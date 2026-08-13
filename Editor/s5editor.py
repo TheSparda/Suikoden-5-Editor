@@ -58,8 +58,13 @@ PAGE = """<!doctype html><meta charset=utf-8>
    <button onclick=peek()>Read</button>
  </div>
  <pre id=out>Pick your ISO and click Open / Verify.</pre>
- <p class=note>Named character editing is disabled until the record layout is verified.
- See <code>Editor/Suikoden5_ISO_offsets.md</code>.</p>
+ <div class=row>
+   <button onclick=names()>List characters</button>
+   <span class=note>edit a name (≤7 chars) and Save to rename in the ISO</span>
+ </div>
+ <div id=names></div>
+ <p class=note>Character <b>renaming</b> is verified (8-byte name table @0x691600). Stat
+ editing is still research — see <code>Editor/Suikoden5_ISO_offsets.md</code>.</p>
 </main>
 <script>
 async function j(u,b){const r=await fetch(u,{method:b?'POST':'GET',body:b&&JSON.stringify(b),
@@ -71,6 +76,17 @@ async function peek(){const iso=document.getElementById('iso').value;
   const off=document.getElementById('roff').value, len=document.getElementById('rlen').value;
   const s=await j('/api/peek',{iso,off,len});
   document.getElementById('out').textContent = s.error? s.error : s.hex+'\\n'+s.ascii;}
+async function names(){const iso=document.getElementById('iso').value;
+  const s=await j('/api/names',{iso}); const d=document.getElementById('names');
+  if(s.error){d.textContent=s.error;return}
+  d.innerHTML='<table>'+s.names.map(e=>
+    `<tr><td>#${e.index}</td><td>0x${e.off.toString(16)}</td>`+
+    `<td><input id="n${e.index}" value="${e.name}" maxlength=7 size=9></td>`+
+    `<td><button onclick="rename(${e.index})">Save</button></td></tr>`).join('')+'</table>';}
+async function rename(i){const iso=document.getElementById('iso').value;
+  const name=document.getElementById('n'+i).value;
+  const s=await j('/api/rename',{iso,index:i,name});
+  alert(s.error?('Error: '+s.error):('Renamed #'+i+' -> '+name));}
 (function(){const st=%STATE%; if(st.iso){document.getElementById('iso').value=st.iso}})();
 </script>
 """
@@ -119,6 +135,24 @@ class H(http.server.BaseHTTPRequestHandler):
                 ascii_ = "".join(chr(c) if 32 <= c < 127 else "." for c in b)
                 return self._send(200, json.dumps(
                     {"hex": b.hex(" "), "ascii": ascii_}))
+            if self.path == "/api/names":
+                iso = data.get("iso", "")
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "file not found"}))
+                with P.Iso(iso) as g:
+                    ns = P.read_names(g)
+                return self._send(200, json.dumps({"names": ns}))
+            if self.path == "/api/rename":
+                iso = data.get("iso", "")
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "file not found"}))
+                try:
+                    P.backup(iso)
+                    with P.Iso(iso, writable=True) as g:
+                        P.set_name(g, int(data["index"]), str(data["name"]))
+                    return self._send(200, json.dumps({"ok": True}))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             self._send(404, "{}")
         except Exception as e:
             self._send(200, json.dumps({"error": str(e)}))
