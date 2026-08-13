@@ -140,6 +140,44 @@ def _peek(a):
     with Iso(a.iso) as g: b = g.rd(int(a.off, 0), max(1, min(256, a.len)))
     print(b.hex(" ")); print("".join(chr(c) if 32 <= c < 127 else "." for c in b)); return 0
 
+def _findbytes(a):
+    needle = bytes.fromhex(a.hex.replace(" ", ""))
+    hits = []; CH = 8 << 20; ov = len(needle); pos = 0
+    sz = os.path.getsize(a.iso)
+    with Iso(a.iso) as g:
+        while pos < sz and len(hits) < a.max:
+            buf = g.rd(pos, CH)
+            if not buf: break
+            j = buf.find(needle)
+            while j >= 0 and len(hits) < a.max:
+                hits.append(pos + j); j = buf.find(needle, j + 1)
+            pos += CH - ov
+    print(f"{len(hits)} hit(s):", ", ".join(hex(h) for h in hits))
+    return 0
+
+def _dumpregion(a):
+    off = int(a.off, 0); n = min(a.len, 4096)
+    with Iso(a.iso) as g: b = g.rd(off, n)
+    for r in range(0, len(b), 16):
+        chunk = b[r:r+16]
+        hexs = " ".join(f"{c:02x}" for c in chunk)
+        asc = "".join(chr(c) if 32 <= c < 127 else "." for c in chunk)
+        print(f"  0x{off+r:08X}  {hexs:<47}  {asc}")
+    return 0
+
+def _ids(a):
+    import json
+    path = os.path.join(HERE, "s5_reference.json")
+    try: ref = json.load(open(path))
+    except Exception: print("s5_reference.json not found"); return 2
+    cats = [a.category] if a.category else list(ref)
+    for c in cats:
+        rows = ref.get(c, [])
+        if a.filter: rows = [r for r in rows if a.filter.lower() in r["name"].lower()]
+        print(f"\n[{c}] {len(rows)}")
+        for r in rows[:a.limit]: print(f"  {r['off']}  {r['name']}")
+    return 0
+
 def _poke(a):
     backup(a.iso)
     with Iso(a.iso, writable=True) as g:
@@ -166,6 +204,9 @@ def main(argv=None):
     add("names", _names, [(("--limit",), dict(type=int, default=0))])
     add("set-name", _setname, [(("--index",), dict(type=int, required=True)), (("--name",), dict(required=True))])
     add("ladder", _ladder)
+    add("find-bytes", _findbytes, [(("--hex",), dict(required=True)), (("--max",), dict(type=int, default=16))])
+    add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])
+    add("ids", _ids, [(("--category",), dict()), (("--filter",), dict()), (("--limit",), dict(type=int, default=200))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])

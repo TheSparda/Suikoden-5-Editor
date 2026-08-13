@@ -55,6 +55,14 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
  </div>
  <div id=sections></div>
  <hr style="border-color:#4a2b26;margin:18px 0">
+ <h3 style="color:#f0c05a;font-size:15px">Reference lookup</h3>
+ <div class=row>
+   <select id=refcat onchange=refShow()></select>
+   <input id=reffilter size=18 placeholder="search names…" oninput=refShow()>
+   <span id=refcount class=note></span>
+ </div>
+ <pre id=refout style="max-height:260px">Loading reference…</pre>
+ <hr style="border-color:#4a2b26;margin:18px 0">
  <h3 style="color:#f0c05a;font-size:15px">Memory-card saves</h3>
  <div class=row>
    Search folder: <input id=saveroot size=40 placeholder="(defaults to ./Saves)">
@@ -106,6 +114,16 @@ async function saveChar(){const inps=[...document.querySelectorAll('#sections in
   const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
   document.getElementById('csave').textContent=s.error?('error: '+s.error):('saved '+edits.length+' field(s)');
   if(!s.error)loadChar();}
+let REF={};
+async function refInit(){REF=await j('/api/reference',{});
+  const sel=document.getElementById('refcat');
+  sel.innerHTML=Object.keys(REF).map(k=>`<option>${k} (${REF[k].length})</option>`).join('');
+  refShow();}
+function refShow(){const cat=(document.getElementById('refcat').value||'').split(' ')[0];
+  const f=(document.getElementById('reffilter').value||'').toLowerCase();
+  const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f));
+  document.getElementById('refcount').textContent=rows.length+' shown';
+  document.getElementById('refout').textContent=rows.map(e=>e.off+'  '+e.name).join('\n')||'(none)';}
 async function scanSaves(){const s=await j('/api/savescan',{root:document.getElementById('saveroot').value});
   const d=document.getElementById('saves');
   if(s.error){d.textContent=s.error;return}
@@ -129,6 +147,7 @@ async function saveWrite(i){const sv=window._saves[i];
 async function peek(){const s=await j('/api/peek',{iso:iso(),
   off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
   document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii);}
+refInit();
 (function(){const st=%STATE%;if(st.iso){document.getElementById('iso').value=st.iso}})();
 </script>
 """
@@ -167,6 +186,12 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/reference":
+                try:
+                    ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
+                except Exception:
+                    ref = {}
+                return self._send(200, json.dumps(ref))
             if self.path == "/api/savescan":
                 roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
                 if d.get("root"): roots.insert(0, d["root"])
