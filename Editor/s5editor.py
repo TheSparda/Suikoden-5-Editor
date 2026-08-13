@@ -61,7 +61,7 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
    <input id=reffilter size=18 placeholder="search names…" oninput=refShow()>
    <span id=refcount class=note></span>
  </div>
- <pre id=refout style="max-height:260px">Loading reference…</pre>
+ <div id=refout style="max-height:280px;overflow:auto;background:#0f0a0b;padding:8px;border-radius:6px">Loading reference…</div>
  <hr style="border-color:#4a2b26;margin:18px 0">
  <h3 style="color:#f0c05a;font-size:15px">Memory-card saves</h3>
  <div class=row>
@@ -121,9 +121,18 @@ async function refInit(){REF=await j('/api/reference',{});
   refShow();}
 function refShow(){const cat=(document.getElementById('refcat').value||'').split(' ')[0];
   const f=(document.getElementById('reffilter').value||'').toLowerCase();
-  const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f));
-  document.getElementById('refcount').textContent=rows.length+' shown';
-  document.getElementById('refout').textContent=rows.map(e=>e.off+'  '+e.name).join('\n')||'(none)';}
+  const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f)).slice(0,400);
+  document.getElementById('refcount').textContent=rows.length+' shown (edit a name → Enter to write to ISO, byte-capped)';
+  const out=document.getElementById('refout');out.innerHTML='';
+  rows.forEach(e=>{const line=document.createElement('div');
+    line.innerHTML=`<span class=note>${e.off}</span> `+
+      `<input value="${e.name.replace(/"/g,'&quot;')}" data-off="${e.off}" size="24" `+
+      `onkeydown="if(event.key==='Enter')refWrite(this)">`;
+    out.appendChild(line);});}
+async function refWrite(inp){if(!iso()){alert('Open the ISO first');return}
+  const r=await j('/api/setstring',{iso:iso(),off:inp.dataset.off,text:inp.value});
+  inp.style.borderColor=r.error?'#ff6b6b':'#8bd450';
+  if(r.error)alert(r.error);}
 async function scanSaves(){const s=await j('/api/savescan',{root:document.getElementById('saveroot').value});
   const d=document.getElementById('saves');
   if(s.error){d.textContent=s.error;return}
@@ -192,6 +201,13 @@ class H(http.server.BaseHTTPRequestHandler):
                 except Exception:
                     ref = {}
                 return self._send(200, json.dumps(ref))
+            if self.path == "/api/setstring":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    cap = P.set_cstring(g, int(str(d["off"]), 0), str(d["text"]))
+                return self._send(200, json.dumps({"ok": True, "cap": cap}))
             if self.path == "/api/savescan":
                 roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
                 if d.get("root"): roots.insert(0, d["root"])
