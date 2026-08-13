@@ -64,6 +64,20 @@ element/target/AOE/status), rune→spell grants, unite attacks, gear (DEF/price/
 weapons (sharpen curve), foods, shops. Per methodology, score each field vs description
 text / a stat guide to ≥95% before writing. NOT YET verified — do not write blind.
 
-## Save-side (RAM) struct
-`s5_char_struct.json` (from the Cheat Engine table) — reliable RAM layout for the
-memory-card save editor; unrelated to these ISO offsets.
+## Save-side (memory card) — VERIFIED against a real save
+PS2 card engine (PS2MFS + ECC + .psu) ported verbatim from S3 → `s5save.py`; ECC
+validated on real cards. S5 save specifics:
+- Save folder + payload filename: **BASLUS-2129100** (payload file is named like the
+  folder, NOT "gamedata"). Payload size **74024 bytes** (0x12128).
+- PS2-browser title (icon.sys) e.g. "SuikodenV 01LV.39/019:16" → slot / level / playtime.
+- gamedata fields (VERIFIED): **heroName @0x00 (16B)**, **castleName @0x14 (16B)**,
+  **level @0x28** (u32; low byte). `field25` scene id @0x4C, event .rom @0x8C.
+- Checksum: S3-style sum-zero is FALSE here; S5's checksum (if any) is uncracked —
+  writes carry a warning + .bak; test on a card copy. Write path round-trips with ECC
+  intact on a copied card.
+- NEEDS MORE SAVES: per-character stat/party/gold/recruit offsets, checksum algorithm,
+  and the **New Game Plus flag** — require multiple saves (esp. a pre/post-NG+ pair) to
+  diff. Only one distinct save state is currently available.
+
+The Cheat Engine RAM struct (`s5_char_struct.json`) is a guide for the per-character
+save layout once located.
