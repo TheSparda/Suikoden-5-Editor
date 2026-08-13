@@ -57,6 +57,14 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
  </div>
  <div id=sections></div>
  <hr style="border-color:#4a2b26;margin:18px 0">
+ <h3 style="color:#f0c05a;font-size:15px">Hard Mode (party-wide starting-stat scaler)</h3>
+ <div class=row>
+   Factor <input id=hmfactor type=number step=0.05 min=0.1 max=10 value=0.5 size=5>
+   <button onclick="hardmode(false)">Apply to all characters</button>
+   <button class=ghost onclick="hardmode(true)">Restore</button>
+   <span id=hmstatus class=note>idempotent: scales the original values; Restore is exact</span>
+ </div>
+ <hr style="border-color:#4a2b26;margin:18px 0">
  <h3 style="color:#f0c05a;font-size:15px">Reference lookup</h3>
  <div class=row>
    <select id=refcat onchange=refShow()></select>
@@ -128,6 +136,11 @@ async function saveChar(){const inps=[...document.querySelectorAll('#sections in
   const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
   document.getElementById('csave').textContent=s.error?('error: '+s.error):('saved '+edits.length+' field(s)');
   if(!s.error)loadChar();}
+async function hardmode(restore){if(!iso()){alert('Open the ISO first');return}
+  const factor=parseFloat(document.getElementById('hmfactor').value);
+  if(!restore && !confirm('Scale ALL characters\' starting stats x'+factor+'? (.bak made; Restore available)'))return;
+  const r=await j('/api/hardmode',{iso:iso(),factor,restore});
+  document.getElementById('hmstatus').textContent=r.error?('error: '+r.error):(restore?('restored '+r.n+' chars'):('scaled '+r.n+' chars x'+factor));}
 let REF={};
 async function refInit(){REF=await j('/api/reference',{});
   const sel=document.getElementById('refcat');
@@ -213,6 +226,14 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/hardmode":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                if d.get("restore"):
+                    n = P.hardmode_restore(iso)
+                else:
+                    n = P.hardmode_apply(iso, float(d.get("factor", 0.5)))
+                return self._send(200, json.dumps({"ok": True, "n": n}))
             if self.path == "/api/reference":
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))

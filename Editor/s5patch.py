@@ -105,6 +105,46 @@ def backup(path):
     if not os.path.exists(bak): shutil.copy2(path, bak)
     return bak
 
+# ---- Hard Mode: scale every character's VERIFIED starting stats party-wide.
+# Idempotent via a sidecar baseline (originals stored once), so re-applying a new
+# factor always scales the ORIGINAL values and Restore is exact.
+import json as _json
+_HM_STATS = [f for f in F.TABLES["stats"][2] if f[3] == "num" and f[1] >= 2]  # 12 u16 stats
+
+def _hm_sidecar(iso_path): return iso_path + ".hardmode.json"
+
+def hardmode_apply(iso_path, factor):
+    """Multiply all characters' starting stats by `factor` (0.1..10). Stores a baseline
+    on first apply. Returns count of characters touched."""
+    chars = [c["id"] for c in F.load_characters()]
+    side = _hm_sidecar(iso_path)
+    base = {}
+    if os.path.exists(side):
+        base = _json.load(open(side))
+    backup(iso_path)
+    with Iso(iso_path, writable=True) as g:
+        for cid in chars:
+            a = table_addr("stats", cid); key = str(cid)
+            if key not in base:
+                base[key] = [g.ru(a + off, w) for (_, off, w, _k) in _HM_STATS]
+            for i, (_, off, w, _k) in enumerate(_HM_STATS):
+                v = int(base[key][i] * factor)
+                g.wu(a + off, w, max(0, min((1 << 8*w) - 1, v)))
+    _json.dump(base, open(side, "w"))
+    return len(chars)
+
+def hardmode_restore(iso_path):
+    side = _hm_sidecar(iso_path)
+    if not os.path.exists(side): return 0
+    base = _json.load(open(side))
+    with Iso(iso_path, writable=True) as g:
+        for key, vals in base.items():
+            a = table_addr("stats", int(key))
+            for i, (_, off, w, _k) in enumerate(_HM_STATS):
+                g.wu(a + off, w, vals[i])
+    os.remove(side)
+    return len(base)
+
 
 # --------------------------------------------------------------------------- CLI
 def _verify(a):
@@ -227,6 +267,11 @@ def main(argv=None):
     add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])
     add("ids", _ids, [(("--category",), dict()), (("--filter",), dict()), (("--limit",), dict(type=int, default=200))])
     add("set-string", _setstring, [(("--off",), dict(required=True)), (("--text",), dict(required=True))])
+    def _hm(a):
+        if a.restore: n = hardmode_restore(a.iso); print(f"restored {n} chars")
+        else: n = hardmode_apply(a.iso, a.factor); print(f"scaled stats of {n} chars x{a.factor}")
+        return 0
+    add("hardmode", _hm, [(("--factor",), dict(type=float, default=0.5)), (("--restore",), dict(action="store_true"))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
