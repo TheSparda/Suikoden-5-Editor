@@ -58,6 +58,14 @@ seeks in `list1RTB_Click` at bases not yet resolved — currently READ-ONLY/omit
     description pool ~0x655xxx.
 - Rune name POINTER array at ISO 0x666070 (u32 vaddr pointers into the rune pool).
 
+## Name pointer arrays (VERIFIED) vs stat arrays (unlinked)
+- Spell NAME pointer array at ISO 0x66D640+ (u32 → name strings in 0x6BExxx pool),
+  multi-language. Names are searchable + editable in place (Reference tab / set-string).
+- CONFIRMED: spells (and by extension gear/weapon/food/shop) store names via pointer
+  arrays but keep numeric STATS in a SEPARATE array the community exe never references.
+  So stat-field offsets can't be verified from the exe. Per methodology they stay
+  READ-ONLY until scored ≥95% against an external stat guide (a future ground-truth pass).
+
 ## Still to RE (editable stat tables — need ground-truth validation)
 Record tables that reference the pools via (name_ptr, desc_ptr) — spells (power/cast/
 element/target/AOE/status), rune→spell grants, unite attacks, gear (DEF/price/effects),
