@@ -1,0 +1,9320 @@
+{
+"items": [
+{
+"off": "0x6510f0",
+"name": "Boundary Piece"
+},
+{
+"off": "0x651110",
+"name": "Pezzo di Confine"
+},
+{
+"off": "0x651130",
+"name": "Abgrenzungs-Stck"
+},
+{
+"off": "0x651248",
+"name": "Steel Piece"
+},
+{
+"off": "0x651270",
+"name": "Pezzo d'Acciaio"
+},
+{
+"off": "0x651290",
+"name": "Trozo de acero"
+},
+{
+"off": "0x651378",
+"name": "Violence Piece"
+},
+{
+"off": "0x6513a0",
+"name": "Pezzo di Rabbia"
+},
+{
+"off": "0x6513c0",
+"name": "Trozo de violencia"
+},
+{
+"off": "0x6514d0",
+"name": "Boost Piece"
+},
+{
+"off": "0x6514f0",
+"name": "Pezzo Incremento"
+},
+{
+"off": "0x651520",
+"name": "Trozo de mejora"
+},
+{
+"off": "0x651608",
+"name": "Fortune Piece"
+},
+{
+"off": "0x651630",
+"name": "Pz Buona fortuna"
+},
+{
+"off": "0x651660",
+"name": "Tr. buena fortuna"
+},
+{
+"off": "0x651770",
+"name": "Prosperity Piece"
+},
+{
+"off": "0x6517b0",
+"name": "Pz Denaro facile"
+},
+{
+"off": "0x6517e0",
+"name": "Tr. dinero afort."
+},
+{
+"off": "0x6518f0",
+"name": "Great Firefly Pc"
+},
+{
+"off": "0x651930",
+"name": "Pz Gran lucciola"
+},
+{
+"off": "0x651aa8",
+"name": "h#j"
+},
+{
+"off": "0x651aac",
+"name": "x#j"
+},
+{
+"off": "0x651ac8",
+"name": "@$j"
+},
+{
+"off": "0x651acc",
+"name": "p$j"
+},
+{
+"off": "0x651ae8",
+"name": "@%j"
+},
+{
+"off": "0x651aec",
+"name": "p%j"
+},
+{
+"off": "0x651b00",
+"name": " &j"
+},
+{
+"off": "0x651b04",
+"name": "0&j"
+},
+{
+"off": "0x651b08",
+"name": "P&j"
+},
+{
+"off": "0x651b0c",
+"name": "p&j"
+},
+{
+"off": "0x651b1c",
+"name": "0'j"
+},
+{
+"off": "0x651b20",
+"name": "`'j"
+},
+{
+"off": "0x651b24",
+"name": "p'j"
+},
+{
+"off": "0x651b3c",
+"name": "0(j"
+},
+{
+"off": "0x651b40",
+"name": "`(j"
+},
+{
+"off": "0x651b5c",
+"name": "0)j"
+},
+{
+"off": "0x651b60",
+"name": "`)j"
+},
+{
+"off": "0x651b70",
+"name": " *j"
+},
+{
+"off": "0x651b74",
+"name": "0*j"
+},
+{
+"off": "0x651b78",
+"name": "P*j"
+},
+{
+"off": "0x651b7c",
+"name": "`*j"
+},
+{
+"off": "0x651b80",
+"name": "p*j"
+},
+{
+"off": "0x651b90",
+"name": " +j"
+},
+{
+"off": "0x651b94",
+"name": "P+j"
+},
+{
+"off": "0x651bb0",
+"name": "0,j"
+},
+{
+"off": "0x651bb4",
+"name": "`,j"
+},
+{
+"off": "0x651c1c",
+"name": " -j"
+},
+{
+"off": "0x651c20",
+"name": "0-j"
+},
+{
+"off": "0x651c24",
+"name": "@-j"
+},
+{
+"off": "0x651c28",
+"name": "p-j"
+},
+{
+"off": "0x651c3c",
+"name": "(.j"
+},
+{
+"off": "0x651c40",
+"name": "8.j"
+},
+{
+"off": "0x651c44",
+"name": "P.j"
+},
+{
+"off": "0x651c48",
+"name": "`.j"
+},
+{
+"off": "0x651c4c",
+"name": "p.j"
+},
+{
+"off": "0x651c5c",
+"name": " /j"
+},
+{
+"off": "0x651c60",
+"name": "P/j"
+},
+{
+"off": "0x651c74",
+"name": "p/j"
+},
+{
+"off": "0x651c9c",
+"name": " 0j"
+},
+{
+"off": "0x651ca0",
+"name": "P0j"
+},
+{
+"off": "0x651cb4",
+"name": "(1j"
+},
+{
+"off": "0x651cb8",
+"name": "@1j"
+},
+{
+"off": "0x651cbc",
+"name": "P1j"
+},
+{
+"off": "0x651cc0",
+"name": "p1j"
+},
+{
+"off": "0x651cd0",
+"name": " 2j"
+},
+{
+"off": "0x651cd4",
+"name": "P2j"
+},
+{
+"off": "0x651cd8",
+"name": "x2j"
+},
+{
+"off": "0x651cf0",
+"name": " 3j"
+},
+{
+"off": "0x651cf4",
+"name": "P3j"
+},
+{
+"off": "0x651d10",
+"name": " 4j"
+},
+{
+"off": "0x651d14",
+"name": "@4j"
+},
+{
+"off": "0x651d18",
+"name": "p4j"
+},
+{
+"off": "0x651d2c",
+"name": "05j"
+},
+{
+"off": "0x651d30",
+"name": "@5j"
+},
+{
+"off": "0x651d34",
+"name": "P5j"
+},
+{
+"off": "0x651d38",
+"name": "p5j"
+},
+{
+"off": "0x651d48",
+"name": " 6j"
+},
+{
+"off": "0x651d4c",
+"name": "P6j"
+},
+{
+"off": "0x651d68",
+"name": "07j"
+},
+{
+"off": "0x651d6c",
+"name": "`7j"
+},
+{
+"off": "0x651d84",
+"name": "08j"
+},
+{
+"off": "0x651d88",
+"name": "P8j"
+},
+{
+"off": "0x651d8c",
+"name": "`8j"
+},
+{
+"off": "0x651d9c",
+"name": " 9j"
+},
+{
+"off": "0x651da0",
+"name": "H9j"
+},
+{
+"off": "0x651da4",
+"name": "X9j"
+},
+{
+"off": "0x651da8",
+"name": "p9j"
+},
+{
+"off": "0x651dc0",
+"name": "0:j"
+},
+{
+"off": "0x651dc4",
+"name": "P:j"
+},
+{
+"off": "0x651dc8",
+"name": "x:j"
+},
+{
+"off": "0x651de4",
+"name": "@;j"
+},
+{
+"off": "0x651de8",
+"name": "p;j"
+},
+{
+"off": "0x651e00",
+"name": " <j"
+},
+{
+"off": "0x651e04",
+"name": "0<j"
+},
+{
+"off": "0x651e08",
+"name": "`<j"
+},
+{
+"off": "0x651e20",
+"name": "0=j"
+},
+{
+"off": "0x651e24",
+"name": "H=j"
+},
+{
+"off": "0x651e28",
+"name": "`=j"
+},
+{
+"off": "0x651e3c",
+"name": "@>j"
+},
+{
+"off": "0x651e40",
+"name": "p>j"
+},
+{
+"off": "0x651e58",
+"name": "0?j"
+},
+{
+"off": "0x651e5c",
+"name": "`?j"
+},
+{
+"off": "0x651e70",
+"name": "0@j"
+},
+{
+"off": "0x651e74",
+"name": "P@j"
+},
+{
+"off": "0x651e78",
+"name": "p@j"
+},
+{
+"off": "0x651e88",
+"name": " Aj"
+},
+{
+"off": "0x651e8c",
+"name": "PAj"
+},
+{
+"off": "0x651e90",
+"name": "Medicine"
+},
+{
+"off": "0x651eb0",
+"name": "Medicina"
+},
+{
+"off": "0x651ec0",
+"name": "Recover 100 HP"
+},
+{
+"off": "0x651ef0",
+"name": "Recupera 100 PS"
+},
+{
+"off": "0x651f18",
+"name": "Mega Medicine"
+},
+{
+"off": "0x651f38",
+"name": "Mega medicina"
+},
+{
+"off": "0x651f48",
+"name": "Mega-Medizin"
+},
+{
+"off": "0x651f58",
+"name": "Megamedicina"
+},
+{
+"off": "0x651f68",
+"name": "Recover 200 HP"
+},
+{
+"off": "0x651fa0",
+"name": "Recupera 200 PS"
+},
+{
+"off": "0x651fd0",
+"name": "ImmortalMedicine"
+},
+{
+"off": "0x652000",
+"name": "Medicina immort."
+},
+{
+"off": "0x652020",
+"name": "Unsterbl.Medizin"
+},
+{
+"off": "0x652040",
+"name": "Medicina inmortal"
+},
+{
+"off": "0x652058",
+"name": "Recover all HP"
+},
+{
+"off": "0x652090",
+"name": "Recupera ogni PS"
+},
+{
+"off": "0x6520d0",
+"name": "Recupera todos PS"
+},
+{
+"off": "0x6520e8",
+"name": "Dragon Incense"
+},
+{
+"off": "0x6520f8",
+"name": "Encens dragon"
+},
+{
+"off": "0x652110",
+"name": "Incenso del drago"
+},
+{
+"off": "0x652128",
+"name": "Drachenrauch"
+},
+{
+"off": "0x652250",
+"name": "Cheesecake"
+},
+{
+"off": "0x652260",
+"name": "Cheese-cake"
+},
+{
+"off": "0x652270",
+"name": "Torta di ricotta"
+},
+{
+"off": "0x652298",
+"name": "Tarta de queso"
+},
+{
+"off": "0x6522a8",
+"name": "Recover 50 HP"
+},
+{
+"off": "0x6522d8",
+"name": "Recupera 50 PS"
+},
+{
+"off": "0x652310",
+"name": "Baked Cheesecake"
+},
+{
+"off": "0x652330",
+"name": "Cheese-cake cuit"
+},
+{
+"off": "0x652350",
+"name": "Tor. ricotta cotta"
+},
+{
+"off": "0x652380",
+"name": "T. queso al horno"
+},
+{
+"off": "0x652398",
+"name": "Recover 150 HP"
+},
+{
+"off": "0x6523d0",
+"name": "Recupera 150 PS"
+},
+{
+"off": "0x652400",
+"name": "Rare Cheesecake"
+},
+{
+"off": "0x652410",
+"name": "Cheesecake rare"
+},
+{
+"off": "0x652420",
+"name": "T. ricotta rara"
+},
+{
+"off": "0x652440",
+"name": "Tarta queso rara"
+},
+{
+"off": "0x652458",
+"name": "Recover 300 HP"
+},
+{
+"off": "0x652490",
+"name": "Recupera 300 PS"
+},
+{
+"off": "0x6524b8",
+"name": "Mixed Herbs"
+},
+{
+"off": "0x6524c8",
+"name": "Erbe miste"
+},
+{
+"off": "0x6524f0",
+"name": "Mezcla de hierbas"
+},
+{
+"off": "0x652508",
+"name": "Recover all MP"
+},
+{
+"off": "0x652520",
+"name": "Recupera ogni PM"
+},
+{
+"off": "0x652560",
+"name": "Recupera todos PM"
+},
+{
+"off": "0x652580",
+"name": "Sacrificial Jizo"
+},
+{
+"off": "0x6525a0",
+"name": "Jizo sacrificiel"
+},
+{
+"off": "0x6525c0",
+"name": "Jizo sacrificale"
+},
+{
+"off": "0x6525d8",
+"name": "Jizo-Opfer"
+},
+{
+"off": "0x6525f0",
+"name": "Jizo expiatorio"
+},
+{
+"off": "0x6526f0",
+"name": "Sacrificial Buddha"
+},
+{
+"off": "0x652710",
+"name": "Bouddha sacrif."
+},
+{
+"off": "0x652720",
+"name": "Budda sacrificale"
+},
+{
+"off": "0x652738",
+"name": "Buddha-Opfer"
+},
+{
+"off": "0x652750",
+"name": "Buddha expiatorio"
+},
+{
+"off": "0x652860",
+"name": "Antitoxin"
+},
+{
+"off": "0x652870",
+"name": "Antitoxine"
+},
+{
+"off": "0x652880",
+"name": "Antitossina"
+},
+{
+"off": "0x652890",
+"name": "Gegengift"
+},
+{
+"off": "0x6528a0",
+"name": "Antitoxina"
+},
+{
+"off": "0x652998",
+"name": "Cough Drop"
+},
+{
+"off": "0x6529a8",
+"name": "Sirop toux"
+},
+{
+"off": "0x6529c0",
+"name": "Pastiglia tosse"
+},
+{
+"off": "0x6529d0",
+"name": "Hustentropfen"
+},
+{
+"off": "0x6529e0",
+"name": "Gota de tos"
+},
+{
+"off": "0x652a60",
+"name": "Heilt den Stillestatus"
+},
+{
+"off": "0x652aa8",
+"name": "Eye Drops"
+},
+{
+"off": "0x652ab8",
+"name": "Gouttes yeux"
+},
+{
+"off": "0x652ac8",
+"name": "Gocce occhi"
+},
+{
+"off": "0x652ad8",
+"name": "Augentropfen"
+},
+{
+"off": "0x652ae8",
+"name": "Gotas oculares"
+},
+{
+"off": "0x652bc8",
+"name": "Smelling Salts"
+},
+{
+"off": "0x652be8",
+"name": "Riechsalz"
+},
+{
+"off": "0x652c80",
+"name": "Heilt den Schlafstatus"
+},
+{
+"off": "0x652cc0",
+"name": "Tomato Salad"
+},
+{
+"off": "0x652cd0",
+"name": "Salade tomates"
+},
+{
+"off": "0x652ce0",
+"name": "Insalata pomodori"
+},
+{
+"off": "0x652cf8",
+"name": "Tomatensalat"
+},
+{
+"off": "0x652d10",
+"name": "Ensalada de tomate"
+},
+{
+"off": "0x652e18",
+"name": "Potato Salad"
+},
+{
+"off": "0x652e28",
+"name": "Salade patates"
+},
+{
+"off": "0x652e40",
+"name": "Insalata patate"
+},
+{
+"off": "0x652e50",
+"name": "Kartoffelsalat"
+},
+{
+"off": "0x652e60",
+"name": "Ensalada de patata"
+},
+{
+"off": "0x652f70",
+"name": "Carpaccio Salad"
+},
+{
+"off": "0x652f80",
+"name": "Salade carpaccio"
+},
+{
+"off": "0x652f98",
+"name": "Carpaccio"
+},
+{
+"off": "0x652fa8",
+"name": "Carpacciosalat"
+},
+{
+"off": "0x652fc0",
+"name": "Ensalada carpaccio"
+},
+{
+"off": "0x6530d0",
+"name": "Deluxe Salad"
+},
+{
+"off": "0x6530e0",
+"name": "Salade extra"
+},
+{
+"off": "0x6530f0",
+"name": "Insalata deluxe"
+},
+{
+"off": "0x653100",
+"name": "Luxussalat"
+},
+{
+"off": "0x653110",
+"name": "Ensalada especial"
+},
+{
+"off": "0x653220",
+"name": "Jus de fruit"
+},
+{
+"off": "0x653318",
+"name": "Fruit Punch"
+},
+{
+"off": "0x653330",
+"name": "Cocktail jus fruit"
+},
+{
+"off": "0x653350",
+"name": "Ponce alla frutta"
+},
+{
+"off": "0x653368",
+"name": "Fruchtpunsch"
+},
+{
+"off": "0x653380",
+"name": "Refresco de frutas"
+},
+{
+"off": "0x653490",
+"name": "Vegetable Juice"
+},
+{
+"off": "0x6534b0",
+"name": "Succo di verdure"
+},
+{
+"off": "0x6534e0",
+"name": "Zumo de verduras"
+},
+{
+"off": "0x6535f0",
+"name": "Retso Nectar"
+},
+{
+"off": "0x653600",
+"name": "Nectar Retso"
+},
+{
+"off": "0x653610",
+"name": "Nettare Retso"
+},
+{
+"off": "0x653620",
+"name": "Retso-Nektar"
+},
+{
+"off": "0x653730",
+"name": "Broiled Eel"
+},
+{
+"off": "0x653760",
+"name": "Anguilla grigliata"
+},
+{
+"off": "0x653778",
+"name": "Gegrillter Aal"
+},
+{
+"off": "0x653788",
+"name": "Anguila asada"
+},
+{
+"off": "0x653888",
+"name": "Sashimi Combo"
+},
+{
+"off": "0x653898",
+"name": "Combo sashimi"
+},
+{
+"off": "0x6538b0",
+"name": "Combo di sashimi"
+},
+{
+"off": "0x6538c8",
+"name": "Sashimi-Combo"
+},
+{
+"off": "0x6538e0",
+"name": "Combo de sashimi"
+},
+{
+"off": "0x6539f0",
+"name": "Deluxe Sashimi"
+},
+{
+"off": "0x653a00",
+"name": "Sashimi extra"
+},
+{
+"off": "0x653a10",
+"name": "Sashimi deluxe"
+},
+{
+"off": "0x653a20",
+"name": "Luxus-Sashimi"
+},
+{
+"off": "0x653a30",
+"name": "Sashimi especial"
+},
+{
+"off": "0x653b40",
+"name": "Imperial Fish"
+},
+{
+"off": "0x653b70",
+"name": "Pesce imperiale"
+},
+{
+"off": "0x653b80",
+"name": "Kaiserfisch"
+},
+{
+"off": "0x653b90",
+"name": "Pescado imperial"
+},
+{
+"off": "0x653c68",
+"name": "Rolled Cabbage"
+},
+{
+"off": "0x653c90",
+"name": "Involtino cavolo"
+},
+{
+"off": "0x653ca8",
+"name": "Kohlrouladen"
+},
+{
+"off": "0x653cb8",
+"name": "Col enrollada"
+},
+{
+"off": "0x653db8",
+"name": "Carp Soup"
+},
+{
+"off": "0x653dc8",
+"name": "Soupe carpe"
+},
+{
+"off": "0x653dd8",
+"name": "Zuppa di carpa"
+},
+{
+"off": "0x653de8",
+"name": "Karpfensuppe"
+},
+{
+"off": "0x653df8",
+"name": "Sopa de carpa"
+},
+{
+"off": "0x653ef8",
+"name": "Beef Stew"
+},
+{
+"off": "0x653f20",
+"name": "Stufato di manzo"
+},
+{
+"off": "0x653f40",
+"name": "Rindfleischeintopf"
+},
+{
+"off": "0x653f60",
+"name": "Asado de ternera"
+},
+{
+"off": "0x654068",
+"name": "Chicken Curry"
+},
+{
+"off": "0x654078",
+"name": "Curry poulet"
+},
+{
+"off": "0x654088",
+"name": "Pollo al curry"
+},
+{
+"off": "0x6540a8",
+"name": "Curry de pollo"
+},
+{
+"off": "0x6541a8",
+"name": "Grilled Salmon"
+},
+{
+"off": "0x6541d0",
+"name": "Salmone grigliato"
+},
+{
+"off": "0x6541f0",
+"name": "Gegrillter Lachs"
+},
+{
+"off": "0x654308",
+"name": "Abalone Steak"
+},
+{
+"off": "0x654318",
+"name": "Steak ormeau"
+},
+{
+"off": "0x654330",
+"name": "Mollusco grigliato"
+},
+{
+"off": "0x654348",
+"name": "Seeohr-Steak"
+},
+{
+"off": "0x654470",
+"name": "Grilled Chicken"
+},
+{
+"off": "0x654490",
+"name": "Pollo arrosto"
+},
+{
+"off": "0x6544b0",
+"name": "Pollo parrilla"
+},
+{
+"off": "0x6545a8",
+"name": "Marbled Steak"
+},
+{
+"off": "0x6545d0",
+"name": "Bist. marmorizzata"
+},
+{
+"off": "0x6545e8",
+"name": "Saftiges Steak"
+},
+{
+"off": "0x654600",
+"name": "Filete vetas grasa"
+},
+{
+"off": "0x654708",
+"name": "Tuna Rice Bowl"
+},
+{
+"off": "0x654718",
+"name": "Bol riz thon"
+},
+{
+"off": "0x654728",
+"name": "Riso al tonno"
+},
+{
+"off": "0x654740",
+"name": "Thunf.-Reisschale"
+},
+{
+"off": "0x654868",
+"name": "Crab Rice Bowl"
+},
+{
+"off": "0x654878",
+"name": "Bol riz crabe"
+},
+{
+"off": "0x654890",
+"name": "Riso al granchio"
+},
+{
+"off": "0x6548a8",
+"name": "Krabben-Reis"
+},
+{
+"off": "0x6548c0",
+"name": "Bowl arroz y cangr"
+},
+{
+"off": "0x6549c8",
+"name": "Matsutake Rice"
+},
+{
+"off": "0x6549d8",
+"name": "Riz matsutake"
+},
+{
+"off": "0x6549e8",
+"name": "Riso Matsutake"
+},
+{
+"off": "0x6549f8",
+"name": "Matsutake-Reis"
+},
+{
+"off": "0x654a10",
+"name": "Arroz Matsutake"
+},
+{
+"off": "0x654b10",
+"name": "Seafood Rice Bowl"
+},
+{
+"off": "0x654b30",
+"name": "Bol riz fruits mer"
+},
+{
+"off": "0x654b50",
+"name": "Riso fr. di mare"
+},
+{
+"off": "0x654b68",
+"name": "Meeresfr.-Reis"
+},
+{
+"off": "0x654b80",
+"name": "Bowl arroz y mar."
+},
+{
+"off": "0x654c88",
+"name": "Full Course"
+},
+{
+"off": "0x654c98",
+"name": "Repas complet"
+},
+{
+"off": "0x654cb0",
+"name": "Piatto principale"
+},
+{
+"off": "0x654cc8",
+"name": "Curso completo"
+},
+{
+"off": "0x654dd0",
+"name": "Deluxe Full Course"
+},
+{
+"off": "0x654df0",
+"name": "Repas comp. extra"
+},
+{
+"off": "0x654e10",
+"name": "Piatto pr. deluxe"
+},
+{
+"off": "0x654e40",
+"name": "Curso compl. esp."
+},
+{
+"off": "0x654fa4",
+"name": "(Fj"
+},
+{
+"off": "0x654fa8",
+"name": "8Fj"
+},
+{
+"off": "0x654fac",
+"name": "HFj"
+},
+{
+"off": "0x654fb0",
+"name": "XFj"
+},
+{
+"off": "0x654fb4",
+"name": "hFj"
+},
+{
+"off": "0x654fd4",
+"name": " Gj"
+},
+{
+"off": "0x654fd8",
+"name": "@Gj"
+},
+{
+"off": "0x654fdc",
+"name": "XGj"
+},
+{
+"off": "0x654fe0",
+"name": "pGj"
+},
+{
+"off": "0x654ffc",
+"name": "(Hj"
+},
+{
+"off": "0x655000",
+"name": "@Hj"
+},
+{
+"off": "0x655004",
+"name": "`Hj"
+},
+{
+"off": "0x655014",
+"name": " Ij"
+},
+{
+"off": "0x655018",
+"name": "PIj"
+},
+{
+"off": "0x65501c",
+"name": "`Ij"
+},
+{
+"off": "0x655020",
+"name": "pIj"
+},
+{
+"off": "0x655044",
+"name": "0Jj"
+},
+{
+"off": "0x655048",
+"name": "PJj"
+},
+{
+"off": "0x65504c",
+"name": "hJj"
+},
+{
+"off": "0x655070",
+"name": " Kj"
+},
+{
+"off": "0x655074",
+"name": "0Kj"
+},
+{
+"off": "0x655078",
+"name": "@Kj"
+},
+{
+"off": "0x65507c",
+"name": "XKj"
+},
+{
+"off": "0x655080",
+"name": "pKj"
+},
+{
+"off": "0x6550a8",
+"name": "pGj"
+},
+{
+"off": "0x6550ac",
+"name": " Lj"
+},
+{
+"off": "0x6550b0",
+"name": "@Lj"
+},
+{
+"off": "0x6550b4",
+"name": "`Lj"
+},
+{
+"off": "0x6550d0",
+"name": "0Mj"
+},
+{
+"off": "0x6550d4",
+"name": "`Mj"
+},
+{
+"off": "0x6550e8",
+"name": " Nj"
+},
+{
+"off": "0x6550ec",
+"name": "8Nj"
+},
+{
+"off": "0x6550f0",
+"name": "PNj"
+},
+{
+"off": "0x6550f4",
+"name": "pNj"
+},
+{
+"off": "0x655104",
+"name": "0Oj"
+},
+{
+"off": "0x655108",
+"name": "`Oj"
+},
+{
+"off": "0x65510c",
+"name": "pOj"
+},
+{
+"off": "0x655128",
+"name": "@Pj"
+},
+{
+"off": "0x65512c",
+"name": "pPj"
+},
+{
+"off": "0x65514c",
+"name": "0Qj"
+},
+{
+"off": "0x655150",
+"name": "`Qj"
+},
+{
+"off": "0x655170",
+"name": "0Rj"
+},
+{
+"off": "0x655174",
+"name": "PRj"
+},
+{
+"off": "0x655194",
+"name": " Sj"
+},
+{
+"off": "0x655198",
+"name": "@Sj"
+},
+{
+"off": "0x65519c",
+"name": "`Sj"
+},
+{
+"off": "0x6551bc",
+"name": "0Tj"
+},
+{
+"off": "0x6551c0",
+"name": "`Tj"
+},
+{
+"off": "0x6551d4",
+"name": "(Uj"
+},
+{
+"off": "0x6551d8",
+"name": "@Uj"
+},
+{
+"off": "0x6551dc",
+"name": "PUj"
+},
+{
+"off": "0x6551e0",
+"name": "`Uj"
+},
+{
+"off": "0x6551f4",
+"name": "@Vj"
+},
+{
+"off": "0x6551f8",
+"name": "pVj"
+},
+{
+"off": "0x655214",
+"name": "@Wj"
+},
+{
+"off": "0x655218",
+"name": "pWj"
+},
+{
+"off": "0x655234",
+"name": "0Xj"
+},
+{
+"off": "0x655238",
+"name": "`Xj"
+},
+{
+"off": "0x65524c",
+"name": " Yj"
+},
+{
+"off": "0x65525c",
+"name": "0Yj"
+},
+{
+"off": "0x655260",
+"name": "`Yj"
+},
+{
+"off": "0x655274",
+"name": "0Zj"
+},
+{
+"off": "0x655278",
+"name": "PZj"
+},
+{
+"off": "0x65527c",
+"name": "hZj"
+},
+{
+"off": "0x655290",
+"name": "0[j"
+},
+{
+"off": "0x655294",
+"name": "`[j"
+},
+{
+"off": "0x6552b0",
+"name": "0\\j"
+},
+{
+"off": "0x6552b4",
+"name": "`\\j"
+},
+{
+"off": "0x6552cc",
+"name": " ]j"
+},
+{
+"off": "0x6552d0",
+"name": "0]j"
+},
+{
+"off": "0x6552d4",
+"name": "@]j"
+},
+{
+"off": "0x6552d8",
+"name": "p]j"
+},
+{
+"off": "0x6552e8",
+"name": "0^j"
+},
+{
+"off": "0x6552ec",
+"name": "@^j"
+},
+{
+"off": "0x6552f0",
+"name": "`^j"
+},
+{
+"off": "0x6552f4",
+"name": "x^j"
+},
+{
+"off": "0x655308",
+"name": "0_j"
+},
+{
+"off": "0x65530c",
+"name": "`_j"
+},
+{
+"off": "0x655328",
+"name": "0`j"
+},
+{
+"off": "0x65532c",
+"name": "``j"
+},
+{
+"off": "0x655344",
+"name": " aj"
+},
+{
+"off": "0x655348",
+"name": "0aj"
+},
+{
+"off": "0x65534c",
+"name": "Paj"
+},
+{
+"off": "0x655360",
+"name": "@bj"
+},
+{
+"off": "0x655364",
+"name": "Pbj"
+},
+{
+"off": "0x655368",
+"name": "pbj"
+},
+{
+"off": "0x655380",
+"name": "@cj"
+},
+{
+"off": "0x655388",
+"name": "hcj"
+},
+{
+"off": "0x65538c",
+"name": "xcj"
+},
+{
+"off": "0x6553a4",
+"name": "0dj"
+},
+{
+"off": "0x6553a8",
+"name": "`dj"
+},
+{
+"off": "0x6553c8",
+"name": "@ej"
+},
+{
+"off": "0x6553cc",
+"name": "pej"
+},
+{
+"off": "0x6553e0",
+"name": " fj"
+},
+{
+"off": "0x6553e4",
+"name": "@fj"
+},
+{
+"off": "0x6553e8",
+"name": "`fj"
+},
+{
+"off": "0x6553fc",
+"name": "@gj"
+},
+{
+"off": "0x655400",
+"name": "hgj"
+},
+{
+"off": "0x655404",
+"name": "xgj"
+},
+{
+"off": "0x65541c",
+"name": " hj"
+},
+{
+"off": "0x655420",
+"name": "Phj"
+},
+{
+"off": "0x65543c",
+"name": " ij"
+},
+{
+"off": "0x655440",
+"name": "Pij"
+},
+{
+"off": "0x655458",
+"name": "0jj"
+},
+{
+"off": "0x65545c",
+"name": "Hjj"
+},
+{
+"off": "0x655460",
+"name": "`jj"
+},
+{
+"off": "0x655474",
+"name": "@kj"
+},
+{
+"off": "0x655478",
+"name": "pkj"
+},
+{
+"off": "0x655494",
+"name": " lj"
+},
+{
+"off": "0x655498",
+"name": "Plj"
+},
+{
+"off": "0x6554b4",
+"name": " mj"
+},
+{
+"off": "0x6554b8",
+"name": "Pmj"
+},
+{
+"off": "0x6554d0",
+"name": "(nj"
+},
+{
+"off": "0x6554d4",
+"name": "@nj"
+},
+{
+"off": "0x6554d8",
+"name": "`nj"
+},
+{
+"off": "0x6554ec",
+"name": "@oj"
+},
+{
+"off": "0x6554f0",
+"name": "hoj"
+},
+{
+"off": "0x6554f4",
+"name": "xoj"
+},
+{
+"off": "0x65550c",
+"name": "@pj"
+},
+{
+"off": "0x655510",
+"name": "ppj"
+},
+{
+"off": "0x65552c",
+"name": " qj"
+},
+{
+"off": "0x655530",
+"name": "Pqj"
+},
+{
+"off": "0x655544",
+"name": "0rj"
+},
+{
+"off": "0x655548",
+"name": "Prj"
+},
+{
+"off": "0x65554c",
+"name": "hrj"
+},
+{
+"off": "0x655560",
+"name": "0sj"
+},
+{
+"off": "0x655564",
+"name": "`sj"
+},
+{
+"off": "0x655584",
+"name": "@tj"
+},
+{
+"off": "0x655588",
+"name": "ptj"
+},
+{
+"off": "0x65559c",
+"name": "(uj"
+},
+{
+"off": "0x6555a0",
+"name": "@uj"
+},
+{
+"off": "0x6555a4",
+"name": "`uj"
+},
+{
+"off": "0x6555b4",
+"name": " vj"
+},
+{
+"off": "0x6555c0",
+"name": "Flaming Arrows S"
+},
+{
+"off": "0x655600",
+"name": "P. Frecce fuoco"
+},
+{
+"off": "0x655610",
+"name": "Flammenpfeil-R."
+},
+{
+"off": "0x655620",
+"name": "R. flechas llama"
+},
+{
+"off": "0x655710",
+"name": "Dancing Flames S"
+},
+{
+"off": "0x655730",
+"name": "Par. flam. dans."
+},
+{
+"off": "0x655750",
+"name": "P. Fiamme danz."
+},
+{
+"off": "0x655760",
+"name": "Tanz. Flamm.-R."
+},
+{
+"off": "0x655770",
+"name": "R. llamas bailar."
+},
+{
+"off": "0x655870",
+"name": "Blazing Wall Scr"
+},
+{
+"off": "0x655888",
+"name": "Parch. mur feu"
+},
+{
+"off": "0x6558a0",
+"name": "P. Muro cocente"
+},
+{
+"off": "0x6558b0",
+"name": "Mauerbrand-R."
+},
+{
+"off": "0x6558c0",
+"name": "R. pared en lla."
+},
+{
+"off": "0x655900",
+"name": "Mur de feu sur ennemis"
+},
+{
+"off": "0x6559a0",
+"name": "Thunder Runner S"
+},
+{
+"off": "0x6559c0",
+"name": "Par. gd grondem."
+},
+{
+"off": "0x6559d8",
+"name": "P. Tuono infr."
+},
+{
+"off": "0x6559f0",
+"name": "Saus. Donner-R."
+},
+{
+"off": "0x655a00",
+"name": "R. trueno destr."
+},
+{
+"off": "0x655b00",
+"name": "Berserk Blow Scr"
+},
+{
+"off": "0x655b20",
+"name": "Par. coup folie"
+},
+{
+"off": "0x655b30",
+"name": "P. Scoppio ira"
+},
+{
+"off": "0x655b40",
+"name": "Wutschlag-Rolle"
+},
+{
+"off": "0x655b50",
+"name": "R. arreb. de ira."
+},
+{
+"off": "0x655c30",
+"name": "Soaring Bolt Scr"
+},
+{
+"off": "0x655c50",
+"name": "Par. foudre fun."
+},
+{
+"off": "0x655c70",
+"name": "P. Tuono svett."
+},
+{
+"off": "0x655c80",
+"name": "Donnerschw.-R."
+},
+{
+"off": "0x655c90",
+"name": "R. trueno vertig."
+},
+{
+"off": "0x655d80",
+"name": "Breath of Ice S"
+},
+{
+"off": "0x655d90",
+"name": "Par. souffle gl."
+},
+{
+"off": "0x655db0",
+"name": "P. Soffio ghia."
+},
+{
+"off": "0x655dc0",
+"name": "Eisodem-Rolle"
+},
+{
+"off": "0x655dd0",
+"name": "R. soplo helado"
+},
+{
+"off": "0x655eb0",
+"name": "Kindness Rain S"
+},
+{
+"off": "0x655ee0",
+"name": "P. Flusso gent."
+},
+{
+"off": "0x655f00",
+"name": "R. arroyo amabil."
+},
+{
+"off": "0x656000",
+"name": "Wind of Sleep S"
+},
+{
+"off": "0x656010",
+"name": "Par. vent ensom."
+},
+{
+"off": "0x656028",
+"name": "P. Vento dorm."
+},
+{
+"off": "0x656040",
+"name": "Schlumm. Wind-R."
+},
+{
+"off": "0x656060",
+"name": "R. viento adorm."
+},
+{
+"off": "0x656160",
+"name": "The Shredding S"
+},
+{
+"off": "0x656170",
+"name": "Par. vent destr."
+},
+{
+"off": "0x656190",
+"name": "P. Vento distr."
+},
+{
+"off": "0x6561c0",
+"name": "R. viento destr."
+},
+{
+"off": "0x6562c0",
+"name": "Clay Guardian S"
+},
+{
+"off": "0x6562d0",
+"name": "Par. gard. terre"
+},
+{
+"off": "0x6562f0",
+"name": "P. Guard. Terra"
+},
+{
+"off": "0x656320",
+"name": "R. guard. tierra"
+},
+{
+"off": "0x656410",
+"name": "Vengeful Child S"
+},
+{
+"off": "0x656430",
+"name": "Par. enf. veng."
+},
+{
+"off": "0x656440",
+"name": "P. Figlio vend."
+},
+{
+"off": "0x656450",
+"name": "Kind d.Rache-R."
+},
+{
+"off": "0x656460",
+"name": "R. hijo venganza"
+},
+{
+"off": "0x656598",
+"name": " }j"
+},
+{
+"off": "0x65659c",
+"name": "@}j"
+},
+{
+"off": "0x6565a0",
+"name": "p}j"
+},
+{
+"off": "0x6565b4",
+"name": "0~j"
+},
+{
+"off": "0x6565b8",
+"name": "P~j"
+},
+{
+"off": "0x6565bc",
+"name": "`~j"
+},
+{
+"off": "0x6565c0",
+"name": "p~j"
+},
+{
+"off": "0x656770",
+"name": "Blinking Rune Pc"
+},
+{
+"off": "0x6567b0",
+"name": "Pezzo R. Lampegg."
+},
+{
+"off": "0x6567d0",
+"name": "Teleport.-Run.stk."
+},
+{
+"off": "0x6567f0",
+"name": "Tr. runa parpad."
+},
+{
+"off": "0x656860",
+"name": "Evoca i membri pronti"
+},
+{
+"off": "0x656880",
+"name": "Ruft Reserve-Mitglieder"
+},
+{
+"off": "0x6568a0",
+"name": "Llama miembros en espera"
+},
+{
+"off": "0x6568c0",
+"name": "Escape Scroll"
+},
+{
+"off": "0x6568e0",
+"name": "Perg. della fuga"
+},
+{
+"off": "0x6568f8",
+"name": "Flucht-Rolle"
+},
+{
+"off": "0x656908",
+"name": "Rollo de huida"
+},
+{
+"off": "0x656980",
+"name": "Fuggi dalle segrete"
+},
+{
+"off": "0x656a80",
+"name": "Stone of Strength"
+},
+{
+"off": "0x656a98",
+"name": "Pierre pouvoir"
+},
+{
+"off": "0x656ab0",
+"name": "Pietra della forza"
+},
+{
+"off": "0x656af0",
+"name": "Piedra de fuerza"
+},
+{
+"off": "0x656bf0",
+"name": "Stone of Magic"
+},
+{
+"off": "0x656c00",
+"name": "Pierre magie"
+},
+{
+"off": "0x656c10",
+"name": "Pietra della magia"
+},
+{
+"off": "0x656c30",
+"name": "Stein der Magie"
+},
+{
+"off": "0x656c40",
+"name": "Piedra de magia"
+},
+{
+"off": "0x656d20",
+"name": "Stone of Skill"
+},
+{
+"off": "0x656d30",
+"name": "Pierre technique"
+},
+{
+"off": "0x656d60",
+"name": "Stein des Talents"
+},
+{
+"off": "0x656d80",
+"name": "Piedra habilidad"
+},
+{
+"off": "0x656e90",
+"name": "Stone of Evasion"
+},
+{
+"off": "0x656ec0",
+"name": "Pietra evasione"
+},
+{
+"off": "0x656ed0",
+"name": "Stein d. Ausweich."
+},
+{
+"off": "0x656ff8",
+"name": "Stone of Speed"
+},
+{
+"off": "0x657008",
+"name": "Pierre vitesse"
+},
+{
+"off": "0x657030",
+"name": "Stein des Tempos"
+},
+{
+"off": "0x657050",
+"name": "Piedra velocidad"
+},
+{
+"off": "0x657158",
+"name": "Stone of Luck"
+},
+{
+"off": "0x657168",
+"name": "Pierre chance"
+},
+{
+"off": "0x657178",
+"name": "Pietra fortuna"
+},
+{
+"off": "0x6571b0",
+"name": "Piedra de suerte"
+},
+{
+"off": "0x6573d8",
+"name": "Window Set 1"
+},
+{
+"off": "0x657400",
+"name": "Set di finestre 1"
+},
+{
+"off": "0x657418",
+"name": "Fensterset 1"
+},
+{
+"off": "0x657428",
+"name": "Set ventana 1"
+},
+{
+"off": "0x657498",
+"name": "Ogg. Finestre"
+},
+{
+"off": "0x657508",
+"name": "Window Set 2"
+},
+{
+"off": "0x657530",
+"name": "Set di finestre 2"
+},
+{
+"off": "0x657548",
+"name": "Fensterset 2"
+},
+{
+"off": "0x657558",
+"name": "Set ventana 2"
+},
+{
+"off": "0x657568",
+"name": "Window Set 3"
+},
+{
+"off": "0x657590",
+"name": "Set di finestre 3"
+},
+{
+"off": "0x6575a8",
+"name": "Fensterset 3"
+},
+{
+"off": "0x6575b8",
+"name": "Set ventana 3"
+},
+{
+"off": "0x6575c8",
+"name": "Window Set 4"
+},
+{
+"off": "0x6575f0",
+"name": "Set di finestre 4"
+},
+{
+"off": "0x657608",
+"name": "Fensterset 4"
+},
+{
+"off": "0x657618",
+"name": "Set ventana 4"
+},
+{
+"off": "0x657628",
+"name": "Window Set 5"
+},
+{
+"off": "0x657650",
+"name": "Set di finestre 5"
+},
+{
+"off": "0x657668",
+"name": "Fensterset 5"
+},
+{
+"off": "0x657678",
+"name": "Set ventana 5"
+},
+{
+"off": "0x657688",
+"name": "Window Set 6"
+},
+{
+"off": "0x6576b0",
+"name": "Set di finestre 6"
+},
+{
+"off": "0x6576c8",
+"name": "Fensterset 6"
+},
+{
+"off": "0x6576d8",
+"name": "Set ventana 6"
+},
+{
+"off": "0x6576e8",
+"name": "Window Set 7"
+},
+{
+"off": "0x657710",
+"name": "Set di finestre 7"
+},
+{
+"off": "0x657728",
+"name": "Fensterset 7"
+},
+{
+"off": "0x657738",
+"name": "Set ventana 7"
+},
+{
+"off": "0x657748",
+"name": "Window Set 8"
+},
+{
+"off": "0x657770",
+"name": "Set di finestre 8"
+},
+{
+"off": "0x657788",
+"name": "Fensterset 8"
+},
+{
+"off": "0x657798",
+"name": "Set ventana 8"
+},
+{
+"off": "0x6577a8",
+"name": "Sound Set 1"
+},
+{
+"off": "0x6577b8",
+"name": "Set di suoni 1"
+},
+{
+"off": "0x6577c8",
+"name": "Schallset 1"
+},
+{
+"off": "0x6577d8",
+"name": "Set sonidos 1"
+},
+{
+"off": "0x6578d8",
+"name": "Sound Set 2"
+},
+{
+"off": "0x6578e8",
+"name": "Set di suoni 2"
+},
+{
+"off": "0x6578f8",
+"name": "Schallset 2"
+},
+{
+"off": "0x657908",
+"name": "Set sonidos 2"
+},
+{
+"off": "0x657918",
+"name": "Sound Set 3"
+},
+{
+"off": "0x657928",
+"name": "Set di suoni 3"
+},
+{
+"off": "0x657938",
+"name": "Schallset 3"
+},
+{
+"off": "0x657948",
+"name": "Set sonidos 3"
+},
+{
+"off": "0x657958",
+"name": "Sound Set 4"
+},
+{
+"off": "0x657968",
+"name": "Set di suoni 4"
+},
+{
+"off": "0x657978",
+"name": "Schallset 4"
+},
+{
+"off": "0x657988",
+"name": "Set sonidos 4"
+},
+{
+"off": "0x657998",
+"name": "Sound Set 5"
+},
+{
+"off": "0x6579a8",
+"name": "Set di suoni 5"
+},
+{
+"off": "0x6579b8",
+"name": "Schallset 5"
+},
+{
+"off": "0x6579c8",
+"name": "Set sonidos 5"
+},
+{
+"off": "0x6579d8",
+"name": "Voice Set 1"
+},
+{
+"off": "0x6579e8",
+"name": "Set di voci 1"
+},
+{
+"off": "0x6579f8",
+"name": "Stimmenset 1"
+},
+{
+"off": "0x657a08",
+"name": "Set voz 1"
+},
+{
+"off": "0x657b00",
+"name": "Voice Set 2"
+},
+{
+"off": "0x657b10",
+"name": "Set di voci 2"
+},
+{
+"off": "0x657b20",
+"name": "Stimmenset 2"
+},
+{
+"off": "0x657b30",
+"name": "Set voz 2"
+},
+{
+"off": "0x657b40",
+"name": "Voice Set 3"
+},
+{
+"off": "0x657b50",
+"name": "Set di voci 3"
+},
+{
+"off": "0x657b60",
+"name": "Stimmenset 3"
+},
+{
+"off": "0x657b70",
+"name": "Set voz 3"
+},
+{
+"off": "0x657b80",
+"name": "Voice Set 4"
+},
+{
+"off": "0x657b90",
+"name": "Set di voci 4"
+},
+{
+"off": "0x657ba0",
+"name": "Stimmenset 4"
+},
+{
+"off": "0x657bb0",
+"name": "Set voz 4"
+},
+{
+"off": "0x657bc0",
+"name": "Voice Set 5"
+},
+{
+"off": "0x657bd0",
+"name": "Set di voci 5"
+},
+{
+"off": "0x657be0",
+"name": "Stimmenset 5"
+},
+{
+"off": "0x657bf0",
+"name": "Set voz 5"
+},
+{
+"off": "0x657ef8",
+"name": "Calamaro"
+},
+{
+"off": "0x657f90",
+"name": "Zutat, Koch gesucht..."
+},
+{
+"off": "0x657fd0",
+"name": "Tintenfisch"
+},
+{
+"off": "0x657fe0",
+"name": "Thunfisch"
+},
+{
+"off": "0x657ff0",
+"name": "Turbine Shells"
+},
+{
+"off": "0x658000",
+"name": "Coquilles turban"
+},
+{
+"off": "0x658018",
+"name": "Chiocciole"
+},
+{
+"off": "0x658030",
+"name": "Turbanschnecken"
+},
+{
+"off": "0x658040",
+"name": "Conchas de turbina"
+},
+{
+"off": "0x658058",
+"name": "Mollusco"
+},
+{
+"off": "0x658068",
+"name": "Granchio"
+},
+{
+"off": "0x658078",
+"name": "Cangrejo"
+},
+{
+"off": "0x658088",
+"name": "Truffles"
+},
+{
+"off": "0x658098",
+"name": "Matsutake"
+},
+{
+"off": "0x6580a8",
+"name": "Marbled Beef"
+},
+{
+"off": "0x6580d0",
+"name": "Carne marmorizzata"
+},
+{
+"off": "0x6580f0",
+"name": "Marm. Rindfleisch"
+},
+{
+"off": "0x658110",
+"name": "Ternera con grasa"
+},
+{
+"off": "0x658130",
+"name": "Premium Chicken"
+},
+{
+"off": "0x658160",
+"name": "Pollo prima qual."
+},
+{
+"off": "0x658178",
+"name": "Luxus-Huhn"
+},
+{
+"off": "0x658190",
+"name": "Pollo de primera"
+},
+{
+"off": "0x6581a8",
+"name": "Quality Sake"
+},
+{
+"off": "0x6581d8",
+"name": "Ottimo sake"
+},
+{
+"off": "0x658200",
+"name": "Sake de calidad"
+},
+{
+"off": "0x658210",
+"name": "Baby Carp"
+},
+{
+"off": "0x658230",
+"name": "Piccola carpa"
+},
+{
+"off": "0x658240",
+"name": "Junger Karpfen"
+},
+{
+"off": "0x658330",
+"name": "Baby Salmon"
+},
+{
+"off": "0x658350",
+"name": "Piccolo salmone"
+},
+{
+"off": "0x658360",
+"name": "Junger Lachs"
+},
+{
+"off": "0x658390",
+"name": "Baby Puffer Fish"
+},
+{
+"off": "0x6583d0",
+"name": "Piccolo p. palla"
+},
+{
+"off": "0x6583f0",
+"name": "Junger Kugelfisch"
+},
+{
+"off": "0x658428",
+"name": "Baby Eel"
+},
+{
+"off": "0x658450",
+"name": "Piccola anguilla"
+},
+{
+"off": "0x658468",
+"name": "Junger Aal"
+},
+{
+"off": "0x658498",
+"name": "Baby Sturgeon"
+},
+{
+"off": "0x6584c0",
+"name": "Piccolo storione"
+},
+{
+"off": "0x658510",
+"name": "Tomato Seedling"
+},
+{
+"off": "0x658520",
+"name": "Plantule tomate"
+},
+{
+"off": "0x658530",
+"name": "Piantina pomodori"
+},
+{
+"off": "0x658548",
+"name": "Tomatenpflanze"
+},
+{
+"off": "0x658560",
+"name": "Semillero tomate"
+},
+{
+"off": "0x658640",
+"name": "Melon Seedling"
+},
+{
+"off": "0x658650",
+"name": "Plantule melon"
+},
+{
+"off": "0x658660",
+"name": "Piantina di melone"
+},
+{
+"off": "0x658678",
+"name": "Melonenpflanze"
+},
+{
+"off": "0x6586a8",
+"name": "Grape Seedling"
+},
+{
+"off": "0x6586b8",
+"name": "Plantule vigne"
+},
+{
+"off": "0x6586c8",
+"name": "Piantina d'uva"
+},
+{
+"off": "0x6586d8",
+"name": "Traubenpflanze"
+},
+{
+"off": "0x6586f0",
+"name": "Semillero de uva"
+},
+{
+"off": "0x658708",
+"name": "Onion Seedling"
+},
+{
+"off": "0x658720",
+"name": "Plantule oignon"
+},
+{
+"off": "0x658730",
+"name": "Piantina cipolla"
+},
+{
+"off": "0x658748",
+"name": "Zwiebelpflanze"
+},
+{
+"off": "0x658760",
+"name": "Semillero cebolla"
+},
+{
+"off": "0x658780",
+"name": "Cabbage Seedling"
+},
+{
+"off": "0x658798",
+"name": "Plantule choux"
+},
+{
+"off": "0x6587b0",
+"name": "Piantina di cavolo"
+},
+{
+"off": "0x6587c8",
+"name": "Kohlpflanze"
+},
+{
+"off": "0x6587e0",
+"name": "Semillero de col"
+},
+{
+"off": "0x658800",
+"name": "Potato Seedling"
+},
+{
+"off": "0x658810",
+"name": "Plantule patate"
+},
+{
+"off": "0x658820",
+"name": "Piantina di patate"
+},
+{
+"off": "0x658840",
+"name": "Kartoffelpflanze"
+},
+{
+"off": "0x658860",
+"name": "Semillero patata"
+},
+{
+"off": "0x658880",
+"name": "Carrot Seedling"
+},
+{
+"off": "0x658890",
+"name": "Plantule carotte"
+},
+{
+"off": "0x6588b0",
+"name": "Piantina di carote"
+},
+{
+"off": "0x6588d0",
+"name": "Karottenpflanze"
+},
+{
+"off": "0x6588e0",
+"name": "Semill. zanahoria"
+},
+{
+"off": "0x658900",
+"name": "RedPepper Seedling"
+},
+{
+"off": "0x658920",
+"name": "Plantule poivron"
+},
+{
+"off": "0x658940",
+"name": "Piantina peperoni"
+},
+{
+"off": "0x658960",
+"name": "Rote-Paprika-Pfl."
+},
+{
+"off": "0x658980",
+"name": "Semill. pim. rojo"
+},
+{
+"off": "0x6589d4",
+"name": " Cn"
+},
+{
+"off": "0x6589d8",
+"name": "(Cn"
+},
+{
+"off": "0x6589f0",
+"name": "0Cn"
+},
+{
+"off": "0x6589f4",
+"name": "8Cn"
+},
+{
+"off": "0x6589f8",
+"name": "@Cn"
+},
+{
+"off": "0x658a00",
+"name": "HCn"
+},
+{
+"off": "0x658a18",
+"name": "PCn"
+},
+{
+"off": "0x658a1c",
+"name": "XCn"
+},
+{
+"off": "0x658a20",
+"name": "`Cn"
+},
+{
+"off": "0x658a28",
+"name": "hCn"
+},
+{
+"off": "0x658a68",
+"name": "pCn"
+},
+{
+"off": "0x658a6c",
+"name": "xCn"
+},
+{
+"off": "0x658d88",
+"name": "Old Book 1"
+},
+{
+"off": "0x658d98",
+"name": "Vieux livre 1"
+},
+{
+"off": "0x658da8",
+"name": "Libro antico 1"
+},
+{
+"off": "0x658db8",
+"name": "Altes Buch 1"
+},
+{
+"off": "0x658dd0",
+"name": "Libro antiguo 1"
+},
+{
+"off": "0x658e38",
+"name": "Libro vecchio"
+},
+{
+"off": "0x658ea8",
+"name": "Old Book 2"
+},
+{
+"off": "0x658eb8",
+"name": "Vieux livre 2"
+},
+{
+"off": "0x658ec8",
+"name": "Libro antico 2"
+},
+{
+"off": "0x658ed8",
+"name": "Altes Buch 2"
+},
+{
+"off": "0x658ef0",
+"name": "Libro antiguo 2"
+},
+{
+"off": "0x658f00",
+"name": "Old Book 3"
+},
+{
+"off": "0x658f10",
+"name": "Vieux livre 3"
+},
+{
+"off": "0x658f20",
+"name": "Libro antico 3"
+},
+{
+"off": "0x658f30",
+"name": "Altes Buch 3"
+},
+{
+"off": "0x658f40",
+"name": "Libro antiguo 3"
+},
+{
+"off": "0x658f50",
+"name": "Old Book 4"
+},
+{
+"off": "0x658f60",
+"name": "Vieux livre 4"
+},
+{
+"off": "0x658f70",
+"name": "Libro antico 4"
+},
+{
+"off": "0x658f80",
+"name": "Altes Buch 4"
+},
+{
+"off": "0x658f90",
+"name": "Libro antiguo 4"
+},
+{
+"off": "0x658fa0",
+"name": "Old Book 5"
+},
+{
+"off": "0x658fb0",
+"name": "Vieux livre 5"
+},
+{
+"off": "0x658fc0",
+"name": "Libro antico 5"
+},
+{
+"off": "0x658fd0",
+"name": "Altes Buch 5"
+},
+{
+"off": "0x658fe0",
+"name": "Libro antiguo 5"
+},
+{
+"off": "0x658ff0",
+"name": "Old Book 6"
+},
+{
+"off": "0x659000",
+"name": "Vieux livre 6"
+},
+{
+"off": "0x659010",
+"name": "Libro antico 6"
+},
+{
+"off": "0x659020",
+"name": "Altes Buch 6"
+},
+{
+"off": "0x659030",
+"name": "Libro antiguo 6"
+},
+{
+"off": "0x659040",
+"name": "Old Book 7"
+},
+{
+"off": "0x659050",
+"name": "Vieux livre 7"
+},
+{
+"off": "0x659060",
+"name": "Libro antico 7"
+},
+{
+"off": "0x659070",
+"name": "Altes Buch 7"
+},
+{
+"off": "0x659080",
+"name": "Libro antiguo 7"
+},
+{
+"off": "0x659090",
+"name": "Old Book 8"
+},
+{
+"off": "0x6590a0",
+"name": "Vieux livre 8"
+},
+{
+"off": "0x6590b0",
+"name": "Libro antico 8"
+},
+{
+"off": "0x6590c0",
+"name": "Altes Buch 8"
+},
+{
+"off": "0x6590d0",
+"name": "Libro antiguo 8"
+},
+{
+"off": "0x6590e0",
+"name": "Old Book 9"
+},
+{
+"off": "0x6590f0",
+"name": "Vieux livre 9"
+},
+{
+"off": "0x659100",
+"name": "Libro antico 9"
+},
+{
+"off": "0x659110",
+"name": "Altes Buch 9"
+},
+{
+"off": "0x659120",
+"name": "Libro antiguo 9"
+},
+{
+"off": "0x659130",
+"name": "Old Book 10"
+},
+{
+"off": "0x659140",
+"name": "Vieux livre 10"
+},
+{
+"off": "0x659150",
+"name": "Libro antico 10"
+},
+{
+"off": "0x659160",
+"name": "Altes Buch 10"
+},
+{
+"off": "0x659170",
+"name": "Libro antiguo 10"
+},
+{
+"off": "0x659188",
+"name": "Old Book 11"
+},
+{
+"off": "0x659198",
+"name": "Vieux livre 11"
+},
+{
+"off": "0x6591b0",
+"name": "Libro antico 11"
+},
+{
+"off": "0x6591c0",
+"name": "Altes Buch 11"
+},
+{
+"off": "0x6591d0",
+"name": "Libro antiguo 11"
+},
+{
+"off": "0x6591e8",
+"name": "Old Book 12"
+},
+{
+"off": "0x6591f8",
+"name": "Vieux livre 12"
+},
+{
+"off": "0x659210",
+"name": "Libro antico 12"
+},
+{
+"off": "0x659220",
+"name": "Altes Buch 12"
+},
+{
+"off": "0x659230",
+"name": "Libro antiguo 12"
+},
+{
+"off": "0x659248",
+"name": "Old Book 13"
+},
+{
+"off": "0x659258",
+"name": "Vieux livre 13"
+},
+{
+"off": "0x659270",
+"name": "Libro antico 13"
+},
+{
+"off": "0x659280",
+"name": "Altes Buch 13"
+},
+{
+"off": "0x659290",
+"name": "Libro antiguo 13"
+},
+{
+"off": "0x6592a8",
+"name": "Strange Book"
+},
+{
+"off": "0x6592c8",
+"name": "Libro strano"
+},
+{
+"off": "0x6592e0",
+"name": "Sonderbares Buch"
+},
+{
+"off": "0x659748",
+"name": "Zucchero"
+},
+{
+"off": "0x6597c0",
+"name": "Oggetto commerc."
+},
+{
+"off": "0x659840",
+"name": "Soybeans"
+},
+{
+"off": "0x659850",
+"name": "Semi di soia"
+},
+{
+"off": "0x659860",
+"name": "Sojabohnen"
+},
+{
+"off": "0x659870",
+"name": "Vegetables"
+},
+{
+"off": "0x659880",
+"name": "Handicrafts"
+},
+{
+"off": "0x659890",
+"name": "Artisanat"
+},
+{
+"off": "0x6598a0",
+"name": "Prod. artigianato"
+},
+{
+"off": "0x6598c8",
+"name": "Especias"
+},
+{
+"off": "0x6598e0",
+"name": "Gold and Silver"
+},
+{
+"off": "0x6598f0",
+"name": "Or et argent"
+},
+{
+"off": "0x659900",
+"name": "Oro e argento"
+},
+{
+"off": "0x659910",
+"name": "Gold und Silber"
+},
+{
+"off": "0x659920",
+"name": "Oro y plata"
+},
+{
+"off": "0x659930",
+"name": "Miso/Soy Sauce"
+},
+{
+"off": "0x659940",
+"name": "Sauce soja/miso"
+},
+{
+"off": "0x659950",
+"name": "Miso/Salsa di soia"
+},
+{
+"off": "0x659970",
+"name": "Miso/Soja-Sauce"
+},
+{
+"off": "0x659980",
+"name": "Salsa de miso/soja"
+},
+{
+"off": "0x659998",
+"name": "Gold Craftwork"
+},
+{
+"off": "0x6599c0",
+"name": "Artigianato in oro"
+},
+{
+"off": "0x6599d8",
+"name": "Goldkunstwerk"
+},
+{
+"off": "0x659ab8",
+"name": " Dn"
+},
+{
+"off": "0x659abc",
+"name": "(Dn"
+},
+{
+"off": "0x659ac0",
+"name": "0Dn"
+},
+{
+"off": "0x659ad8",
+"name": "8Dn"
+},
+{
+"off": "0x659adc",
+"name": "@Dn"
+},
+{
+"off": "0x659ae0",
+"name": "HDn"
+},
+{
+"off": "0x659ae4",
+"name": "PDn"
+},
+{
+"off": "0x659ae8",
+"name": "XDn"
+},
+{
+"off": "0x659b00",
+"name": "`Dn"
+},
+{
+"off": "0x659b04",
+"name": "hDn"
+},
+{
+"off": "0x659b08",
+"name": "pDn"
+},
+{
+"off": "0x659b0c",
+"name": "xDn"
+},
+{
+"off": "0x659bf8",
+"name": " En"
+},
+{
+"off": "0x659bfc",
+"name": "(En"
+},
+{
+"off": "0x659c00",
+"name": "0En"
+},
+{
+"off": "0x659c40",
+"name": "8En"
+},
+{
+"off": "0x659c44",
+"name": "@En"
+},
+{
+"off": "0x659c48",
+"name": "HEn"
+},
+{
+"off": "0x659c4c",
+"name": "PEn"
+},
+{
+"off": "0x659c50",
+"name": "XEn"
+},
+{
+"off": "0x659c90",
+"name": "`En"
+},
+{
+"off": "0x659c94",
+"name": "hEn"
+},
+{
+"off": "0x659c98",
+"name": "pEn"
+},
+{
+"off": "0x659c9c",
+"name": "xEn"
+},
+{
+"off": "0x659d30",
+"name": "? Large Statue"
+},
+{
+"off": "0x659d40",
+"name": "? Grosse statue"
+},
+{
+"off": "0x659d50",
+"name": "Grande statua ?"
+},
+{
+"off": "0x659d70",
+"name": "? Estatua grande"
+},
+{
+"off": "0x659e80",
+"name": "Dragon God Statue"
+},
+{
+"off": "0x659ea0",
+"name": "Statue dieu dragon"
+},
+{
+"off": "0x659ec0",
+"name": "Statua oro drago"
+},
+{
+"off": "0x659ee0",
+"name": "Drachengott-Statue"
+},
+{
+"off": "0x659ff8",
+"name": "Goddess Statue"
+},
+{
+"off": "0x65a018",
+"name": "Statua di dea"
+},
+{
+"off": "0x65a050",
+"name": "Estatua de diosa"
+},
+{
+"off": "0x65a110",
+"name": "Queen Statue"
+},
+{
+"off": "0x65a120",
+"name": "Statue Reine"
+},
+{
+"off": "0x65a130",
+"name": "Statua Regina"
+},
+{
+"off": "0x65a160",
+"name": "Estatua de Reina"
+},
+{
+"off": "0x65a268",
+"name": "Knight Statue"
+},
+{
+"off": "0x65a280",
+"name": "Statue chevalier"
+},
+{
+"off": "0x65a2a0",
+"name": "Statua Cavaliere"
+},
+{
+"off": "0x65a2b8",
+"name": "Ritter-Statue"
+},
+{
+"off": "0x65a2d0",
+"name": "Estatua caballero"
+},
+{
+"off": "0x65a3e0",
+"name": "? Statue"
+},
+{
+"off": "0x65a3f0",
+"name": "Statua ?"
+},
+{
+"off": "0x65a400",
+"name": "? Estatua"
+},
+{
+"off": "0x65a4a0",
+"name": "Angel Statue"
+},
+{
+"off": "0x65a4b0",
+"name": "Statue ange"
+},
+{
+"off": "0x65a4c0",
+"name": "Statua di angelo"
+},
+{
+"off": "0x65a4d8",
+"name": "Engel-Statue"
+},
+{
+"off": "0x65a5d0",
+"name": "Demon Statue"
+},
+{
+"off": "0x65a5f0",
+"name": "Statua di demone"
+},
+{
+"off": "0x65a620",
+"name": "Estatua demonio"
+},
+{
+"off": "0x65a6f8",
+"name": "Peeing Boy"
+},
+{
+"off": "0x65a840",
+"name": "Cursed Statue"
+},
+{
+"off": "0x65a850",
+"name": "Statue maudite"
+},
+{
+"off": "0x65a860",
+"name": "Statua maledetta"
+},
+{
+"off": "0x65a880",
+"name": "Verfluchte Statue"
+},
+{
+"off": "0x65a8a0",
+"name": "Estatua encantada"
+},
+{
+"off": "0x65a9a8",
+"name": "? Painting"
+},
+{
+"off": "0x65a9b8",
+"name": "? Tableau"
+},
+{
+"off": "0x65a9c8",
+"name": "Dipinto ?"
+},
+{
+"off": "0x65a9e8",
+"name": "? Pintura"
+},
+{
+"off": "0x65aac0",
+"name": "\"Daybreak\""
+},
+{
+"off": "0x65aad0",
+"name": "\"Lever du jour\""
+},
+{
+"off": "0x65aaf8",
+"name": "Amanecer"
+},
+{
+"off": "0x65aba0",
+"name": "Cuadro de un amanecer"
+},
+{
+"off": "0x65abc8",
+"name": "\"Tramonto\""
+},
+{
+"off": "0x65abf8",
+"name": "Anochecer"
+},
+{
+"off": "0x65acd0",
+"name": "\"Ruines\""
+},
+{
+"off": "0x65ace0",
+"name": "\"Rovine\""
+},
+{
+"off": "0x65acf0",
+"name": "\"Ruinen\""
+},
+{
+"off": "0x65ada0",
+"name": "\"Queen's Knights\""
+},
+{
+"off": "0x65adb8",
+"name": "\"Chevaliers\""
+},
+{
+"off": "0x65add0",
+"name": "\"Cavalieri Regina\""
+},
+{
+"off": "0x65ade8",
+"name": "\"Ritter\""
+},
+{
+"off": "0x65ae00",
+"name": "Caballeros Reina"
+},
+{
+"off": "0x65af10",
+"name": "\"Cavalry Soldier\""
+},
+{
+"off": "0x65af28",
+"name": "\"Cavalier\""
+},
+{
+"off": "0x65af38",
+"name": "\"Cavaliere\""
+},
+{
+"off": "0x65af50",
+"name": "\"Kavalleriesoldat\""
+},
+{
+"off": "0x65b080",
+"name": "\"The Sacred Games\""
+},
+{
+"off": "0x65b0c0",
+"name": "\"I Giochi sacri\""
+},
+{
+"off": "0x65b0e0",
+"name": "\"Heilige Spiele\""
+},
+{
+"off": "0x65b100",
+"name": "Juegos Sagrados"
+},
+{
+"off": "0x65b1e8",
+"name": "\"The Smile\""
+},
+{
+"off": "0x65b1f8",
+"name": "\"Le sourire\""
+},
+{
+"off": "0x65b208",
+"name": "\"Il sorriso\""
+},
+{
+"off": "0x65b228",
+"name": "La sonrisa"
+},
+{
+"off": "0x65b328",
+"name": "Graffiti"
+},
+{
+"off": "0x65b3b0",
+"name": "Graffiti, wer war das?"
+},
+{
+"off": "0x65b4c0",
+"name": "Porcelain Pot"
+},
+{
+"off": "0x65b4d0",
+"name": "Vase porcelaine"
+},
+{
+"off": "0x65b4e0",
+"name": "Vaso di porcellana"
+},
+{
+"off": "0x65b4f8",
+"name": "Porzellanvase"
+},
+{
+"off": "0x65b530",
+"name": "A white porcelain pot"
+},
+{
+"off": "0x65b5e0",
+"name": "Gentian Pot"
+},
+{
+"off": "0x65b5f0",
+"name": "Vase gentiane"
+},
+{
+"off": "0x65b600",
+"name": "Vaso di genziane"
+},
+{
+"off": "0x65b618",
+"name": "Enzianvase"
+},
+{
+"off": "0x65b740",
+"name": "Gold Pot"
+},
+{
+"off": "0x65b750",
+"name": "Vaso d'oro"
+},
+{
+"off": "0x65b770",
+"name": "Olla de oro"
+},
+{
+"off": "0x65b780",
+"name": "A flamboyant golden pot"
+},
+{
+"off": "0x65b820",
+"name": "Celadon Pot"
+},
+{
+"off": "0x65b840",
+"name": "Vaso verde chiaro"
+},
+{
+"off": "0x65b980",
+"name": "Karaya Urn"
+},
+{
+"off": "0x65b990",
+"name": "Urne Karaya"
+},
+{
+"off": "0x65b9a0",
+"name": "Urna Karaya"
+},
+{
+"off": "0x65b9b0",
+"name": "Karaya-Urne"
+},
+{
+"off": "0x65b9c0",
+"name": "Urna de Karaya"
+},
+{
+"off": "0x65baa8",
+"name": "Rose Pot"
+},
+{
+"off": "0x65bab8",
+"name": "Vase rose"
+},
+{
+"off": "0x65bac8",
+"name": "Vaso di rose"
+},
+{
+"off": "0x65bad8",
+"name": "Rosenvase"
+},
+{
+"off": "0x65bb00",
+"name": "A pot with a rose design"
+},
+{
+"off": "0x65bbd0",
+"name": "Pot of Failure"
+},
+{
+"off": "0x65bbf0",
+"name": "Vaso Fallimento"
+},
+{
+"off": "0x65bc00",
+"name": "Versagertopf"
+},
+{
+"off": "0x65bc10",
+"name": "Olla de fracaso"
+},
+{
+"off": "0x65bcf8",
+"name": "? Bonsai"
+},
+{
+"off": "0x65bd18",
+"name": "Bonsai ?"
+},
+{
+"off": "0x65be00",
+"name": "Pine Bonsai"
+},
+{
+"off": "0x65be20",
+"name": "Bonsai di pino"
+},
+{
+"off": "0x65be30",
+"name": "Pinienbonsai"
+},
+{
+"off": "0x65be90",
+"name": "Un magnifico pino bonsai"
+},
+{
+"off": "0x65bef0",
+"name": "Bamboo Bonsai"
+},
+{
+"off": "0x65bf20",
+"name": "Bambusbonsai"
+},
+{
+"off": "0x65bfe0",
+"name": "Plum Bonsai"
+}
+],
+"enemies": [
+{
+"off": "0x65c000",
+"name": "Bonsai di prugno"
+},
+{
+"off": "0x65c018",
+"name": "Pflaumenbonsai"
+},
+{
+"off": "0x65c0f0",
+"name": "Cherry Bonsai"
+},
+{
+"off": "0x65c110",
+"name": "Bonsai di ciliegio"
+},
+{
+"off": "0x65c128",
+"name": "Kirschbonsai"
+},
+{
+"off": "0x65c200",
+"name": "Potted Plant"
+},
+{
+"off": "0x65c210",
+"name": "Plante verte"
+},
+{
+"off": "0x65c220",
+"name": "Pianta in vaso"
+},
+{
+"off": "0x65c230",
+"name": "Topfpflanze"
+},
+{
+"off": "0x65c240",
+"name": "Planta en maceta"
+},
+{
+"off": "0x65c260",
+"name": "A nameless potted plant"
+},
+{
+"off": "0x65ccc0",
+"name": "Devil Beads"
+},
+{
+"off": "0x65ccd0",
+"name": "Perles diaboliques"
+},
+{
+"off": "0x65ccf0",
+"name": "Perline da demone"
+},
+{
+"off": "0x65cd08",
+"name": "Teufelsperlen"
+},
+{
+"off": "0x65cd20",
+"name": "Cuentas de demonio"
+},
+{
+"off": "0x65cd60",
+"name": "Pour $N, dans le bain ?"
+},
+{
+"off": "0x65cde0",
+"name": "Creeper Beads"
+},
+{
+"off": "0x65cdf0",
+"name": "Perles Carnivora"
+},
+{
+"off": "0x65ce10",
+"name": "Perline rampicante"
+},
+{
+"off": "0x65ce28",
+"name": "Kriecherperlen"
+},
+{
+"off": "0x65ce40",
+"name": "Cuentas enredadera"
+},
+{
+"off": "0x65ce60",
+"name": "Pale Moon Beads"
+},
+{
+"off": "0x65ce90",
+"name": "Perl. Luna pallida"
+},
+{
+"off": "0x65cea8",
+"name": "Vollmondperlen"
+},
+{
+"off": "0x65ced8",
+"name": "Ol' Tree Beads"
+},
+{
+"off": "0x65cef0",
+"name": "Perles vieil arbre"
+},
+{
+"off": "0x65cf10",
+"name": "Perl. Alb. vecchio"
+},
+{
+"off": "0x65cf30",
+"name": "Alter Baum-Perlen"
+},
+{
+"off": "0x65cf70",
+"name": "Milk Bath Beads"
+},
+{
+"off": "0x65cf80",
+"name": "Perles bain lait"
+},
+{
+"off": "0x65cfa0",
+"name": "Perle bagno latte"
+},
+{
+"off": "0x65cfc0",
+"name": "Milchbadeperlen"
+},
+{
+"off": "0x65cfe8",
+"name": "Toy Duckling"
+},
+{
+"off": "0x65cff8",
+"name": "Canard bain"
+},
+{
+"off": "0x65d008",
+"name": "Paperetta"
+},
+{
+"off": "0x65d018",
+"name": "Badeentchen"
+},
+{
+"off": "0x65d030",
+"name": "Patito de juguete"
+},
+{
+"off": "0x65d048",
+"name": "Toy Beaver"
+},
+{
+"off": "0x65d058",
+"name": "Castor peluche"
+},
+{
+"off": "0x65d070",
+"name": "Castoro giocattolo"
+},
+{
+"off": "0x65d088",
+"name": "Spielzeugbiber"
+},
+{
+"off": "0x65d0a0",
+"name": "Castor de juguete"
+},
+{
+"off": "0x65d0c0",
+"name": "Toy Dragon Horse"
+},
+{
+"off": "0x65d0e0",
+"name": "Drag-chev. peluche"
+},
+{
+"off": "0x65d100",
+"name": "Drago giocattolo"
+},
+{
+"off": "0x65d120",
+"name": "Spielzeugdrach.pf."
+},
+{
+"off": "0x65d140",
+"name": "Cab. drag. juguet."
+},
+{
+"off": "0x65d158",
+"name": "Sake Set"
+},
+{
+"off": "0x65d168",
+"name": "Set da sake"
+},
+{
+"off": "0x65d178",
+"name": "Sake-Set"
+},
+{
+"off": "0x65d188",
+"name": "Set de sake"
+},
+{
+"off": "0x65d198",
+"name": "Rose Petals"
+},
+{
+"off": "0x65d1b8",
+"name": "Petali di rosa"
+},
+{
+"off": "0x65d1f0",
+"name": "Toy Boat"
+},
+{
+"off": "0x65d200",
+"name": "Petit bateau"
+},
+{
+"off": "0x65d210",
+"name": "Barca giocattolo"
+},
+{
+"off": "0x65d228",
+"name": "Spielzeugboot"
+},
+{
+"off": "0x65d240",
+"name": "Barco de juguete"
+},
+{
+"off": "0x65d468",
+"name": "Holly Boy"
+},
+{
+"off": "0x65d478",
+"name": "Jeune houx"
+},
+{
+"off": "0x65d490",
+"name": "Ragazzo agrifoglio"
+},
+{
+"off": "0x65d4b0",
+"name": "Stechpalmen-Junge"
+},
+{
+"off": "0x65d4c8",
+"name": "Chico de acebo"
+},
+{
+"off": "0x65d4d8",
+"name": "Holly Elf"
+},
+{
+"off": "0x65d4e8",
+"name": "Elfe houx"
+},
+{
+"off": "0x65d500",
+"name": "Elfo agrifoglio"
+},
+{
+"off": "0x65d510",
+"name": "Stechpalmen-Elfe"
+},
+{
+"off": "0x65d528",
+"name": "Elfo de acebo"
+},
+{
+"off": "0x65d538",
+"name": "Hairball"
+},
+{
+"off": "0x65d548",
+"name": "Boule de poils"
+},
+{
+"off": "0x65d558",
+"name": "Palla di pelo"
+},
+{
+"off": "0x65d578",
+"name": "Bola de pelo"
+},
+{
+"off": "0x65d588",
+"name": "Blade Bunny"
+},
+{
+"off": "0x65d5c0",
+"name": "Coniglio tagliente"
+},
+{
+"off": "0x65d5d8",
+"name": "Messer-Hase"
+},
+{
+"off": "0x65d5e8",
+"name": "Conejo de hoja"
+},
+{
+"off": "0x65d5f8",
+"name": "Golden Bunny"
+},
+{
+"off": "0x65d608",
+"name": "Lapin en or"
+},
+{
+"off": "0x65d620",
+"name": "Coniglio dorato"
+},
+{
+"off": "0x65d630",
+"name": "Goldener Hase"
+},
+{
+"off": "0x65d640",
+"name": "Conejo dorado"
+},
+{
+"off": "0x65d650",
+"name": "Dark Bunny"
+},
+{
+"off": "0x65d680",
+"name": "Coniglio oscuro"
+},
+{
+"off": "0x65d690",
+"name": "Dunkler Hase"
+},
+{
+"off": "0x65d6a0",
+"name": "Conejo oscuro"
+},
+{
+"off": "0x65d6b0",
+"name": "Killer Bunny"
+},
+{
+"off": "0x65d6c0",
+"name": "Lapin tueur"
+},
+{
+"off": "0x65d6d0",
+"name": "Coniglio killer"
+},
+{
+"off": "0x65d6e0",
+"name": "Killer-Hase"
+},
+{
+"off": "0x65d6f0",
+"name": "Conejo asesino"
+},
+{
+"off": "0x65d700",
+"name": "Carnivora"
+},
+{
+"off": "0x65d710",
+"name": "Rampicante"
+},
+{
+"off": "0x65d720",
+"name": "Wilder Spross"
+},
+{
+"off": "0x65d730",
+"name": "Enredadera"
+},
+{
+"off": "0x65d740",
+"name": "Purple Creeper"
+},
+{
+"off": "0x65d750",
+"name": "Carnivora pourpre"
+},
+{
+"off": "0x65d770",
+"name": "Rampicante viola"
+},
+{
+"off": "0x65d788",
+"name": "Purpurspross"
+},
+{
+"off": "0x65d7a0",
+"name": "Enredadera morada"
+},
+{
+"off": "0x65d7b8",
+"name": "Armadillon"
+},
+{
+"off": "0x65d7c8",
+"name": "Armadillo"
+},
+{
+"off": "0x65d7d8",
+"name": "Rockadillo"
+},
+{
+"off": "0x65d7e8",
+"name": "Zombie Snail"
+},
+{
+"off": "0x65d800",
+"name": "Escargot zombie"
+},
+{
+"off": "0x65d810",
+"name": "Lumaca zombie"
+},
+{
+"off": "0x65d820",
+"name": "Zombie-Schnecke"
+},
+{
+"off": "0x65d830",
+"name": "Caracol zombi"
+},
+{
+"off": "0x65d840",
+"name": "DoReMi Elf"
+},
+{
+"off": "0x65d860",
+"name": "Elfo DoReMi"
+},
+{
+"off": "0x65d870",
+"name": "DoReMi-Elfen"
+},
+{
+"off": "0x65d880",
+"name": "Wild Boar"
+},
+{
+"off": "0x65d890",
+"name": "Sanglier"
+},
+{
+"off": "0x65d8a0",
+"name": "Cinghiale"
+},
+{
+"off": "0x65d8b0",
+"name": "Wilder Eber"
+},
+{
+"off": "0x65d8d0",
+"name": "Razorback"
+},
+{
+"off": "0x65d8e0",
+"name": "Dotranchan"
+},
+{
+"off": "0x65d8f0",
+"name": "Maiale selvatico"
+},
+{
+"off": "0x65d908",
+"name": "Skeleton"
+},
+{
+"off": "0x65d918",
+"name": "Squelette"
+},
+{
+"off": "0x65d928",
+"name": "Scheletro"
+},
+{
+"off": "0x65d938",
+"name": "Esqueleto"
+},
+{
+"off": "0x65d948",
+"name": "Bone Soldier"
+},
+{
+"off": "0x65d958",
+"name": "Soldat en os"
+},
+{
+"off": "0x65d968",
+"name": "Soldato d'ossa"
+},
+{
+"off": "0x65d978",
+"name": "Knochensoldat"
+},
+{
+"off": "0x65d990",
+"name": "Soldado de hueso"
+},
+{
+"off": "0x65d9a8",
+"name": "Skull Army"
+},
+{
+"off": "0x65d9d0",
+"name": "Esercito di teschi"
+},
+{
+"off": "0x65d9f0",
+"name": "Totenkopf-Armee"
+},
+{
+"off": "0x65da28",
+"name": "Todesfee"
+},
+{
+"off": "0x65da38",
+"name": "Ghost Armor"
+},
+{
+"off": "0x65da60",
+"name": "Corazza spettrale"
+},
+{
+"off": "0x65da78",
+"name": "Geisterpanzer"
+},
+{
+"off": "0x65da90",
+"name": "Armadura fantasma"
+},
+{
+"off": "0x65daa8",
+"name": "Terrible Armor"
+},
+{
+"off": "0x65dac0",
+"name": "Armure terrible"
+},
+{
+"off": "0x65dad0",
+"name": "Corazza terribile"
+},
+{
+"off": "0x65daf0",
+"name": "Schreckenspanzer"
+},
+{
+"off": "0x65db10",
+"name": "Armadura terrible"
+},
+{
+"off": "0x65db28",
+"name": "Terror Armor"
+},
+{
+"off": "0x65db40",
+"name": "Armure de terreur"
+},
+{
+"off": "0x65db60",
+"name": "Corazza del terrore"
+},
+{
+"off": "0x65db78",
+"name": "Terrorpanzer"
+},
+{
+"off": "0x65db90",
+"name": "Armadura de terror"
+},
+{
+"off": "0x65dba8",
+"name": "Chien fou"
+},
+{
+"off": "0x65dbb8",
+"name": "Cane rabbioso"
+},
+{
+"off": "0x65dbc8",
+"name": "Wilder Hund"
+},
+{
+"off": "0x65dbd8",
+"name": "Perro loco"
+},
+{
+"off": "0x65dbe8",
+"name": "Hellhound"
+},
+{
+"off": "0x65dc00",
+"name": "Chien des enfers"
+},
+{
+"off": "0x65dc20",
+"name": "Segugio infernale"
+},
+{
+"off": "0x65dc50",
+"name": "Perro endiablado"
+},
+{
+"off": "0x65dc68",
+"name": "Ghost Shield"
+},
+{
+"off": "0x65dca0",
+"name": "Scudo spettrale"
+},
+{
+"off": "0x65dcb0",
+"name": "Geisterschild"
+},
+{
+"off": "0x65dcc0",
+"name": "Escudo fantasma"
+},
+{
+"off": "0x65dcd0",
+"name": "Magic Shield"
+},
+{
+"off": "0x65dce0",
+"name": "Bouclier magique"
+},
+{
+"off": "0x65dcf8",
+"name": "Scudo magico"
+},
+{
+"off": "0x65dd08",
+"name": "Zauberschild"
+},
+{
+"off": "0x65dd28",
+"name": "Unicorn Zombie"
+},
+{
+"off": "0x65dd38",
+"name": "Zombie licorne"
+},
+{
+"off": "0x65dd50",
+"name": "Zombie unicorno"
+},
+{
+"off": "0x65dd60",
+"name": "Einhorn-Zombie"
+},
+{
+"off": "0x65dd70",
+"name": "Zombi unicornio"
+},
+{
+"off": "0x65dd80",
+"name": "Hellsteed"
+},
+{
+"off": "0x65dd90",
+"name": "Etalon des enfers"
+},
+{
+"off": "0x65ddb0",
+"name": "Destriero infernale"
+},
+{
+"off": "0x65dde0",
+"name": "Corcel endiablado"
+},
+{
+"off": "0x65ddf8",
+"name": "Mad Condor"
+},
+{
+"off": "0x65de08",
+"name": "Condor fou"
+},
+{
+"off": "0x65de18",
+"name": "Condor pazzo"
+},
+{
+"off": "0x65de28",
+"name": "Wilder Kondor"
+},
+{
+"off": "0x65de50",
+"name": "Killer Bald Eagle"
+},
+{
+"off": "0x65de68",
+"name": "Aigle tueur"
+},
+{
+"off": "0x65de80",
+"name": "Aquila bianca killer"
+},
+{
+"off": "0x65de98",
+"name": "Killer-Adler"
+},
+{
+"off": "0x65deb8",
+"name": "Condor Zombie"
+},
+{
+"off": "0x65dec8",
+"name": "Zombie condor"
+},
+{
+"off": "0x65ded8",
+"name": "Kondor-Zombie"
+},
+{
+"off": "0x65def8",
+"name": "Killer Tiger"
+},
+{
+"off": "0x65df08",
+"name": "Tigre tueur"
+},
+{
+"off": "0x65df18",
+"name": "Tigre killer"
+},
+{
+"off": "0x65df28",
+"name": "Killer-Tiger"
+},
+{
+"off": "0x65df38",
+"name": "Tigre asesino"
+},
+{
+"off": "0x65df48",
+"name": "Saber Fang"
+},
+{
+"off": "0x65df58",
+"name": "Croc-sabre"
+},
+{
+"off": "0x65df70",
+"name": "Zanna di sciabola"
+},
+{
+"off": "0x65dfa0",
+"name": "Colmillo de sable"
+},
+{
+"off": "0x65dfb8",
+"name": "Arrow Bat"
+},
+{
+"off": "0x65dff0",
+"name": "Pipistrello freccia"
+},
+{
+"off": "0x65e010",
+"name": "Pfeilfledermaus"
+},
+{
+"off": "0x65e038",
+"name": "Man-eating Bat"
+},
+{
+"off": "0x65e050",
+"name": "Chve-souris carnivore"
+},
+{
+"off": "0x65e070",
+"name": "Pipistrello carnivoro"
+},
+{
+"off": "0x65e0c8",
+"name": "Vampire Bat"
+},
+{
+"off": "0x65e0e0",
+"name": "Chauve-souris vampire"
+},
+{
+"off": "0x65e100",
+"name": "Pipistrello vampiro"
+},
+{
+"off": "0x65e120",
+"name": "Vampirfledermaus"
+},
+{
+"off": "0x65e158",
+"name": "Ogre Frog"
+},
+{
+"off": "0x65e170",
+"name": "Grenouille-ogre"
+},
+{
+"off": "0x65e180",
+"name": "Rana orco"
+},
+{
+"off": "0x65e190",
+"name": "Ogerfrosch"
+},
+{
+"off": "0x65e1a0",
+"name": "Rana ogro"
+},
+{
+"off": "0x65e1b0",
+"name": "Evil Toad"
+},
+{
+"off": "0x65e1d8",
+"name": "Rospo malefico"
+},
+{
+"off": "0x65e1f8",
+"name": "Sapo malvado"
+},
+{
+"off": "0x65e208",
+"name": "Horohoro"
+},
+{
+"off": "0x65e218",
+"name": "Flagello"
+},
+{
+"off": "0x65e228",
+"name": "Hermilio Crab"
+},
+{
+"off": "0x65e238",
+"name": "Crabe Hermilio"
+},
+{
+"off": "0x65e250",
+"name": "Granchio Hermilio"
+},
+{
+"off": "0x65e268",
+"name": "Eremito-Krabbe"
+},
+{
+"off": "0x65e280",
+"name": "Cangrejo Hermilio"
+},
+{
+"off": "0x65e298",
+"name": "Hermisio Crab"
+},
+{
+"off": "0x65e2a8",
+"name": "Crabe Hermisio"
+},
+{
+"off": "0x65e2c0",
+"name": "Granchio Hermisio"
+},
+{
+"off": "0x65e2d8",
+"name": "Eremita-Krabbe"
+},
+{
+"off": "0x65e2f0",
+"name": "Cangrejo Hermisio"
+},
+{
+"off": "0x65e308",
+"name": "Dragonfly"
+},
+{
+"off": "0x65e318",
+"name": "Libellule"
+},
+{
+"off": "0x65e328",
+"name": "Libellula"
+},
+{
+"off": "0x65e348",
+"name": "Avolo Pestis"
+},
+{
+"off": "0x65e358",
+"name": "Peste Avolo"
+},
+{
+"off": "0x65e368",
+"name": "Centipede"
+},
+{
+"off": "0x65e378",
+"name": "Mille-pattes"
+},
+{
+"off": "0x65e388",
+"name": "Millepiedi"
+},
+{
+"off": "0x65e3b8",
+"name": "Salamandy"
+},
+{
+"off": "0x65e3c8",
+"name": "Salamandre"
+},
+{
+"off": "0x65e3d8",
+"name": "Salamandra"
+},
+{
+"off": "0x65e3f0",
+"name": "Greater Salamandy"
+},
+{
+"off": "0x65e430",
+"name": "Salamandy Maggiore"
+},
+{
+"off": "0x65e470",
+"name": "Salamandra mayor"
+},
+{
+"off": "0x65e488",
+"name": "King Salamandy"
+},
+{
+"off": "0x65e498",
+"name": "Roi Salamandre"
+},
+{
+"off": "0x65e4a8",
+"name": "Re Salamandy"
+},
+{
+"off": "0x65e4d8",
+"name": "Salamandra rey"
+},
+{
+"off": "0x65e4e8",
+"name": "Unocchio"
+},
+{
+"off": "0x65e4f8",
+"name": "Millioneye"
+},
+{
+"off": "0x65e508",
+"name": "Millionoeil"
+},
+{
+"off": "0x65e518",
+"name": "Milionocchio"
+},
+{
+"off": "0x65e528",
+"name": "Millionenauge"
+},
+{
+"off": "0x65e538",
+"name": "Millonojo"
+},
+{
+"off": "0x65e548",
+"name": "Billioneye"
+},
+{
+"off": "0x65e558",
+"name": "Milliardoeil"
+},
+{
+"off": "0x65e568",
+"name": "Miliardocchio"
+},
+{
+"off": "0x65e578",
+"name": "Milliardenauge"
+},
+{
+"off": "0x65e588",
+"name": "Billonojo"
+},
+{
+"off": "0x65e598",
+"name": "Large Spider"
+},
+{
+"off": "0x65e5c0",
+"name": "Ragno grande"
+},
+{
+"off": "0x65e5f0",
+"name": "Huge Legs"
+},
+{
+"off": "0x65e600",
+"name": "Grandes jambes"
+},
+{
+"off": "0x65e610",
+"name": "Zampe lunghe"
+},
+{
+"off": "0x65e620",
+"name": "Riesenbein"
+},
+{
+"off": "0x65e630",
+"name": "Enormes patas"
+},
+{
+"off": "0x65e640",
+"name": "Tarentule"
+},
+{
+"off": "0x65e650",
+"name": "Tarantola"
+},
+{
+"off": "0x65e660",
+"name": "Visage Box"
+},
+{
+"off": "0x65e680",
+"name": "Springteufel"
+},
+{
+"off": "0x65e690",
+"name": "Caja de semblante"
+},
+{
+"off": "0x65e6a8",
+"name": "Malifaux"
+},
+{
+"off": "0x65e6b8",
+"name": "Wizard Tree"
+},
+{
+"off": "0x65e6c8",
+"name": "Arbre sorcier"
+},
+{
+"off": "0x65e6e0",
+"name": "Albero del mago"
+},
+{
+"off": "0x65e6f0",
+"name": "Zauberbaum"
+},
+{
+"off": "0x65e710",
+"name": "Papa Holly"
+},
+{
+"off": "0x65e720",
+"name": "Papa houx"
+},
+{
+"off": "0x65e730",
+"name": "Agrifoglio padre"
+},
+{
+"off": "0x65e750",
+"name": "Stechpalmen-Vater"
+},
+{
+"off": "0x65e778",
+"name": "Ghost Holly"
+},
+{
+"off": "0x65e7a0",
+"name": "Agrifoglio spettrale"
+},
+{
+"off": "0x65e7c0",
+"name": "Stechpalmen-Geist"
+},
+{
+"off": "0x65e7e0",
+"name": "Acebo de fantasma"
+},
+{
+"off": "0x65e7f8",
+"name": "Zadom King"
+},
+{
+"off": "0x65e808",
+"name": "Roi Zadom"
+},
+{
+"off": "0x65e818",
+"name": "Re Zadom"
+},
+{
+"off": "0x65e838",
+"name": "Rey Zadom"
+},
+{
+"off": "0x65e848",
+"name": "Red Ulse"
+},
+{
+"off": "0x65e858",
+"name": "Ulse rouge"
+},
+{
+"off": "0x65e868",
+"name": "Ulse rosso"
+},
+{
+"off": "0x65e878",
+"name": "Roter Urs"
+},
+{
+"off": "0x65e888",
+"name": "Ulse rojo"
+},
+{
+"off": "0x65e898",
+"name": "Gray Ulse"
+},
+{
+"off": "0x65e8a8",
+"name": "Ulse gris"
+},
+{
+"off": "0x65e8b8",
+"name": "Ulse grigio"
+},
+{
+"off": "0x65e8c8",
+"name": "Grauer Urs"
+},
+{
+"off": "0x65e8e0",
+"name": "Boule de fourrure"
+},
+{
+"off": "0x65e900",
+"name": "Palla di pelliccia"
+},
+{
+"off": "0x65e928",
+"name": "Bola de piel"
+},
+{
+"off": "0x65e938",
+"name": "Big Creeper"
+},
+{
+"off": "0x65e950",
+"name": "Grande carnivora"
+},
+{
+"off": "0x65e970",
+"name": "Gran rampicante"
+},
+{
+"off": "0x65e980",
+"name": "Riesenspross"
+},
+{
+"off": "0x65e990",
+"name": "Gran trepadora"
+},
+{
+"off": "0x65e9a0",
+"name": "Bronze Sun"
+},
+{
+"off": "0x65e9b0",
+"name": "Soleil de bronze"
+},
+{
+"off": "0x65e9c8",
+"name": "Sole di bronzo"
+},
+{
+"off": "0x65e9d8",
+"name": "Bronzesonne"
+},
+{
+"off": "0x65e9e8",
+"name": "Sol de bronce"
+},
+{
+"off": "0x65e9f8",
+"name": "Copper Sun"
+},
+{
+"off": "0x65ea10",
+"name": "Soleil de cuivre"
+},
+{
+"off": "0x65ea28",
+"name": "Sole di rame"
+},
+{
+"off": "0x65ea38",
+"name": "Kupfersonne"
+},
+{
+"off": "0x65ea48",
+"name": "Sol de cobre"
+},
+{
+"off": "0x65ea58",
+"name": "Stone Golem"
+},
+{
+"off": "0x65ea70",
+"name": "Golem de pierre"
+},
+{
+"off": "0x65ea80",
+"name": "Golem di pietra"
+},
+{
+"off": "0x65ea90",
+"name": "Stein-Golem"
+},
+{
+"off": "0x65eab0",
+"name": "Rock Golem"
+},
+{
+"off": "0x65eac0",
+"name": "Golem de roc"
+},
+{
+"off": "0x65ead0",
+"name": "Golem di roccia"
+},
+{
+"off": "0x65eae0",
+"name": "Fels-Golem"
+},
+{
+"off": "0x65eb00",
+"name": "Salamander"
+},
+{
+"off": "0x65eb10",
+"name": "Dragone alato"
+},
+{
+"off": "0x65eb20",
+"name": "Lindwurm"
+},
+{
+"off": "0x65eb30",
+"name": "Mantikra"
+},
+{
+"off": "0x65eb40",
+"name": "Blue Scissors"
+},
+{
+"off": "0x65eb50",
+"name": "Ciseaux bleus"
+},
+{
+"off": "0x65eb60",
+"name": "Forbici blu"
+},
+{
+"off": "0x65eb70",
+"name": "Blauschere"
+},
+{
+"off": "0x65eb80",
+"name": "Tijeras azules"
+},
+{
+"off": "0x65eb90",
+"name": "King Mantik"
+},
+{
+"off": "0x65eba0",
+"name": "Roi Mantik"
+},
+{
+"off": "0x65ebb0",
+"name": "Re Mantik"
+},
+{
+"off": "0x65ebd0",
+"name": "Rey Mantik"
+},
+{
+"off": "0x65ebe0",
+"name": "Diamond Sun A"
+},
+{
+"off": "0x65ebf0",
+"name": "Diamant solaire A"
+},
+{
+"off": "0x65ec10",
+"name": "Sole di diamante A"
+},
+{
+"off": "0x65ec28",
+"name": "Diamantsonne A"
+},
+{
+"off": "0x65ec40",
+"name": "Sol de diamante A"
+},
+{
+"off": "0x65ec58",
+"name": "Diamond Sun B"
+},
+{
+"off": "0x65ec70",
+"name": "Diamant solaire B"
+},
+{
+"off": "0x65ec90",
+"name": "Sole di diamante B"
+},
+{
+"off": "0x65eca8",
+"name": "Diamantsonne B"
+},
+{
+"off": "0x65ecc0",
+"name": "Sol de diamante B"
+},
+{
+"off": "0x65ece0",
+"name": "Ancient Creeper"
+},
+{
+"off": "0x65ecf0",
+"name": "Ancienne Carnivora"
+},
+{
+"off": "0x65ed10",
+"name": "Rampicante antico"
+},
+{
+"off": "0x65ed28",
+"name": "Urkriecher"
+},
+{
+"off": "0x65ed40",
+"name": "Antigua trepadora"
+},
+{
+"off": "0x65ed58",
+"name": "Enmesharra"
+},
+{
+"off": "0x65ed68",
+"name": "Girtablulu"
+},
+{
+"off": "0x65ed80",
+"name": "Sun Rune Incarnation"
+},
+{
+"off": "0x65eda0",
+"name": "Esprit Rune solaire"
+},
+{
+"off": "0x65edc0",
+"name": "Incarnazione Runa Sole"
+},
+{
+"off": "0x65ede0",
+"name": "Sonnenruneninkarnation"
+},
+{
+"off": "0x65ee20",
+"name": "Guardian Heat Sprite"
+},
+{
+"off": "0x65ee40",
+"name": "Lutin gardien chaleur"
+},
+{
+"off": "0x65ee60",
+"name": "Spirito cust. Calore"
+},
+{
+"off": "0x65eec0",
+"name": "Guardian Light Sprite"
+},
+{
+"off": "0x65ef00",
+"name": "Spirito cust. Luce"
+},
+{
+"off": "0x65ef60",
+"name": "Book of Condemnation"
+},
+{
+"off": "0x65ef80",
+"name": "Livre de condamnation"
+},
+{
+"off": "0x65efa0",
+"name": "Libro della Condanna"
+},
+{
+"off": "0x65efc0",
+"name": "Buch der Verdammnis"
+},
+{
+"off": "0x65efe0",
+"name": "Libro de condena"
+},
+{
+"off": "0x65eff8",
+"name": "Royal Mummy"
+},
+{
+"off": "0x65f008",
+"name": "Momie royale"
+},
+{
+"off": "0x65f018",
+"name": "Mummia reale"
+},
+{
+"off": "0x65f048",
+"name": "Momia Real"
+},
+{
+"off": "0x65f058",
+"name": "Shepcesska"
+},
+{
+"off": "0x65f070",
+"name": "Differential Gear"
+},
+{
+"off": "0x65f0a8",
+"name": "Differenziale"
+},
+{
+"off": "0x65f0c0",
+"name": "Differenzialgetriebe"
+},
+{
+"off": "0x65f0d8",
+"name": "Diferencial"
+},
+{
+"off": "0x65f0f0",
+"name": "Mechanical Soldier"
+},
+{
+"off": "0x65f130",
+"name": "Soldato meccanico"
+},
+{
+"off": "0x65f150",
+"name": "Mechanischer Soldat"
+},
+{
+"off": "0x65f190",
+"name": "Mechanical Archer"
+},
+{
+"off": "0x65f1d0",
+"name": "Arciere meccanico"
+},
+{
+"off": "0x65f238",
+"name": "Bodyguard"
+},
+{
+"off": "0x65f248",
+"name": "Barows Soldier"
+},
+{
+"off": "0x65f260",
+"name": "Soldat de Barows"
+},
+{
+"off": "0x65f280",
+"name": "Soldato di Barows"
+},
+{
+"off": "0x65f298",
+"name": "Soldat/Barows"
+},
+{
+"off": "0x65f2b0",
+"name": "Soldado de Barows"
+},
+{
+"off": "0x65f2c8",
+"name": "Assassin"
+},
+{
+"off": "0x65f2d8",
+"name": "Assassino"
+},
+{
+"off": "0x65f300",
+"name": "Raging Assassin"
+},
+{
+"off": "0x65f310",
+"name": "Assassin en furie"
+},
+{
+"off": "0x65f330",
+"name": "Assassino furioso"
+},
+{
+"off": "0x65f370",
+"name": "Asesino furioso"
+},
+{
+"off": "0x65f380",
+"name": "Godwin Soldier"
+},
+{
+"off": "0x65f390",
+"name": "Soldat de Godwin"
+},
+{
+"off": "0x65f3b0",
+"name": "Soldato di Godwin"
+},
+{
+"off": "0x65f3c8",
+"name": "Soldat/Godwin"
+},
+{
+"off": "0x65f3e0",
+"name": "Soldado de Godwin"
+},
+{
+"off": "0x65f3f8",
+"name": "Prison Guard"
+},
+{
+"off": "0x65f408",
+"name": "Aufseher"
+},
+{
+"off": "0x65f428",
+"name": "Elite Soldier"
+},
+{
+"off": "0x65f460",
+"name": "Elitesoldat"
+},
+{
+"off": "0x65f488",
+"name": "Imperial Guard"
+},
+{
+"off": "0x65f4b0",
+"name": "Guardia imperiale"
+},
+{
+"off": "0x65f4c8",
+"name": "Reichswache"
+},
+{
+"off": "0x65f4e0",
+"name": "Guardia imperial"
+},
+{
+"off": "0x65f4f8",
+"name": "Elite Trooper"
+},
+{
+"off": "0x65f530",
+"name": "Capitano guardia reale"
+},
+{
+"off": "0x65f590",
+"name": "Sable Patrol Guard"
+},
+{
+"off": "0x65f5b0",
+"name": "Sentinelle de Sable"
+},
+{
+"off": "0x65f5d0",
+"name": "Sentinella di Sable"
+},
+{
+"off": "0x65f600",
+"name": "Centinela de Sable"
+},
+{
+"off": "0x65f618",
+"name": "Pirate Lackey"
+},
+{
+"off": "0x65f630",
+"name": "Laquais de pirate"
+},
+{
+"off": "0x65f648",
+"name": "Pirata Lackey"
+},
+{
+"off": "0x65f658",
+"name": "Piraten-Lakai"
+},
+{
+"off": "0x65f668",
+"name": "Pirate Captain"
+},
+{
+"off": "0x65f680",
+"name": "Capitaine pirate"
+},
+{
+"off": "0x65f6a0",
+"name": "Capitano pirata"
+},
+{
+"off": "0x65f6d0",
+"name": "Suspicious Man"
+},
+{
+"off": "0x65f6e0",
+"name": "Homme douteux"
+},
+{
+"off": "0x65f6f0",
+"name": "Uomo sospetto"
+},
+{
+"off": "0x65f720",
+"name": "Hombre sospechoso"
+},
+{
+"off": "0x65f738",
+"name": "Armes Soldier"
+},
+{
+"off": "0x65f748",
+"name": "Soldat d'Armes"
+},
+{
+"off": "0x65f760",
+"name": "Soldato di Armes"
+},
+{
+"off": "0x65f778",
+"name": "Soldat/Armes"
+},
+{
+"off": "0x65f790",
+"name": "Soldado de Armes"
+},
+{
+"off": "0x65f7b0",
+"name": "Armes Bodyguard"
+},
+{
+"off": "0x65f7c0",
+"name": "Garde du corps d'Armes"
+},
+{
+"off": "0x65f7e0",
+"name": "G. del corpo di Armes"
+},
+{
+"off": "0x65f800",
+"name": "Leibwache/Armes"
+},
+{
+"off": "0x65f810",
+"name": "Guardaespaldas Armes"
+},
+{
+"off": "0x65f828",
+"name": "Giant Snake"
+},
+{
+"off": "0x65f850",
+"name": "Serpente gigante"
+},
+{
+"off": "0x65f868",
+"name": "Riesenschlange"
+},
+{
+"off": "0x65f880",
+"name": "Serpiente gigante"
+},
+{
+"off": "0x65f898",
+"name": "Raging Alenia"
+},
+{
+"off": "0x65f8c0",
+"name": "Alenia furiosa"
+},
+{
+"off": "0x65f8d0",
+"name": "Rasende Alenia"
+},
+{
+"off": "0x65f8e0",
+"name": "Raging Zahhak"
+},
+{
+"off": "0x65f8f0",
+"name": "Zahhak en furie"
+},
+{
+"off": "0x65f900",
+"name": "Zahhak furioso"
+},
+{
+"off": "0x65f910",
+"name": "Rasender Zahhak"
+},
+{
+"off": "0x65f95c",
+"name": " Fn"
+},
+{
+"off": "0x65f960",
+"name": " Fn"
+},
+{
+"off": "0x65f964",
+"name": " Fn"
+},
+{
+"off": "0x65f968",
+"name": " Fn"
+},
+{
+"off": "0x65f96c",
+"name": " Fn"
+},
+{
+"off": "0x65fa4c",
+"name": "(Fn"
+},
+{
+"off": "0x65fa9c",
+"name": "0Fn"
+},
+{
+"off": "0x65faa0",
+"name": "0Fn"
+},
+{
+"off": "0x65faa4",
+"name": "0Fn"
+},
+{
+"off": "0x65faa8",
+"name": "0Fn"
+},
+{
+"off": "0x65faac",
+"name": "0Fn"
+},
+{
+"off": "0x65fbc8",
+"name": "8Fn"
+},
+{
+"off": "0x65fbcc",
+"name": "@Fn"
+},
+{
+"off": "0x65fbd0",
+"name": "8Fn"
+},
+{
+"off": "0x65fbd4",
+"name": "HFn"
+},
+{
+"off": "0x65fbd8",
+"name": "8Fn"
+},
+{
+"off": "0x65fbdc",
+"name": "8Fn"
+},
+{
+"off": "0x65fbe0",
+"name": "@Fn"
+},
+{
+"off": "0x65fbe4",
+"name": "8Fn"
+},
+{
+"off": "0x65fbe8",
+"name": "HFn"
+},
+{
+"off": "0x65fbec",
+"name": "8Fn"
+},
+{
+"off": "0x65fbfc",
+"name": "PFn"
+},
+{
+"off": "0x65fc00",
+"name": "XFn"
+},
+{
+"off": "0x65fc10",
+"name": "PFn"
+},
+{
+"off": "0x65fc14",
+"name": "XFn"
+},
+{
+"off": "0x65fc24",
+"name": "`Fn"
+},
+{
+"off": "0x65fc54",
+"name": "hFn"
+},
+{
+"off": "0x65fc5c",
+"name": "hFn"
+},
+{
+"off": "0x65fc64",
+"name": "hFn"
+},
+{
+"off": "0x65fc68",
+"name": "pFn"
+},
+{
+"off": "0x65fc6c",
+"name": "xFn"
+},
+{
+"off": "0x65fc7c",
+"name": "pFn"
+},
+{
+"off": "0x65fc80",
+"name": "xFn"
+},
+{
+"off": "0x660180",
+"name": " Gn"
+},
+{
+"off": "0x660194",
+"name": " Gn"
+},
+{
+"off": "0x6601a4",
+"name": "(Gn"
+},
+{
+"off": "0x6601a8",
+"name": "(Gn"
+},
+{
+"off": "0x6601b4",
+"name": "(Gn"
+},
+{
+"off": "0x6601b8",
+"name": "(Gn"
+},
+{
+"off": "0x6601bc",
+"name": "(Gn"
+},
+{
+"off": "0x6601c8",
+"name": "(Gn"
+},
+{
+"off": "0x660294",
+"name": "0Gn"
+},
+{
+"off": "0x660298",
+"name": "0Gn"
+},
+{
+"off": "0x66029c",
+"name": "0Gn"
+},
+{
+"off": "0x6602a0",
+"name": "0Gn"
+},
+{
+"off": "0x6602a4",
+"name": "0Gn"
+},
+{
+"off": "0x6602f8",
+"name": "8Gn"
+},
+{
+"off": "0x6602fc",
+"name": "8Gn"
+},
+{
+"off": "0x660300",
+"name": "8Gn"
+},
+{
+"off": "0x660304",
+"name": "8Gn"
+},
+{
+"off": "0x660308",
+"name": "8Gn"
+},
+{
+"off": "0x66030c",
+"name": "@Gn"
+},
+{
+"off": "0x660310",
+"name": "@Gn"
+},
+{
+"off": "0x660314",
+"name": "@Gn"
+},
+{
+"off": "0x660318",
+"name": "@Gn"
+},
+{
+"off": "0x66031c",
+"name": "HGn"
+},
+{
+"off": "0x660320",
+"name": "PGn"
+},
+{
+"off": "0x660324",
+"name": "XGn"
+},
+{
+"off": "0x660328",
+"name": "`Gn"
+},
+{
+"off": "0x66032c",
+"name": "hGn"
+},
+{
+"off": "0x660330",
+"name": "pGn"
+},
+{
+"off": "0x660370",
+"name": "xGn"
+},
+{
+"off": "0x660374",
+"name": "xGn"
+},
+{
+"off": "0x66037c",
+"name": "xGn"
+},
+{
+"off": "0x660834",
+"name": "(@n"
+},
+{
+"off": "0x660838",
+"name": "(@n"
+},
+{
+"off": "0x66083c",
+"name": "(@n"
+},
+{
+"off": "0x660840",
+"name": "(@n"
+},
+{
+"off": "0x660844",
+"name": "(@n"
+},
+{
+"off": "0x660848",
+"name": "(@n"
+},
+{
+"off": "0x66084c",
+"name": "(@n"
+},
+{
+"off": "0x660850",
+"name": "(@n"
+},
+{
+"off": "0x660854",
+"name": "(@n"
+},
+{
+"off": "0x660858",
+"name": "(@n"
+},
+{
+"off": "0x66085c",
+"name": "p_h"
+},
+{
+"off": "0x660860",
+"name": "p_h"
+},
+{
+"off": "0x660864",
+"name": "p_h"
+},
+{
+"off": "0x660868",
+"name": "p_h"
+},
+{
+"off": "0x66086c",
+"name": "p_h"
+},
+{
+"off": "0x6609c4",
+"name": "p@n"
+},
+{
+"off": "0x6609c8",
+"name": "p@n"
+},
+{
+"off": "0x6609cc",
+"name": "p@n"
+},
+{
+"off": "0x6609d0",
+"name": "p@n"
+},
+{
+"off": "0x6609d4",
+"name": "p@n"
+},
+{
+"off": "0x6609d8",
+"name": "8@n"
+},
+{
+"off": "0x6609dc",
+"name": "8@n"
+},
+{
+"off": "0x6609e0",
+"name": "8@n"
+},
+{
+"off": "0x6609e4",
+"name": "8@n"
+},
+{
+"off": "0x6609e8",
+"name": "8@n"
+},
+{
+"off": "0x6609ec",
+"name": "`_h"
+},
+{
+"off": "0x6609f0",
+"name": "`_h"
+},
+{
+"off": "0x6609f4",
+"name": "`_h"
+},
+{
+"off": "0x6609f8",
+"name": "`_h"
+},
+{
+"off": "0x6609fc",
+"name": "`_h"
+},
+{
+"off": "0x660a00",
+"name": "`_h"
+},
+{
+"off": "0x660a04",
+"name": "`_h"
+},
+{
+"off": "0x660a08",
+"name": "`_h"
+},
+{
+"off": "0x660a0c",
+"name": "`_h"
+},
+{
+"off": "0x660a10",
+"name": "`_h"
+},
+{
+"off": "0x660a14",
+"name": "0@n"
+},
+{
+"off": "0x660a18",
+"name": "0@n"
+},
+{
+"off": "0x660a1c",
+"name": "0@n"
+},
+{
+"off": "0x660a20",
+"name": "0@n"
+},
+{
+"off": "0x660a24",
+"name": "0@n"
+},
+{
+"off": "0x660b18",
+"name": "Technique"
+},
+{
+"off": "0x660b28",
+"name": "TechniquF"
+},
+{
+"off": "0x660b38",
+"name": "TechniquI"
+},
+{
+"off": "0x660b48",
+"name": "TechniquG"
+},
+{
+"off": "0x660b58",
+"name": "TechniquS"
+},
+{
+"off": "0x660c58",
+"name": "Vitality"
+},
+{
+"off": "0x660c68",
+"name": "VitalitF"
+},
+{
+"off": "0x660c78",
+"name": "VitalitI"
+},
+{
+"off": "0x660c88",
+"name": "VitalitG"
+},
+{
+"off": "0x660c98",
+"name": "VitalitS"
+},
+{
+"off": "0x660cb0",
+"name": "Critical Hit/Charge %%+"
+},
+{
+"off": "0x660cd0",
+"name": "Critical Hit/Charge %%F"
+},
+{
+"off": "0x660cf0",
+"name": "Critical Hit/Charge %%I"
+},
+{
+"off": "0x660d10",
+"name": "Critical Hit/Charge %%G"
+},
+{
+"off": "0x660d30",
+"name": "Critical Hit/Charge %%S"
+},
+{
+"off": "0x660e38",
+"name": "Magic Defense"
+},
+{
+"off": "0x660e48",
+"name": "Magic DefensF"
+},
+{
+"off": "0x660e58",
+"name": "Magic DefensI"
+},
+{
+"off": "0x660e68",
+"name": "Magic DefensG"
+},
+{
+"off": "0x660e78",
+"name": "Magic DefensS"
+},
+{
+"off": "0x660f30",
+"name": "Incantation"
+},
+{
+"off": "0x660f40",
+"name": "IncantatioF"
+},
+{
+"off": "0x660f50",
+"name": "IncantatioI"
+},
+{
+"off": "0x660f60",
+"name": "IncantatioG"
+},
+{
+"off": "0x660f70",
+"name": "IncantatioS"
+},
+{
+"off": "0x660f80",
+"name": "Faster magic incantation"
+},
+{
+"off": "0x660fa0",
+"name": "Faster magic incantatioF"
+},
+{
+"off": "0x660fc0",
+"name": "Faster magic incantatioI"
+},
+{
+"off": "0x660fe0",
+"name": "Faster magic incantatioG"
+}
+],
+"skills": [
+{
+"off": "0x661000",
+"name": "Faster magic incantatioS"
+},
+{
+"off": "0x661020",
+"name": "Sword of Magic"
+},
+{
+"off": "0x661030",
+"name": "Sword of MagiF"
+},
+{
+"off": "0x661040",
+"name": "Sword of MagiI"
+},
+{
+"off": "0x661050",
+"name": "Sword of MagiG"
+},
+{
+"off": "0x661060",
+"name": "Sword of MagiS"
+},
+{
+"off": "0x661070",
+"name": "Magic sword effect+"
+},
+{
+"off": "0x661090",
+"name": "Magic sword effectF"
+},
+{
+"off": "0x6610b0",
+"name": "Magic sword effectI"
+},
+{
+"off": "0x6610d0",
+"name": "Magic sword effectG"
+},
+{
+"off": "0x6610f0",
+"name": "Magic sword effectS"
+},
+{
+"off": "0x661108",
+"name": "Raging Lion"
+},
+{
+"off": "0x661118",
+"name": "Raging LioF"
+},
+{
+"off": "0x661128",
+"name": "Raging LioI"
+},
+{
+"off": "0x661138",
+"name": "Raging LioG"
+},
+{
+"off": "0x661148",
+"name": "Raging LioS"
+},
+{
+"off": "0x661200",
+"name": "Fate Control"
+},
+{
+"off": "0x661210",
+"name": "Fate ControF"
+},
+{
+"off": "0x661220",
+"name": "Fate ControI"
+},
+{
+"off": "0x661230",
+"name": "Fate ControG"
+},
+{
+"off": "0x661240",
+"name": "Fate ControS"
+},
+{
+"off": "0x6612f0",
+"name": "Karmic Effect"
+},
+{
+"off": "0x661300",
+"name": "Karmic EffecF"
+},
+{
+"off": "0x661310",
+"name": "Karmic EffecI"
+},
+{
+"off": "0x661320",
+"name": "Karmic EffecG"
+},
+{
+"off": "0x661330",
+"name": "Karmic EffecS"
+},
+{
+"off": "0x661428",
+"name": "Armor of Gods"
+},
+{
+"off": "0x661438",
+"name": "Armor of GodF"
+},
+{
+"off": "0x661448",
+"name": "Armor of GodI"
+},
+{
+"off": "0x661458",
+"name": "Armor of GodG"
+},
+{
+"off": "0x661468",
+"name": "Armor of GodS"
+},
+{
+"off": "0x661568",
+"name": "Swift Foot"
+},
+{
+"off": "0x661578",
+"name": "Swift FooF"
+},
+{
+"off": "0x661588",
+"name": "Swift FooI"
+},
+{
+"off": "0x661598",
+"name": "Swift FooG"
+},
+{
+"off": "0x6615a8",
+"name": "Swift FooS"
+},
+{
+"off": "0x6616a8",
+"name": "Triple Harmony"
+},
+{
+"off": "0x6616b8",
+"name": "Triple HarmonF"
+},
+{
+"off": "0x6616c8",
+"name": "Triple HarmonI"
+},
+{
+"off": "0x6616d8",
+"name": "Triple HarmonG"
+},
+{
+"off": "0x6616e8",
+"name": "Triple HarmonS"
+},
+{
+"off": "0x6617e8",
+"name": "All-out Strike"
+},
+{
+"off": "0x6617f8",
+"name": "All-out StrikF"
+},
+{
+"off": "0x661808",
+"name": "All-out StrikI"
+},
+{
+"off": "0x661818",
+"name": "All-out StrikG"
+},
+{
+"off": "0x661828",
+"name": "All-out StrikS"
+},
+{
+"off": "0x661930",
+"name": "Untold Clarity"
+},
+{
+"off": "0x661940",
+"name": "Untold ClaritF"
+},
+{
+"off": "0x661950",
+"name": "Untold ClaritI"
+},
+{
+"off": "0x661960",
+"name": "Untold ClaritG"
+},
+{
+"off": "0x661970",
+"name": "Untold ClaritS"
+},
+{
+"off": "0x661a70",
+"name": "Divine Right"
+},
+{
+"off": "0x661a80",
+"name": "Power of RighF"
+},
+{
+"off": "0x661a90",
+"name": "Power of RighI"
+},
+{
+"off": "0x661aa0",
+"name": "Power of RighG"
+},
+{
+"off": "0x661ab0",
+"name": "Power of RighS"
+},
+{
+"off": "0x661ba8",
+"name": "Zen Sword"
+},
+{
+"off": "0x661bb8",
+"name": "Zen SworF"
+},
+{
+"off": "0x661bc8",
+"name": "Zen SworI"
+},
+{
+"off": "0x661bd8",
+"name": "Zen SworG"
+},
+{
+"off": "0x661be8",
+"name": "Zen SworS"
+},
+{
+"off": "0x661ca0",
+"name": "Sacred Oath"
+},
+{
+"off": "0x661cb0",
+"name": "Oath to GoF"
+},
+{
+"off": "0x661cc0",
+"name": "Oath to GoI"
+},
+{
+"off": "0x661cd0",
+"name": "Oath to GoG"
+},
+{
+"off": "0x661ce0",
+"name": "Oath to GoS"
+},
+{
+"off": "0x661cf0",
+"name": "Affects all magic skills"
+},
+{
+"off": "0x661d10",
+"name": "Effects all magic skillF"
+},
+{
+"off": "0x661d30",
+"name": "Effects all magic skillI"
+},
+{
+"off": "0x661d50",
+"name": "Effects all magic skillG"
+},
+{
+"off": "0x661d70",
+"name": "Effects all magic skillS"
+},
+{
+"off": "0x661d90",
+"name": "Royal Paradise"
+},
+{
+"off": "0x661da0",
+"name": "Royal ParadisF"
+},
+{
+"off": "0x661db0",
+"name": "Royal ParadisI"
+},
+{
+"off": "0x661dc0",
+"name": "Royal ParadisG"
+},
+{
+"off": "0x661dd0",
+"name": "Royal ParadisS"
+},
+{
+"off": "0x661f68",
+"name": "Mow Down"
+},
+{
+"off": "0x661f78",
+"name": "Mow DowF"
+},
+{
+"off": "0x661f88",
+"name": "Mow DowI"
+},
+{
+"off": "0x661f98",
+"name": "Mow DowG"
+},
+{
+"off": "0x661fa8",
+"name": "Mow DowS"
+},
+{
+"off": "0x662198",
+"name": "Stun %%+"
+},
+{
+"off": "0x6621a8",
+"name": "Stun %%F"
+},
+{
+"off": "0x6621b8",
+"name": "Stun %%I"
+},
+{
+"off": "0x6621c8",
+"name": "Stun %%G"
+},
+{
+"off": "0x6621d8",
+"name": "Stun %%S"
+},
+{
+"off": "0x662290",
+"name": "Long Throw"
+},
+{
+"off": "0x6622a0",
+"name": "Long ThroF"
+},
+{
+"off": "0x6622b0",
+"name": "Long ThroI"
+},
+{
+"off": "0x6622c0",
+"name": "Long ThroG"
+},
+{
+"off": "0x6622d0",
+"name": "Long ThroS"
+},
+{
+"off": "0x6623c8",
+"name": "Dragon Special"
+},
+{
+"off": "0x6623d8",
+"name": "Dragon SpeciaF"
+},
+{
+"off": "0x6623e8",
+"name": "Dragon SpeciaI"
+},
+{
+"off": "0x6623f8",
+"name": "Dragon SpeciaG"
+},
+{
+"off": "0x662408",
+"name": "Dragon SpeciaS"
+},
+{
+"off": "0x662510",
+"name": "Forge weapons anywhere"
+},
+{
+"off": "0x6625b0",
+"name": "Combat Teacher"
+},
+{
+"off": "0x6625c0",
+"name": "Combat TeacheF"
+},
+{
+"off": "0x6625d0",
+"name": "Combat TeacheI"
+},
+{
+"off": "0x6625e0",
+"name": "Combat TeacheG"
+},
+{
+"off": "0x6625f0",
+"name": "Combat TeacheS"
+},
+{
+"off": "0x6626e8",
+"name": "Chain Magic"
+},
+{
+"off": "0x6626f8",
+"name": "Chain MagiF"
+},
+{
+"off": "0x662708",
+"name": "Chain MagiI"
+},
+{
+"off": "0x662718",
+"name": "Chain MagiG"
+},
+{
+"off": "0x662728",
+"name": "Chain MagiS"
+},
+{
+"off": "0x662740",
+"name": "Repeat magic casting %%+"
+},
+{
+"off": "0x662760",
+"name": "Repeat magic casting %%F"
+},
+{
+"off": "0x662780",
+"name": "Repeat magic casting %%I"
+},
+{
+"off": "0x6627a0",
+"name": "Repeat magic casting %%G"
+},
+{
+"off": "0x6627c0",
+"name": "Repeat magic casting %%S"
+},
+{
+"off": "0x6627e0",
+"name": "Reveal enemy status"
+},
+{
+"off": "0x662800",
+"name": "Reveals enemy statuF"
+},
+{
+"off": "0x662820",
+"name": "Reveals enemy statuI"
+},
+{
+"off": "0x662840",
+"name": "Reveals enemy statuG"
+},
+{
+"off": "0x662860",
+"name": "Reveals enemy statuS"
+},
+{
+"off": "0x662878",
+"name": "Potch Finder"
+},
+{
+"off": "0x662888",
+"name": "Potch FindeF"
+},
+{
+"off": "0x662898",
+"name": "Potch FindeI"
+},
+{
+"off": "0x6628a8",
+"name": "Potch FindeG"
+},
+{
+"off": "0x6628b8",
+"name": "Potch FindeS"
+},
+{
+"off": "0x6629a8",
+"name": "Treasure Hunt"
+},
+{
+"off": "0x6629b8",
+"name": "Treasure HunF"
+},
+{
+"off": "0x6629c8",
+"name": "Treasure HunI"
+},
+{
+"off": "0x6629d8",
+"name": "Treasure HunG"
+},
+{
+"off": "0x6629e8",
+"name": "Treasure HunS"
+},
+{
+"off": "0x662aa0",
+"name": "Escape Route"
+},
+{
+"off": "0x662ab0",
+"name": "Escape RoutF"
+},
+{
+"off": "0x662ac0",
+"name": "Escape RoutI"
+},
+{
+"off": "0x662ad0",
+"name": "Escape RoutG"
+},
+{
+"off": "0x662ae0",
+"name": "Escape RoutS"
+},
+{
+"off": "0x662cc8",
+"name": "Treatment"
+},
+{
+"off": "0x662cd8",
+"name": "TreatmenF"
+},
+{
+"off": "0x662ce8",
+"name": "TreatmenI"
+},
+{
+"off": "0x662cf8",
+"name": "TreatmenG"
+},
+{
+"off": "0x662d08",
+"name": "TreatmenS"
+},
+{
+"off": "0x662d20",
+"name": "Recover HP after battle"
+},
+{
+"off": "0x662d40",
+"name": "Recover HP after battlF"
+},
+{
+"off": "0x662d60",
+"name": "Recover HP after battlI"
+},
+{
+"off": "0x662d80",
+"name": "Recover HP after battlG"
+},
+{
+"off": "0x662da0",
+"name": "Recover HP after battlS"
+},
+{
+"off": "0x662ea8",
+"name": "Trade In"
+},
+{
+"off": "0x662eb8",
+"name": "Trade IF"
+},
+{
+"off": "0x662ec8",
+"name": "Trade II"
+},
+{
+"off": "0x662ed8",
+"name": "Trade IG"
+},
+{
+"off": "0x662ee8",
+"name": "Trade IS"
+},
+{
+"off": "0x6630d8",
+"name": "Rune Sage"
+},
+{
+"off": "0x6630e8",
+"name": "Rune SagF"
+},
+{
+"off": "0x6630f8",
+"name": "Rune SagI"
+},
+{
+"off": "0x663108",
+"name": "Rune SagG"
+},
+{
+"off": "0x663118",
+"name": "Rune SagS"
+},
+{
+"off": "0x6631d0",
+"name": "Affects battle music..."
+},
+{
+"off": "0x6631f0",
+"name": "Effects battle music..F"
+},
+{
+"off": "0x663210",
+"name": "Effects battle music..I"
+},
+{
+"off": "0x663230",
+"name": "Effects battle music..G"
+},
+{
+"off": "0x663250",
+"name": "Effects battle music..S"
+},
+{
+"off": "0x663268",
+"name": "Perfect Pitch"
+},
+{
+"off": "0x663278",
+"name": "Perfect PitcF"
+},
+{
+"off": "0x663288",
+"name": "Perfect PitcI"
+},
+{
+"off": "0x663298",
+"name": "Perfect PitcG"
+},
+{
+"off": "0x6632a8",
+"name": "Perfect PitcS"
+},
+{
+"off": "0x6632c0",
+"name": "DoReMi Elf power+"
+},
+{
+"off": "0x6632e0",
+"name": "DoReMi Elf power boosF"
+},
+{
+"off": "0x663300",
+"name": "DoReMi Elf power boosI"
+},
+{
+"off": "0x663320",
+"name": "DoReMi Elf power boosG"
+},
+{
+"off": "0x663340",
+"name": "DoReMi Elf power boosS"
+},
+{
+"off": "0x663358",
+"name": "Appraisal"
+},
+{
+"off": "0x663368",
+"name": "AppraisaF"
+},
+{
+"off": "0x663378",
+"name": "AppraisaI"
+},
+{
+"off": "0x663388",
+"name": "AppraisaG"
+},
+{
+"off": "0x663398",
+"name": "AppraisaS"
+},
+{
+"off": "0x663450",
+"name": "Toasty %% during battle+"
+},
+{
+"off": "0x663470",
+"name": "Toasty %% during battleF"
+},
+{
+"off": "0x663490",
+"name": "Toasty %% during battleI"
+},
+{
+"off": "0x6634b0",
+"name": "Toasty %% during battleG"
+},
+{
+"off": "0x6634d0",
+"name": "Toasty %% during battleS"
+},
+{
+"off": "0x663608",
+"name": " Hn"
+},
+{
+"off": "0x66360c",
+"name": "(Hn"
+},
+{
+"off": "0x663610",
+"name": "0Hn"
+},
+{
+"off": "0x663614",
+"name": "8Hn"
+},
+{
+"off": "0x663618",
+"name": "@Hn"
+},
+{
+"off": "0x66361c",
+"name": "HHn"
+},
+{
+"off": "0x663620",
+"name": "PHn"
+},
+{
+"off": "0x663624",
+"name": "XHn"
+},
+{
+"off": "0x663628",
+"name": "`Hn"
+},
+{
+"off": "0x66362c",
+"name": "hHn"
+},
+{
+"off": "0x663630",
+"name": "pHn"
+},
+{
+"off": "0x663634",
+"name": "xHn"
+},
+{
+"off": "0x66365c",
+"name": "01k"
+},
+{
+"off": "0x663660",
+"name": "`1k"
+},
+{
+"off": "0x663674",
+"name": "(2k"
+},
+{
+"off": "0x663678",
+"name": "82k"
+},
+{
+"off": "0x66367c",
+"name": "H2k"
+},
+{
+"off": "0x663680",
+"name": "X2k"
+},
+{
+"off": "0x663684",
+"name": "p2k"
+},
+{
+"off": "0x663694",
+"name": "03k"
+},
+{
+"off": "0x663698",
+"name": "X3k"
+},
+{
+"off": "0x66369c",
+"name": "h3k"
+},
+{
+"off": "0x6636a0",
+"name": "x3k"
+},
+{
+"off": "0x6636bc",
+"name": "04k"
+},
+{
+"off": "0x6636d4",
+"name": "P4k"
+},
+{
+"off": "0x663700",
+"name": " In"
+},
+{
+"off": "0x663704",
+"name": "(In"
+},
+{
+"off": "0x663708",
+"name": "0In"
+},
+{
+"off": "0x66370c",
+"name": "8In"
+},
+{
+"off": "0x663710",
+"name": "85k"
+},
+{
+"off": "0x663714",
+"name": "H5k"
+},
+{
+"off": "0x663718",
+"name": "X5k"
+},
+{
+"off": "0x66371c",
+"name": "h5k"
+},
+{
+"off": "0x663720",
+"name": "x5k"
+},
+{
+"off": "0x663738",
+"name": "06k"
+},
+{
+"off": "0x66373c",
+"name": "@6k"
+},
+{
+"off": "0x663740",
+"name": "P6k"
+},
+{
+"off": "0x663744",
+"name": "`6k"
+},
+{
+"off": "0x663748",
+"name": "p6k"
+},
+{
+"off": "0x663760",
+"name": " 7k"
+},
+{
+"off": "0x663764",
+"name": "07k"
+},
+{
+"off": "0x663768",
+"name": "@7k"
+},
+{
+"off": "0x66376c",
+"name": "P7k"
+},
+{
+"off": "0x663770",
+"name": "`7k"
+},
+{
+"off": "0x663774",
+"name": "p7k"
+},
+{
+"off": "0x663790",
+"name": "(8k"
+},
+{
+"off": "0x663794",
+"name": "88k"
+},
+{
+"off": "0x663798",
+"name": "H8k"
+},
+{
+"off": "0x66379c",
+"name": "`8k"
+},
+{
+"off": "0x6637b8",
+"name": " 9k"
+},
+{
+"off": "0x6637bc",
+"name": "09k"
+},
+{
+"off": "0x6637c0",
+"name": "@9k"
+},
+{
+"off": "0x6637c4",
+"name": "P9k"
+},
+{
+"off": "0x6637c8",
+"name": "p9k"
+},
+{
+"off": "0x6637e4",
+"name": " :k"
+},
+{
+"off": "0x6637e8",
+"name": "0:k"
+},
+{
+"off": "0x6637ec",
+"name": "@:k"
+},
+{
+"off": "0x6637f0",
+"name": "p:k"
+},
+{
+"off": "0x663800",
+"name": "(;k"
+},
+{
+"off": "0x663804",
+"name": "8;k"
+},
+{
+"off": "0x663808",
+"name": "H;k"
+},
+{
+"off": "0x66380c",
+"name": "X;k"
+},
+{
+"off": "0x663810",
+"name": "h;k"
+},
+{
+"off": "0x663824",
+"name": "@<k"
+},
+{
+"off": "0x663828",
+"name": "h<k"
+},
+{
+"off": "0x66382c",
+"name": "x<k"
+},
+{
+"off": "0x663844",
+"name": " =k"
+},
+{
+"off": "0x663848",
+"name": "P=k"
+},
+{
+"off": "0x663868",
+"name": "0>k"
+},
+{
+"off": "0x66386c",
+"name": "`>k"
+},
+{
+"off": "0x663888",
+"name": "(?k"
+},
+{
+"off": "0x66388c",
+"name": "@?k"
+},
+{
+"off": "0x663890",
+"name": "p?k"
+},
+{
+"off": "0x6638a0",
+"name": "0@k"
+},
+{
+"off": "0x6638a4",
+"name": "@@k"
+},
+{
+"off": "0x6638a8",
+"name": "P@k"
+},
+{
+"off": "0x6638ac",
+"name": "`@k"
+},
+{
+"off": "0x6638b0",
+"name": "p@k"
+},
+{
+"off": "0x6638c4",
+"name": "@Ak"
+},
+{
+"off": "0x6638c8",
+"name": "pAk"
+},
+{
+"off": "0x6638e4",
+"name": " Bk"
+},
+{
+"off": "0x6638e8",
+"name": "PBk"
+},
+{
+"off": "0x663908",
+"name": " Ck"
+},
+{
+"off": "0x66390c",
+"name": "@Ck"
+},
+{
+"off": "0x663910",
+"name": "`Ck"
+},
+{
+"off": "0x663934",
+"name": "0Dk"
+},
+{
+"off": "0x663938",
+"name": "PDk"
+},
+{
+"off": "0x66393c",
+"name": "pDk"
+},
+{
+"off": "0x66395c",
+"name": " Ek"
+},
+{
+"off": "0x663960",
+"name": "@Ek"
+},
+{
+"off": "0x663964",
+"name": "`Ek"
+},
+{
+"off": "0x663968",
+"name": "@In"
+},
+{
+"off": "0x66396c",
+"name": "HIn"
+},
+{
+"off": "0x663970",
+"name": "PIn"
+},
+{
+"off": "0x663974",
+"name": "XIn"
+},
+{
+"off": "0x663978",
+"name": "`In"
+},
+{
+"off": "0x66398c",
+"name": "@Fk"
+},
+{
+"off": "0x663990",
+"name": "hFk"
+},
+{
+"off": "0x663994",
+"name": "xFk"
+},
+{
+"off": "0x6639ac",
+"name": " Gk"
+},
+{
+"off": "0x6639b0",
+"name": "PGk"
+},
+{
+"off": "0x6639b8",
+"name": "hIn"
+},
+{
+"off": "0x6639bc",
+"name": "pIn"
+},
+{
+"off": "0x6639c0",
+"name": "xIn"
+},
+{
+"off": "0x6639d8",
+"name": "@Hk"
+},
+{
+"off": "0x6639dc",
+"name": "pHk"
+},
+{
+"off": "0x663a4c",
+"name": "0Ik"
+},
+{
+"off": "0x663a50",
+"name": "PIk"
+},
+{
+"off": "0x663a54",
+"name": "pIk"
+},
+{
+"off": "0x663a74",
+"name": "@Jk"
+},
+{
+"off": "0x663a78",
+"name": "pJk"
+},
+{
+"off": "0x663a94",
+"name": " Kk"
+},
+{
+"off": "0x663a98",
+"name": "PKk"
+},
+{
+"off": "0x663ac0",
+"name": "0Lk"
+},
+{
+"off": "0x663ac4",
+"name": "PLk"
+},
+{
+"off": "0x663ac8",
+"name": "pLk"
+},
+{
+"off": "0x663ae8",
+"name": "0Mk"
+},
+{
+"off": "0x663aec",
+"name": "`Mk"
+},
+{
+"off": "0x663b08",
+"name": "(Nk"
+},
+{
+"off": "0x663b0c",
+"name": "@Nk"
+},
+{
+"off": "0x663b10",
+"name": "`Nk"
+},
+{
+"off": "0x663b3c",
+"name": " Ok"
+},
+{
+"off": "0x663b40",
+"name": "@Ok"
+},
+{
+"off": "0x663b44",
+"name": "`Ok"
+},
+{
+"off": "0x663b48",
+"name": "xOk"
+},
+{
+"off": "0x663b64",
+"name": " Pk"
+},
+{
+"off": "0x663b68",
+"name": "PPk"
+},
+{
+"off": "0x663b88",
+"name": " Qk"
+},
+{
+"off": "0x663b8c",
+"name": "@Qk"
+},
+{
+"off": "0x663b90",
+"name": "`Qk"
+},
+{
+"off": "0x663bb0",
+"name": " Rk"
+},
+{
+"off": "0x663bb4",
+"name": "PRk"
+},
+{
+"off": "0x663bc0",
+"name": " Jn"
+},
+{
+"off": "0x663bc4",
+"name": "(Jn"
+},
+{
+"off": "0x663bc8",
+"name": "0Jn"
+},
+{
+"off": "0x663bcc",
+"name": "8Jn"
+},
+{
+"off": "0x663bd0",
+"name": "@Jn"
+},
+{
+"off": "0x663bdc",
+"name": "@Sk"
+},
+{
+"off": "0x663be0",
+"name": "pSk"
+},
+{
+"off": "0x663bfc",
+"name": " Tk"
+},
+{
+"off": "0x663c00",
+"name": "@Tk"
+},
+{
+"off": "0x663c04",
+"name": "`Tk"
+},
+{
+"off": "0x663c10",
+"name": "HJn"
+},
+{
+"off": "0x663c14",
+"name": "PJn"
+},
+{
+"off": "0x663c18",
+"name": "XJn"
+},
+{
+"off": "0x663c1c",
+"name": "`Jn"
+},
+{
+"off": "0x663c20",
+"name": "hJn"
+},
+{
+"off": "0x663c2c",
+"name": " Uk"
+},
+{
+"off": "0x663c30",
+"name": "PUk"
+},
+{
+"off": "0x663c50",
+"name": "0Vk"
+},
+{
+"off": "0x663c54",
+"name": "`Vk"
+},
+{
+"off": "0x663c60",
+"name": "pJn"
+},
+{
+"off": "0x663c64",
+"name": "xJn"
+},
+{
+"off": "0x663c78",
+"name": " Wk"
+},
+{
+"off": "0x663c7c",
+"name": "PWk"
+},
+{
+"off": "0x663c9c",
+"name": "0Xk"
+},
+{
+"off": "0x663ca0",
+"name": "PXk"
+},
+{
+"off": "0x663ca4",
+"name": "pXk"
+},
+{
+"off": "0x663cd0",
+"name": "0Yk"
+},
+{
+"off": "0x663cd4",
+"name": "PYk"
+},
+{
+"off": "0x663cd8",
+"name": "hYk"
+},
+{
+"off": "0x663cdc",
+"name": "xYk"
+},
+{
+"off": "0x663cf8",
+"name": " Zk"
+},
+{
+"off": "0x663cfc",
+"name": "@Zk"
+},
+{
+"off": "0x663d00",
+"name": "XZk"
+},
+{
+"off": "0x663d04",
+"name": "hZk"
+},
+{
+"off": "0x663d08",
+"name": "xZk"
+},
+{
+"off": "0x663d24",
+"name": "0[k"
+},
+{
+"off": "0x663d3c",
+"name": "P[k"
+},
+{
+"off": "0x663d40",
+"name": "p[k"
+},
+{
+"off": "0x663d6c",
+"name": "@\\k"
+},
+{
+"off": "0x663d70",
+"name": "p\\k"
+},
+{
+"off": "0x663d78",
+"name": "Dawn Rune"
+},
+{
+"off": "0x663d88",
+"name": "Rune de l'aube"
+},
+{
+"off": "0x663d98",
+"name": "Runa dell'Alba"
+},
+{
+"off": "0x663da8",
+"name": "Morgenrot-Rune"
+},
+{
+"off": "0x663dc0",
+"name": "Runa de amanecer"
+},
+{
+"off": "0x663dd8",
+"name": "Twilight Rune"
+}
+],
+"runes": [
+{
+"off": "0x663e00",
+"name": "Runa Crepuscolo"
+},
+{
+"off": "0x663e10",
+"name": "Zwielicht-Rune"
+},
+{
+"off": "0x663e30",
+"name": "Fire Rune"
+},
+{
+"off": "0x663e40",
+"name": "Rune de feu"
+},
+{
+"off": "0x663e50",
+"name": "Runa di Fuoco"
+},
+{
+"off": "0x663e60",
+"name": "Feuer-Rune"
+},
+{
+"off": "0x663e70",
+"name": "Runa de fuego"
+},
+{
+"off": "0x663e80",
+"name": "Rage Rune"
+},
+{
+"off": "0x663e90",
+"name": "Rune de rage"
+},
+{
+"off": "0x663ea0",
+"name": "Runa Furia fuoco"
+},
+{
+"off": "0x663eb8",
+"name": "Inferno-Rune"
+},
+{
+"off": "0x663ed0",
+"name": "R fuego ardiente"
+},
+{
+"off": "0x663ee8",
+"name": "Lightning Rune"
+},
+{
+"off": "0x663ef8",
+"name": "Rune de foudre"
+},
+{
+"off": "0x663f08",
+"name": "Runa di Tuono"
+},
+{
+"off": "0x663f18",
+"name": "Donner-Rune"
+},
+{
+"off": "0x663f28",
+"name": "Runa de trueno"
+},
+{
+"off": "0x663f38",
+"name": "Thunder Rune"
+},
+{
+"off": "0x663f50",
+"name": "Rune de tonnerre"
+},
+{
+"off": "0x663f70",
+"name": "Runa Rombo tuono"
+},
+{
+"off": "0x663f90",
+"name": "Donnerschlag-R."
+},
+{
+"off": "0x663fa0",
+"name": "Runa gran trueno"
+},
+{
+"off": "0x663fb8",
+"name": "Water Rune"
+},
+{
+"off": "0x663fc8",
+"name": "Rune d'eau"
+},
+{
+"off": "0x663fd8",
+"name": "Runa d'Acqua"
+},
+{
+"off": "0x663fe8",
+"name": "Wasser-Rune"
+},
+{
+"off": "0x663ff8",
+"name": "Runa de agua"
+},
+{
+"off": "0x664008",
+"name": "Flowing Rune"
+},
+{
+"off": "0x664040",
+"name": "Runa Acqua corr."
+},
+{
+"off": "0x664060",
+"name": "Wasserflut-Rune"
+},
+{
+"off": "0x664070",
+"name": "R agua corriente"
+},
+{
+"off": "0x664088",
+"name": "Wind Rune"
+},
+{
+"off": "0x664098",
+"name": "Rune de vent"
+},
+{
+"off": "0x6640a8",
+"name": "Runa di Vento"
+},
+{
+"off": "0x6640b8",
+"name": "Wind-Rune"
+},
+{
+"off": "0x6640c8",
+"name": "Runa de viento"
+},
+{
+"off": "0x6640d8",
+"name": "Cyclone Rune"
+},
+{
+"off": "0x6640f0",
+"name": "Rune de cyclone"
+},
+{
+"off": "0x664100",
+"name": "Runa Tr. d'aria"
+},
+{
+"off": "0x664110",
+"name": "Zyklon-Rune"
+},
+{
+"off": "0x664120",
+"name": "Runa de remolino"
+},
+{
+"off": "0x664138",
+"name": "Earth Rune"
+},
+{
+"off": "0x664148",
+"name": "Rune de terre"
+},
+{
+"off": "0x664158",
+"name": "Runa di Terra"
+},
+{
+"off": "0x664168",
+"name": "Erd-Rune"
+},
+{
+"off": "0x664178",
+"name": "Runa de tierra"
+},
+{
+"off": "0x664190",
+"name": "Mother Earth Rn"
+},
+{
+"off": "0x6641b0",
+"name": "Runa Gran Terra"
+},
+{
+"off": "0x6641c0",
+"name": "Erdrutsch-Rune"
+},
+{
+"off": "0x6641d0",
+"name": "R tierra grande"
+},
+{
+"off": "0x6641e0",
+"name": "Star Rune"
+},
+{
+"off": "0x664200",
+"name": "Runa di Stella"
+},
+{
+"off": "0x664210",
+"name": "Sternen-Rune"
+},
+{
+"off": "0x664220",
+"name": "Runa de estrella"
+},
+{
+"off": "0x664238",
+"name": "Blinking Rune"
+},
+{
+"off": "0x664250",
+"name": "Rune clignotante"
+},
+{
+"off": "0x664270",
+"name": "Runa Lampeggian."
+},
+{
+"off": "0x664290",
+"name": "Teleportat.-Rune"
+},
+{
+"off": "0x6642b0",
+"name": "Runa parpadeante"
+},
+{
+"off": "0x6642c8",
+"name": "DoReMi Rune"
+},
+{
+"off": "0x6642e8",
+"name": "Runa DoReMi"
+},
+{
+"off": "0x6642f8",
+"name": "DoReMi-Rune"
+},
+{
+"off": "0x664308",
+"name": "Beast Rune"
+},
+{
+"off": "0x664318",
+"name": "Rune animale"
+},
+{
+"off": "0x664328",
+"name": "Runa di Bestia"
+},
+{
+"off": "0x664338",
+"name": "Bestien-Rune"
+},
+{
+"off": "0x664348",
+"name": "Runa de bestia"
+},
+{
+"off": "0x664358",
+"name": "Shield Rune"
+},
+{
+"off": "0x664368",
+"name": "Rune bouclier"
+},
+{
+"off": "0x664378",
+"name": "Runa di Scudo"
+},
+{
+"off": "0x664388",
+"name": "Schild-Rune"
+},
+{
+"off": "0x664398",
+"name": "Runa de escudo"
+},
+{
+"off": "0x6643a8",
+"name": "Pale Gate Rune"
+},
+{
+"off": "0x6643d0",
+"name": "Runa Por. chiara"
+},
+{
+"off": "0x6643e8",
+"name": "Todesruf-Rune"
+},
+{
+"off": "0x664410",
+"name": "Resurrection Rn"
+},
+{
+"off": "0x664430",
+"name": "Runa Resurrez."
+},
+{
+"off": "0x664440",
+"name": "Erweckungs-Rune"
+},
+{
+"off": "0x664460",
+"name": "Rage Sword Rune"
+},
+{
+"off": "0x664480",
+"name": "Runa Spada fer."
+},
+{
+"off": "0x664490",
+"name": "Brandschwert-R."
+},
+{
+"off": "0x6644a0",
+"name": "R esp fuego ard"
+},
+{
+"off": "0x6644b0",
+"name": "Thunder Sword Rn"
+},
+{
+"off": "0x6644e0",
+"name": "Runa Spada tuono"
+},
+{
+"off": "0x664500",
+"name": "Donnerschwert-R."
+},
+{
+"off": "0x664520",
+"name": "R esp gr trueno"
+},
+{
+"off": "0x664530",
+"name": "Flowing Sword Rn"
+},
+{
+"off": "0x664570",
+"name": "Runa Sp. fluente"
+},
+{
+"off": "0x664590",
+"name": "Wasserschwert-R."
+},
+{
+"off": "0x6645b0",
+"name": "R esp agua corr"
+},
+{
+"off": "0x6645c0",
+"name": "Cyclone Sword Rn"
+},
+{
+"off": "0x6645f0",
+"name": "Runa Sp. ciclone"
+},
+{
+"off": "0x664610",
+"name": "Zyklonschwert-R."
+},
+{
+"off": "0x664630",
+"name": "R esp. remolino"
+},
+{
+"off": "0x664640",
+"name": "M.Earth Sword Rn"
+},
+{
+"off": "0x664670",
+"name": "Runa Spada terra"
+},
+{
+"off": "0x664690",
+"name": "Erdschwert-Rune"
+},
+{
+"off": "0x6646a0",
+"name": "R esp tierra gr"
+},
+{
+"off": "0x6646b0",
+"name": "Condemnation Rn"
+},
+{
+"off": "0x6646d0",
+"name": "Runa di Condanna"
+},
+{
+"off": "0x6646f0",
+"name": "Verdammnis-Rune"
+},
+{
+"off": "0x664700",
+"name": "Runa de condena"
+},
+{
+"off": "0x664710",
+"name": "Howling Rune"
+},
+{
+"off": "0x664720",
+"name": "Rune hurlement"
+},
+{
+"off": "0x664730",
+"name": "Runa ululante"
+},
+{
+"off": "0x664740",
+"name": "Tollwut-Rune"
+},
+{
+"off": "0x664750",
+"name": "Runa de aullido"
+},
+{
+"off": "0x664760",
+"name": "Viper Rune"
+},
+{
+"off": "0x664780",
+"name": "Runa di Vipera"
+},
+{
+"off": "0x664790",
+"name": "Viper-Rune"
+},
+{
+"off": "0x6647b0",
+"name": "Titan Rune"
+},
+{
+"off": "0x6647c0",
+"name": "Rune de titan"
+},
+{
+"off": "0x6647d0",
+"name": "Runa di Titano"
+},
+{
+"off": "0x6647e0",
+"name": "Titan-Rune"
+},
+{
+"off": "0x664800",
+"name": "Unicorn Rune"
+},
+{
+"off": "0x664810",
+"name": "Rune de licorne"
+},
+{
+"off": "0x664820",
+"name": "Runa di Unicorno"
+},
+{
+"off": "0x664838",
+"name": "Einhorn-Rune"
+},
+{
+"off": "0x664848",
+"name": "Runa unicornio"
+},
+{
+"off": "0x664858",
+"name": "Minotaur Rune"
+},
+{
+"off": "0x664868",
+"name": "Rune minotaure"
+},
+{
+"off": "0x664878",
+"name": "Runa Minotauro"
+},
+{
+"off": "0x664890",
+"name": "Minotaurus-Rune"
+},
+{
+"off": "0x6648a0",
+"name": "Runa minotauro"
+},
+{
+"off": "0x6648b0",
+"name": "Lion Rune"
+},
+{
+"off": "0x6648c0",
+"name": "Rune de lion"
+},
+{
+"off": "0x6648d0",
+"name": "Runa di Leone"
+},
+{
+"off": "0x664900",
+"name": "Kite Rune"
+},
+{
+"off": "0x664910",
+"name": "Rune cerf-volant"
+},
+{
+"off": "0x664928",
+"name": "Runa Aquilone"
+},
+{
+"off": "0x664938",
+"name": "Milan-Rune"
+},
+{
+"off": "0x664950",
+"name": "Runa milano real"
+},
+{
+"off": "0x664970",
+"name": "Great Hawk Rune"
+},
+{
+"off": "0x664990",
+"name": "Runa di Falcone"
+},
+{
+"off": "0x6649a0",
+"name": "Habicht-Rune"
+},
+{
+"off": "0x6649b0",
+"name": "Runa gran azor"
+},
+{
+"off": "0x6649c0",
+"name": "Pixie Rune"
+},
+{
+"off": "0x6649d0",
+"name": "Rune farfadet"
+},
+{
+"off": "0x6649e0",
+"name": "Runa di Folletto"
+},
+{
+"off": "0x6649f8",
+"name": "Kobold-Rune"
+},
+{
+"off": "0x664a08",
+"name": "Runa de hadita"
+},
+{
+"off": "0x664a18",
+"name": "Ogre Rune"
+},
+{
+"off": "0x664a28",
+"name": "Rune d'ogre"
+},
+{
+"off": "0x664a38",
+"name": "Runa d'Orco"
+},
+{
+"off": "0x664a48",
+"name": "Oger-Rune"
+},
+{
+"off": "0x664a58",
+"name": "Runa de ogro"
+},
+{
+"off": "0x664a68",
+"name": "Red Rose Rune"
+},
+{
+"off": "0x664a80",
+"name": "Rune rose rouge"
+},
+{
+"off": "0x664a90",
+"name": "Runa Rosa rossa"
+},
+{
+"off": "0x664aa0",
+"name": "Rote-Rosen-Rune"
+},
+{
+"off": "0x664ab0",
+"name": "Runa rosa roja"
+},
+{
+"off": "0x664ac0",
+"name": "Shrike Rune"
+},
+{
+"off": "0x664ad0",
+"name": "Rune gobemouche"
+},
+{
+"off": "0x664ae0",
+"name": "Runa Averla "
+},
+{
+"off": "0x664b18",
+"name": "Wrath Rune"
+},
+{
+"off": "0x664b30",
+"name": "Rune de courroux"
+},
+{
+"off": "0x664b50",
+"name": "Runa di Collera"
+},
+{
+"off": "0x664b60",
+"name": "Rune des Zorns"
+},
+{
+"off": "0x664b70",
+"name": "Runa de ira"
+},
+{
+"off": "0x664b80",
+"name": "Falcon Rune"
+},
+{
+"off": "0x664b90",
+"name": "Rune de faucon"
+},
+{
+"off": "0x664ba0",
+"name": "Runa di Falco"
+},
+{
+"off": "0x664bb0",
+"name": "Falken-Rune"
+},
+{
+"off": "0x664bd0",
+"name": "Angry Dragon Rn"
+},
+{
+"off": "0x664be0",
+"name": "Rune gd dragon"
+},
+{
+"off": "0x664bf0",
+"name": "Runa Drago irato"
+},
+{
+"off": "0x664c10",
+"name": "Zorndrachen-Rune"
+},
+{
+"off": "0x664c38",
+"name": "Boar Rune"
+},
+{
+"off": "0x664c50",
+"name": "Rune de sanglier"
+},
+{
+"off": "0x664c68",
+"name": "Runa di Maiale"
+},
+{
+"off": "0x664c78",
+"name": "Eber-Rune"
+},
+{
+"off": "0x664ca0",
+"name": "Fierce Tiger Rn"
+},
+{
+"off": "0x664cb0",
+"name": "Rune de gd tigre"
+},
+{
+"off": "0x664cd0",
+"name": "Runa Tigre fiera"
+},
+{
+"off": "0x664ce8",
+"name": "Tiger-Rune"
+},
+{
+"off": "0x664d00",
+"name": "Runa tigre fiero"
+},
+{
+"off": "0x664d18",
+"name": "Gadget Rune"
+},
+{
+"off": "0x664d28",
+"name": "Rune gadget"
+},
+{
+"off": "0x664d38",
+"name": "Runa Gadget"
+},
+{
+"off": "0x664d48",
+"name": "Apparat-Rune"
+},
+{
+"off": "0x664d60",
+"name": "Runa del aparato"
+},
+{
+"off": "0x664d78",
+"name": "Mischief Rune"
+},
+{
+"off": "0x664d88",
+"name": "Rune de malice"
+},
+{
+"off": "0x664d98",
+"name": "Runa Inganno"
+},
+{
+"off": "0x664db0",
+"name": "Rune des Unheils"
+},
+{
+"off": "0x664dd8",
+"name": "Sickle Rune"
+},
+{
+"off": "0x664df0",
+"name": "Rune de faucille"
+},
+{
+"off": "0x664e08",
+"name": "Runa di Falce"
+},
+{
+"off": "0x664e18",
+"name": "Sichel-Rune"
+},
+{
+"off": "0x664e28",
+"name": "Runa de hoz"
+},
+{
+"off": "0x664e38",
+"name": "Swallow Rune"
+},
+{
+"off": "0x664e50",
+"name": "Rune hirondelle"
+},
+{
+"off": "0x664e60",
+"name": "Runa di Rondine"
+},
+{
+"off": "0x664e70",
+"name": "Schwalben-Rune"
+},
+{
+"off": "0x664e80",
+"name": "Runa golondrina"
+},
+{
+"off": "0x664e90",
+"name": "Strike-Back Rune"
+},
+{
+"off": "0x664eb0",
+"name": "Rune coup rendu"
+},
+{
+"off": "0x664ec0",
+"name": "Runa Rappresag."
+},
+{
+"off": "0x664ed0",
+"name": "Konter-Rune"
+},
+{
+"off": "0x664ee0",
+"name": "Runa de venganza"
+},
+{
+"off": "0x664f00",
+"name": "Double-Edged Rn"
+},
+{
+"off": "0x664f10",
+"name": "Rune coup double"
+},
+{
+"off": "0x664f30",
+"name": "Runa Doppia lama"
+},
+{
+"off": "0x664f48",
+"name": "Doppler-Rune"
+},
+{
+"off": "0x664f60",
+"name": "Runa doble filo"
+},
+{
+"off": "0x664f70",
+"name": "Multi-Strike Rn"
+},
+{
+"off": "0x664f80",
+"name": "Rune multi-coups"
+},
+{
+"off": "0x664fa0",
+"name": "Runa Multiattac."
+},
+{
+"off": "0x664fe0",
+"name": "Killer Rune"
+},
+{
+"off": "0x664ff0",
+"name": "Rune tueuse"
+},
+{
+"off": "0x665000",
+"name": "Runa critica"
+},
+{
+"off": "0x665010",
+"name": "Kritische Rune"
+},
+{
+"off": "0x665030",
+"name": "Gale Rune"
+},
+{
+"off": "0x665050",
+"name": "Runa di Burrasca"
+},
+{
+"off": "0x665068",
+"name": "Sturm-Rune"
+},
+{
+"off": "0x665080",
+"name": "Runa de vendaval"
+},
+{
+"off": "0x665098",
+"name": "Counter Rune"
+},
+{
+"off": "0x6650b0",
+"name": "Rune contre-att."
+},
+{
+"off": "0x6650d0",
+"name": "Runa Onniveggen."
+},
+{
+"off": "0x6650e8",
+"name": "Seher-Rune"
+},
+{
+"off": "0x665100",
+"name": "Runa que ve todo"
+},
+{
+"off": "0x665118",
+"name": "Power Rune"
+},
+{
+"off": "0x665130",
+"name": "Rune de pouvoir"
+},
+{
+"off": "0x665140",
+"name": "Runa di Potere"
+},
+{
+"off": "0x665150",
+"name": "Kraft-Rune"
+},
+{
+"off": "0x665160",
+"name": "Runa de poder"
+},
+{
+"off": "0x665170",
+"name": "Magical Rune"
+},
+{
+"off": "0x665180",
+"name": "Rune magique"
+},
+{
+"off": "0x665190",
+"name": "Runa magica"
+},
+{
+"off": "0x6651a0",
+"name": "Magische Rune"
+},
+{
+"off": "0x6651c0",
+"name": "Fire Sealing Rn"
+},
+{
+"off": "0x6651d0",
+"name": "Rune anti-feu"
+},
+{
+"off": "0x6651e0",
+"name": "Runa Sig. fuoco"
+},
+{
+"off": "0x6651f0",
+"name": "Feuersiegel-Rune"
+},
+{
+"off": "0x665210",
+"name": "R sello de fuego"
+},
+{
+"off": "0x665230",
+"name": "Water Sealing Rn"
+},
+{
+"off": "0x665248",
+"name": "Rune anti-eau"
+},
+{
+"off": "0x665260",
+"name": "Runa Sig. acqua"
+},
+{
+"off": "0x665270",
+"name": "Wassersiegel-Rune"
+},
+{
+"off": "0x665290",
+"name": "R sello de agua"
+},
+{
+"off": "0x6652a0",
+"name": "Wall Rune"
+},
+{
+"off": "0x6652b0",
+"name": "Rune de mur"
+},
+{
+"off": "0x6652c0",
+"name": "Runa del Muro"
+},
+{
+"off": "0x6652d0",
+"name": "Mauer-Rune"
+},
+{
+"off": "0x6652e0",
+"name": "Runa de pared"
+},
+{
+"off": "0x6652f0",
+"name": "Waking Rune"
+},
+{
+"off": "0x665310",
+"name": "Runa Sveglia"
+},
+{
+"off": "0x665320",
+"name": "Weck-Rune"
+},
+{
+"off": "0x665330",
+"name": "Runa despertar"
+},
+{
+"off": "0x665340",
+"name": "Turtle Rune"
+},
+{
+"off": "0x665350",
+"name": "Rune de tortue"
+},
+{
+"off": "0x665360",
+"name": "Runa Tartaruga"
+},
+{
+"off": "0x665390",
+"name": "Runa de tortuga"
+},
+{
+"off": "0x6653a0",
+"name": "Firefly Rune"
+},
+{
+"off": "0x6653b0",
+"name": "Rune de luciole"
+},
+{
+"off": "0x6653c0",
+"name": "Runa Lucciola"
+},
+{
+"off": "0x665400",
+"name": "Skunk Rune"
+},
+{
+"off": "0x665410",
+"name": "Rune de putois"
+},
+{
+"off": "0x665420",
+"name": "Runa Moffetta"
+},
+{
+"off": "0x665430",
+"name": "Skunk-Rune"
+},
+{
+"off": "0x665440",
+"name": "Runa de mofeta"
+},
+{
+"off": "0x665450",
+"name": "Alert Rune"
+},
+{
+"off": "0x665460",
+"name": "Rune d'alerte"
+},
+{
+"off": "0x665470",
+"name": "Runa Risveglio"
+},
+{
+"off": "0x665480",
+"name": "Rune des Erwachens"
+},
+{
+"off": "0x665498",
+"name": "Runa de alerta"
+},
+{
+"off": "0x6654a8",
+"name": "Sunbeam Rune"
+},
+{
+"off": "0x6654d0",
+"name": "Runa Filtra-sole"
+},
+{
+"off": "0x6654f0",
+"name": "Sonnenschein-Rune"
+},
+{
+"off": "0x665510",
+"name": "Runa filtr. sol"
+},
+{
+"off": "0x665520",
+"name": "Drain Rune"
+},
+{
+"off": "0x665530",
+"name": "Rune drainante"
+},
+{
+"off": "0x665540",
+"name": "Runa Drenante"
+},
+{
+"off": "0x665550",
+"name": "Sog-Rune"
+},
+{
+"off": "0x665560",
+"name": "Runa de sumidero"
+},
+{
+"off": "0x665580",
+"name": "Equilibrium Rune"
+},
+{
+"off": "0x6655c0",
+"name": "Runa Equilibrio"
+},
+{
+"off": "0x6655d0",
+"name": "Gleichgewichts-Rune"
+},
+{
+"off": "0x6655f0",
+"name": "Runa equilibrio"
+},
+{
+"off": "0x665600",
+"name": "Magic Absorb Rn"
+},
+{
+"off": "0x665610",
+"name": "Rune absorbante"
+},
+{
+"off": "0x665620",
+"name": "Runa assorbimag."
+},
+{
+"off": "0x665640",
+"name": "Absorptions-Rune"
+},
+{
+"off": "0x665670",
+"name": "Boundary Rune"
+},
+{
+"off": "0x665690",
+"name": "Runa di Confine"
+},
+{
+"off": "0x6656a0",
+"name": "Abgrenzungs-Rune"
+},
+{
+"off": "0x6656c8",
+"name": "Steel Rune"
+},
+{
+"off": "0x6656d8",
+"name": "Rune d'acier"
+},
+{
+"off": "0x6656e8",
+"name": "Runa d'Acciaio"
+},
+{
+"off": "0x6656f8",
+"name": "Stahl-Rune"
+},
+{
+"off": "0x665708",
+"name": "Runa de acero"
+},
+{
+"off": "0x665718",
+"name": "Violence Rune"
+},
+{
+"off": "0x665728",
+"name": "Rune violente"
+},
+{
+"off": "0x665738",
+"name": "Runa Rabbia"
+},
+{
+"off": "0x665768",
+"name": "Runa de furia"
+},
+{
+"off": "0x665778",
+"name": "Fury Rune"
+},
+{
+"off": "0x665798",
+"name": "Runa dell'Ira"
+},
+{
+"off": "0x6657a8",
+"name": "Rune des Wut"
+},
+{
+"off": "0x6657b8",
+"name": "Boost Rune"
+},
+{
+"off": "0x6657c8",
+"name": "Rune de boost"
+},
+{
+"off": "0x6657e0",
+"name": "Runa Incremento"
+},
+{
+"off": "0x6657f0",
+"name": "Boost-Rune"
+},
+{
+"off": "0x665800",
+"name": "Runa de mejora"
+},
+{
+"off": "0x665810",
+"name": "Crazed Rune"
+},
+{
+"off": "0x665820",
+"name": "Rune de folie"
+},
+{
+"off": "0x665830",
+"name": "Runa impazzita"
+},
+{
+"off": "0x665840",
+"name": "Rune des Wahnsinns"
+},
+{
+"off": "0x665858",
+"name": "Runa de loco"
+},
+{
+"off": "0x665868",
+"name": "Knight Rune"
+},
+{
+"off": "0x665878",
+"name": "Rune chevalier"
+},
+{
+"off": "0x665888",
+"name": "Runa Cavaliere"
+},
+{
+"off": "0x665898",
+"name": "Ritter-Rune"
+},
+{
+"off": "0x6658a8",
+"name": "Runa caballero"
+},
+{
+"off": "0x6658b8",
+"name": "Phero Rune"
+},
+{
+"off": "0x6658d8",
+"name": "Runa Phero"
+},
+{
+"off": "0x6658e8",
+"name": "Phero-Rune"
+},
+{
+"off": "0x6658f8",
+"name": "Runa de fero"
+},
+{
+"off": "0x665908",
+"name": "Fortune Rune"
+},
+{
+"off": "0x665920",
+"name": "Rune de fortune"
+},
+{
+"off": "0x665930",
+"name": "Runa Fortuna"
+},
+{
+"off": "0x665950",
+"name": "Runa fortuna"
+},
+{
+"off": "0x665960",
+"name": "Prosperity Rune"
+},
+{
+"off": "0x665970",
+"name": "Rune de richesse"
+},
+{
+"off": "0x665990",
+"name": "Runa Denaro fac."
+},
+{
+"off": "0x6659a8",
+"name": "Geldsegen-Rune"
+},
+{
+"off": "0x6659c0",
+"name": "R suerte dinero"
+},
+{
+"off": "0x6659d0",
+"name": "Champion's Rune"
+},
+{
+"off": "0x6659e0",
+"name": "Rune du champion"
+},
+{
+"off": "0x6659f8",
+"name": "Runa del Re"
+},
+{
+"off": "0x665a18",
+"name": "Runa del rey"
+},
+{
+"off": "0x665a30",
+"name": "Great Firefly Rn"
+},
+{
+"off": "0x665a50",
+"name": "Rune gde luciole"
+},
+{
+"off": "0x665a70",
+"name": "Runa G. Lucciola"
+},
+{
+"off": "0x665ac0",
+"name": "Parent Turtle Rn"
+},
+{
+"off": "0x665ae0",
+"name": "Rune gde tortue"
+},
+{
+"off": "0x665af0",
+"name": "Runa Mamma tart."
+},
+{
+"off": "0x665b08",
+"name": "Panzer-Rune"
+},
+{
+"off": "0x665b20",
+"name": "R tortuga madre"
+},
+{
+"off": "0x665b30",
+"name": "Godspeed Rune"
+},
+{
+"off": "0x665b60",
+"name": "Runa Buon viag."
+},
+{
+"off": "0x665b70",
+"name": "Sprint-Rune"
+},
+{
+"off": "0x665b80",
+"name": "Runa buena fort."
+},
+{
+"off": "0x665b98",
+"name": "Raven Rune"
+},
+{
+"off": "0x665bb0",
+"name": "Rune de corbeau"
+},
+{
+"off": "0x665bc0",
+"name": "Runa di Raven"
+},
+{
+"off": "0x665bd0",
+"name": "Raben-Rune"
+},
+{
+"off": "0x665be0",
+"name": "Runa de Raven"
+},
+{
+"off": "0x665bf0",
+"name": "Silence Rune"
+},
+{
+"off": "0x665c00",
+"name": "Rune de silence"
+},
+{
+"off": "0x665c10",
+"name": "Runa Silenzio"
+},
+{
+"off": "0x665c20",
+"name": "Rune der Stille"
+},
+{
+"off": "0x665c30",
+"name": "Runa de silencio"
+},
+{
+"off": "0x665c48",
+"name": "Poison Rune"
+},
+{
+"off": "0x665c58",
+"name": "Rune de poison"
+},
+{
+"off": "0x665c68",
+"name": "Runa di Veleno"
+},
+{
+"off": "0x665c78",
+"name": "Gift-Rune"
+},
+{
+"off": "0x665c88",
+"name": "Runa de veneno"
+},
+{
+"off": "0x665c98",
+"name": "Venom Rune"
+},
+{
+"off": "0x665ca8",
+"name": "Rune de venin"
+},
+{
+"off": "0x665cc0",
+"name": "Runa di Tossina"
+},
+{
+"off": "0x665cd0",
+"name": "Schlangengift-Rune"
+},
+{
+"off": "0x665d00",
+"name": "Sleep Rune"
+},
+{
+"off": "0x665d10",
+"name": "Rune de sommeil"
+},
+{
+"off": "0x665d20",
+"name": "Runa del Sonno"
+},
+{
+"off": "0x665d30",
+"name": "Schlaf-Rune"
+},
+{
+"off": "0x665d50",
+"name": "Hunter Rune"
+},
+{
+"off": "0x665d60",
+"name": "Rune de chasseur"
+},
+{
+"off": "0x665d80",
+"name": "Runa Cacciatore"
+},
+{
+"off": "0x665da0",
+"name": "Runa de cazador"
+},
+{
+"off": "0x665db0",
+"name": "Charm Rune"
+},
+{
+"off": "0x665dd0",
+"name": "Runa Talismano"
+},
+{
+"off": "0x665de0",
+"name": "Verzauberungs-Rune"
+},
+{
+"off": "0x665e00",
+"name": "Runa de hechizo"
+},
+{
+"off": "0x665e10",
+"name": "Flame Array"
+},
+{
+"off": "0x665e20",
+"name": "Feu d'artifice"
+},
+{
+"off": "0x665e30",
+"name": "Schiera fiamme"
+},
+{
+"off": "0x665e40",
+"name": "Flammenmeer"
+},
+{
+"off": "0x665e50",
+"name": "Form. llamas"
+},
+{
+"off": "0x665e60",
+"name": "Thunder God"
+},
+{
+"off": "0x665e70",
+"name": "Dieu du tonnerre"
+},
+{
+"off": "0x665e88",
+"name": "Dio del tuono"
+},
+{
+"off": "0x665e98",
+"name": "Donnergott"
+},
+{
+"off": "0x665eb0",
+"name": "Dios del trueno"
+},
+{
+"off": "0x665ec0",
+"name": "Water Dragon"
+},
+{
+"off": "0x665ed0",
+"name": "Dragon d'eau"
+},
+{
+"off": "0x665ee0",
+"name": "Drago d'acqua"
+},
+{
+"off": "0x665ef0",
+"name": "Wasserdrache"
+},
+{
+"off": "0x665f10",
+"name": "Fierce Wind Fang"
+},
+{
+"off": "0x665f50",
+"name": "Zanne fiero vento"
+},
+{
+"off": "0x665f80",
+"name": "Colm. feroz vie."
+},
+{
+"off": "0x665f98",
+"name": "Scorched Earth"
+},
+{
+"off": "0x665fb8",
+"name": "Terra bruciata"
+},
+{
+"off": "0x665fd0",
+"name": "Verbrannte Erde"
+},
+{
+"off": "0x665fe0",
+"name": "Tierra quemada"
+},
+{
+"off": "0x665ff0",
+"name": "Creation"
+}
+],
+"spells": [
+{
+"off": "0x66bf00",
+"name": "Cielo vermiglio"
+},
+{
+"off": "0x66bf10",
+"name": "Abendrot"
+},
+{
+"off": "0x66bf30",
+"name": "Flaming Arrows"
+},
+{
+"off": "0x66bf60",
+"name": "Frecce di fuoco"
+},
+{
+"off": "0x66bf70",
+"name": "Flammenpfeil"
+},
+{
+"off": "0x66bf80",
+"name": "Flecha de llama"
+},
+{
+"off": "0x66bf90",
+"name": "Dancing Flames"
+},
+{
+"off": "0x66bfa0",
+"name": "Flamme dansante"
+},
+{
+"off": "0x66bfb0",
+"name": "Fiamme danzanti"
+},
+{
+"off": "0x66bfc0",
+"name": "Tanzende Flammen"
+},
+{
+"off": "0x66bfe0",
+"name": "Llam. bailarinas"
+},
+{
+"off": "0x66bff8",
+"name": "Blazing Wall"
+},
+{
+"off": "0x66c008",
+"name": "Mur de feu"
+},
+{
+"off": "0x66c018",
+"name": "Muro cocente"
+},
+{
+"off": "0x66c030",
+"name": "Brennende Mauer"
+},
+{
+"off": "0x66c040",
+"name": "Pared en llamas"
+},
+{
+"off": "0x66c050",
+"name": "Explosion"
+},
+{
+"off": "0x66c060",
+"name": "Grande explosion"
+},
+{
+"off": "0x66c080",
+"name": "Gran Esplosione"
+},
+{
+"off": "0x66c0a0",
+"name": "Final Flame"
+},
+{
+"off": "0x66c0b0",
+"name": "Flamme ultime"
+},
+{
+"off": "0x66c0c0",
+"name": "Fiamma finale"
+},
+{
+"off": "0x66c0d0",
+"name": "Flammenfinale"
+},
+{
+"off": "0x66c0e0",
+"name": "Llama final"
+},
+{
+"off": "0x66c0f0",
+"name": "Thunder Runner"
+},
+{
+"off": "0x66c100",
+"name": "Grand grondement"
+},
+{
+"off": "0x66c120",
+"name": "Tuono che infr."
+},
+{
+"off": "0x66c130",
+"name": "Sausender Donner"
+},
+{
+"off": "0x66c150",
+"name": "Trueno destruct."
+},
+{
+"off": "0x66c168",
+"name": "Berserk Blow"
+},
+{
+"off": "0x66c178",
+"name": "Coup de folie"
+},
+{
+"off": "0x66c188",
+"name": "Scoppio d'ira"
+},
+{
+"off": "0x66c198",
+"name": "Schlag der Wut"
+},
+{
+"off": "0x66c1b0",
+"name": "Arrebato de ira"
+},
+{
+"off": "0x66c1c0",
+"name": "Soaring Bolt"
+},
+{
+"off": "0x66c1d0",
+"name": "Foudre funeste"
+},
+{
+"off": "0x66c1e0",
+"name": "Tuono svettante"
+},
+{
+"off": "0x66c1f0",
+"name": "Donnerschwellen"
+},
+{
+"off": "0x66c200",
+"name": "Trueno vertigin."
+},
+{
+"off": "0x66c218",
+"name": "Furious Blow"
+},
+{
+"off": "0x66c240",
+"name": "Scoppio di rab."
+},
+{
+"off": "0x66c250",
+"name": "Schlag des Zorns"
+},
+{
+"off": "0x66c270",
+"name": "Ataque de furia"
+},
+{
+"off": "0x66c280",
+"name": "Thunder Storm"
+},
+{
+"off": "0x66c290",
+"name": "Tempesta tonante"
+},
+{
+"off": "0x66c2a8",
+"name": "Gewitter"
+},
+{
+"off": "0x66c2c0",
+"name": "Tormenta truenos"
+},
+{
+"off": "0x66c2d8",
+"name": "Kindness Drops"
+},
+{
+"off": "0x66c300",
+"name": "Goccia di gent."
+},
+{
+"off": "0x66c330",
+"name": "Gota amabilidad"
+},
+{
+"off": "0x66c340",
+"name": "Breath of Ice"
+},
+{
+"off": "0x66c350",
+"name": "Souffle de glace"
+},
+{
+"off": "0x66c370",
+"name": "Soffio di ghiac."
+},
+{
+"off": "0x66c388",
+"name": "Soplo helado"
+},
+{
+"off": "0x66c398",
+"name": "Kindness Rain"
+},
+{
+"off": "0x66c3c0",
+"name": "Flusso di gent."
+},
+{
+"off": "0x66c3e0",
+"name": "Arroyo amabilid."
+},
+{
+"off": "0x66c3f8",
+"name": "Silent Lake"
+},
+{
+"off": "0x66c408",
+"name": "Lac silencieux"
+},
+{
+"off": "0x66c420",
+"name": "Lago tranquillo"
+},
+{
+"off": "0x66c430",
+"name": "Stiller See"
+},
+{
+"off": "0x66c440",
+"name": "Lago tranquilo"
+},
+{
+"off": "0x66c450",
+"name": "Mother Ocean"
+},
+{
+"off": "0x66c460",
+"name": "Mer maternelle"
+},
+{
+"off": "0x66c470",
+"name": "Madre mare"
+},
+{
+"off": "0x66c480",
+"name": "Mutter Ozean"
+},
+{
+"off": "0x66c490",
+"name": "Mar madre"
+},
+{
+"off": "0x66c4a0",
+"name": "Wind of Sleep"
+},
+{
+"off": "0x66c4d0",
+"name": "Vento dormiente"
+},
+{
+"off": "0x66c4e0",
+"name": "Schlummernder Wind"
+},
+{
+"off": "0x66c500",
+"name": "Viento adormec."
+},
+{
+"off": "0x66c510",
+"name": "Healing Wind"
+},
+{
+"off": "0x66c520",
+"name": "Vent curatif"
+},
+{
+"off": "0x66c530",
+"name": "Vento curativo"
+},
+{
+"off": "0x66c540",
+"name": "Heilender Wind"
+},
+{
+"off": "0x66c550",
+"name": "Viento sanador"
+},
+{
+"off": "0x66c560",
+"name": "The Shredding"
+},
+{
+"off": "0x66c570",
+"name": "Vent destructeur"
+},
+{
+"off": "0x66c590",
+"name": "Vento distrutt."
+},
+{
+"off": "0x66c5c0",
+"name": "Viento destroz."
+},
+{
+"off": "0x66c5d0",
+"name": "Funeral Wind"
+},
+{
+"off": "0x66c5f0",
+"name": "Vento funebre"
+},
+{
+"off": "0x66c620",
+"name": "Shining Wind"
+},
+{
+"off": "0x66c640",
+"name": "Vento brioso"
+},
+{
+"off": "0x66c650",
+"name": "Funkelnder Wind"
+},
+{
+"off": "0x66c660",
+"name": "Viento centell."
+},
+{
+"off": "0x66c670",
+"name": "Clay Guardian"
+},
+{
+"off": "0x66c680",
+"name": "Gardien de terre"
+},
+{
+"off": "0x66c698",
+"name": "Guardia Terra"
+},
+{
+"off": "0x66c6d0",
+"name": "Vengeful Child"
+},
+{
+"off": "0x66c6e0",
+"name": "Enfant vengeur"
+},
+{
+"off": "0x66c6f0",
+"name": "Figlio vendetta"
+},
+{
+"off": "0x66c700",
+"name": "Kind der Rache"
+},
+{
+"off": "0x66c710",
+"name": "Hijo venganza"
+},
+{
+"off": "0x66c720",
+"name": "Guardian Earth"
+},
+{
+"off": "0x66c730",
+"name": "Terre gardienne"
+},
+{
+"off": "0x66c740",
+"name": "Guardia Gr.Terra"
+},
+{
+"off": "0x66c770",
+"name": "Guard. tierra gr"
+},
+{
+"off": "0x66c788",
+"name": "Earthquake"
+},
+{
+"off": "0x66c798",
+"name": "Terremoto"
+},
+{
+"off": "0x66c7a8",
+"name": "Erdbeben"
+},
+{
+"off": "0x66c7b8",
+"name": "Canopy Defense"
+},
+{
+"off": "0x66c7e0",
+"name": "Volta protettiva"
+}
+]
+}
