@@ -57,6 +57,12 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
  </div>
  <div id=sections></div>
  <hr style="border-color:#4a2b26;margin:18px 0">
+ <h3 style="color:#f0c05a;font-size:15px">Item / equipment prices <span class=note>(buy + sell, verified)</span></h3>
+ <div class=row><button onclick=loadPrices()>Load prices</button>
+   <input id=pricefilter size=10 placeholder="min buy…" oninput=priceShow()>
+   <span id=pricenote class=note></span></div>
+ <div id=prices style="max-height:280px;overflow:auto"></div>
+ <hr style="border-color:#4a2b26;margin:18px 0">
  <h3 style="color:#f0c05a;font-size:15px">Hard Mode (party-wide starting-stat scaler)</h3>
  <div class=row>
    Factor <input id=hmfactor type=number step=0.05 min=0.1 max=10 value=0.5 size=5>
@@ -136,6 +142,22 @@ async function saveChar(){const inps=[...document.querySelectorAll('#sections in
   const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
   document.getElementById('csave').textContent=s.error?('error: '+s.error):('saved '+edits.length+' field(s)');
   if(!s.error)loadChar();}
+let PRICES=[];
+async function loadPrices(){if(!iso()){alert('Open the ISO first');return}
+  const s=await j('/api/prices',{iso:iso()});if(s.error){alert(s.error);return}
+  PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();}
+function priceShow(){const min=parseInt(document.getElementById('pricefilter').value||'0')||0;
+  const rows=PRICES.filter(p=>p.buy>=min);
+  document.getElementById('pricenote').textContent=rows.length+' items with a price';
+  const d=document.getElementById('prices');d.innerHTML='';
+  rows.slice(0,300).forEach(p=>{const line=document.createElement('div');line.className='row';
+    line.innerHTML=`<span class=note>#${p.index}</span> buy `+
+      `<input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setPrice(this)> sell `+
+      `<input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setPrice(this)>`;
+    d.appendChild(line);});}
+async function setPrice(inp){const r=await j('/api/setprice',{iso:iso(),
+    index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
+  inp.style.borderColor=r.error?'#ff6b6b':'#8bd450';}
 async function hardmode(restore){if(!iso()){alert('Open the ISO first');return}
   const factor=parseFloat(document.getElementById('hmfactor').value);
   if(!restore && !confirm('Scale ALL characters\' starting stats x'+factor+'? (.bak made; Restore available)'))return;
@@ -225,6 +247,18 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/prices":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: pr = P.read_prices(g)
+                return self._send(200, json.dumps({"prices": pr}))
+            if self.path == "/api/setprice":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    P.write_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/hardmode":
                 if not os.path.exists(iso):

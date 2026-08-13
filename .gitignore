@@ -42,3 +42,8 @@ __pycache__/
 
 # editor/session config
 .claude/
+
+# Stat guides — user-provided ground truth, copyrighted, not distributed
+Guides/
+*.pdf
+*.rtf

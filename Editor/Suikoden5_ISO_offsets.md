@@ -18,7 +18,13 @@ field. Namespace `Suikoden_V_PS2_ROM_Editor`; logic in `Form1`.
 ## Per-character tables  (VERIFIED bases/strides; field labels noted)
 | Table | Base | Stride | Count | Fields |
 |-------|------|--------|-------|--------|
-| Stats     | `0x49F0DC` | `0x7C` (124) | — | +0x00 u8 Level; +0x01 u8 (level-cap?); +0x02..0x18 twelve u16 stats (HP verified: Lyon900/Georg300/Hero480/Miakis150; remaining order HP,SP,ATK,MAG,PDF,MDF,TEC,ACC,EVA,SPD,+2 — labels tentative); +0x1A..0x29 sixteen u8 skill ranks (0..7 seen) |
+| Stats     | `0x49F0DC` | `0x7C` (124) | — | +0x00 u8 Level; +0x01 u8 (level-cap?); +0x02..0x14 ten u16 stats **HP, Spell Count, Attack, Magic, PDF, MDF, Technique, Accuracy, Evasion, Speed** (order VERIFIED vs L60 Character Database guide); +0x16 u16 (~2500 const, unverified); +0x18 u16 **Luck**; +0x1A..0x29 sixteen u8 growth/skill bytes |
+
+## Item / equipment PRICE table  (VERIFIED vs rune guide)
+- Base `0x49433C`, stride `148` (0x94), 148 records in item-id order.
+- +0x00 u32 **buy price**, +0x04 u32 **sell price** (sell == buy/2).
+- Verified: record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500 (Shield Rune).
+- Editable via s5patch prices/set-price + editor Prices panel.
 | Skill thresholds | `0x4987C0` | `0x60` (96) | 16 u8 | ascending magic/skill level thresholds (per class; Kyle==Miakis, Georg==Belcoot) |
 | Skills    | `0x48A970` | `0x12` (18) | 18 u8 | skill values/ranks (0..25 seen; late joiners all 0) |
 | Equipment | `0x493112` | `0x18` (24) | 4 u8  | 4 equip slot item-ids (helm/armor/gloves/boots — order tentative) |
