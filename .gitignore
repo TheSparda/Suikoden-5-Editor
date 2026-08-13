@@ -22,6 +22,8 @@ Prior Editor/
 Editor/Suikoden5Editor_monodis.il
 Editor/*_monodis.il
 Editor/_monodis.err
+# Managed resources extracted from the third-party exe — not distributed
+Editor/_res/
 
 # Local cheat/reference files — not distributed
 Cheats/

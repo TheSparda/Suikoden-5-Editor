@@ -1,0 +1,2498 @@
+{
+ "_note": "Suikoden V character name table. 8-byte fixed-width, ASCII, null-padded. Verified in ISO.",
+ "base": 6886912,
+ "stride": 8,
+ "count": 498,
+ "entries": [
+  {
+   "index": 0,
+   "offset_hex": "0x691600",
+   "name": "Raja"
+  },
+  {
+   "index": 1,
+   "offset_hex": "0x691608",
+   "name": "Zerase"
+  },
+  {
+   "index": 2,
+   "offset_hex": "0x691610",
+   "name": "Craig"
+  },
+  {
+   "index": 3,
+   "offset_hex": "0x691618",
+   "name": "Galleon"
+  },
+  {
+   "index": 4,
+   "offset_hex": "0x691620",
+   "name": "Boz"
+  },
+  {
+   "index": 5,
+   "offset_hex": "0x691628",
+   "name": "Nakula"
+  },
+  {
+   "index": 6,
+   "offset_hex": "0x691630",
+   "name": "Lyon"
+  },
+  {
+   "index": 7,
+   "offset_hex": "0x691638",
+   "name": "Talgeyl"
+  },
+  {
+   "index": 8,
+   "offset_hex": "0x691640",
+   "name": "Eresh"
+  },
+  {
+   "index": 9,
+   "offset_hex": "0x691648",
+   "name": "Dinn"
+  },
+  {
+   "index": 10,
+   "offset_hex": "0x691650",
+   "name": "Kyle"
+  },
+  {
+   "index": 11,
+   "offset_hex": "0x691658",
+   "name": "Zegai"
+  },
+  {
+   "index": 12,
+   "offset_hex": "0x691660",
+   "name": "Isato"
+  },
+  {
+   "index": 13,
+   "offset_hex": "0x691668",
+   "name": "Haswar"
+  },
+  {
+   "index": 14,
+   "offset_hex": "0x691670",
+   "name": "Belcoot"
+  },
+  {
+   "index": 15,
+   "offset_hex": "0x691678",
+   "name": "Norma"
+  },
+  {
+   "index": 16,
+   "offset_hex": "0x691680",
+   "name": "Ax"
+  },
+  {
+   "index": 17,
+   "offset_hex": "0x691688",
+   "name": "Cathari"
+  },
+  {
+   "index": 18,
+   "offset_hex": "0x691690",
+   "name": "Georg"
+  },
+  {
+   "index": 19,
+   "offset_hex": "0x691698",
+   "name": "Ernst"
+  },
+  {
+   "index": 20,
+   "offset_hex": "0x6916a0",
+   "name": "Killey"
+  },
+  {
+   "index": 21,
+   "offset_hex": "0x6916a8",
+   "name": "Shula"
+  },
+  {
+   "index": 22,
+   "offset_hex": "0x6916b0",
+   "name": "Shoon"
+  },
+  {
+   "index": 23,
+   "offset_hex": "0x6916b8",
+   "name": "Volga"
+  },
+  {
+   "index": 24,
+   "offset_hex": "0x6916c0",
+   "name": "Wasil"
+  },
+  {
+   "index": 25,
+   "offset_hex": "0x6916c8",
+   "name": "Flail"
+  },
+  {
+   "index": 26,
+   "offset_hex": "0x6916d0",
+   "name": "Orok"
+  },
+  {
+   "index": 27,
+   "offset_hex": "0x6916d8",
+   "name": "Yoran"
+  },
+  {
+   "index": 28,
+   "offset_hex": "0x6916e0",
+   "name": "Nick"
+  },
+  {
+   "index": 29,
+   "offset_hex": "0x6916e8",
+   "name": "Wilhelm"
+  },
+  {
+   "index": 30,
+   "offset_hex": "0x6916f0",
+   "name": "Mueller"
+  },
+  {
+   "index": 31,
+   "offset_hex": "0x6916f8",
+   "name": "Toma"
+  },
+  {
+   "index": 32,
+   "offset_hex": "0x691700",
+   "name": "Cius"
+  },
+  {
+   "index": 33,
+   "offset_hex": "0x691708",
+   "name": "Raven"
+  },
+  {
+   "index": 34,
+   "offset_hex": "0x691710",
+   "name": "Shinro"
+  },
+  {
+   "index": 35,
+   "offset_hex": "0x691718",
+   "name": "Jeane"
+  },
+  {
+   "index": 36,
+   "offset_hex": "0x691720",
+   "name": "Norden"
+  },
+  {
+   "index": 37,
+   "offset_hex": "0x691728",
+   "name": "Mathias"
+  },
+  {
+   "index": 38,
+   "offset_hex": "0x691730",
+   "name": "Rahal"
+  },
+  {
+   "index": 39,
+   "offset_hex": "0x691738",
+   "name": "Roog"
+  },
+  {
+   "index": 40,
+   "offset_hex": "0x691740",
+   "name": "Gunde"
+  },
+  {
+   "index": 41,
+   "offset_hex": "0x691748",
+   "name": "Bastan"
+  },
+  {
+   "index": 42,
+   "offset_hex": "0x691750",
+   "name": "Lorelai"
+  },
+  {
+   "index": 43,
+   "offset_hex": "0x691758",
+   "name": "Goesch"
+  },
+  {
+   "index": 44,
+   "offset_hex": "0x691760",
+   "name": "Richard"
+  },
+  {
+   "index": 45,
+   "offset_hex": "0x691768",
+   "name": "Wabon"
+  },
+  {
+   "index": 46,
+   "offset_hex": "0x691770",
+   "name": "Rania"
+  },
+  {
+   "index": 47,
+   "offset_hex": "0x691778",
+   "name": "Mohsen"
+  },
+  {
+   "index": 48,
+   "offset_hex": "0x691780",
+   "name": "Silva"
+  },
+  {
+   "index": 49,
+   "offset_hex": "0x691788",
+   "name": "Murad"
+  },
+  {
+   "index": 50,
+   "offset_hex": "0x691790",
+   "name": "Gavaya"
+  },
+  {
+   "index": 51,
+   "offset_hex": "0x691798",
+   "name": "Hazuki"
+  },
+  {
+   "index": 52,
+   "offset_hex": "0x6917a0",
+   "name": "Moroon"
+  },
+  {
+   "index": 53,
+   "offset_hex": "0x6917a8",
+   "name": "Levi"
+  },
+  {
+   "index": 54,
+   "offset_hex": "0x6917b0",
+   "name": "Shigure"
+  },
+  {
+   "index": 55,
+   "offset_hex": "0x6917b8",
+   "name": "Sagiri"
+  },
+  {
+   "index": 56,
+   "offset_hex": "0x6917c0",
+   "name": "Marina"
+  },
+  {
+   "index": 57,
+   "offset_hex": "0x6917c8",
+   "name": "Babbage"
+  },
+  {
+   "index": 58,
+   "offset_hex": "0x6917d0",
+   "name": "Haleth"
+  },
+  {
+   "index": 59,
+   "offset_hex": "0x6917d8",
+   "name": "Nifsara"
+  },
+  {
+   "index": 60,
+   "offset_hex": "0x6917e0",
+   "name": "Yahr"
+  },
+  {
+   "index": 61,
+   "offset_hex": "0x6917e8",
+   "name": "Nelis"
+  },
+  {
+   "index": 62,
+   "offset_hex": "0x6917f0",
+   "name": "Muroon"
+  },
+  {
+   "index": 63,
+   "offset_hex": "0x6917f8",
+   "name": "Bergen"
+  },
+  {
+   "index": 64,
+   "offset_hex": "0x691800",
+   "name": "Miakis"
+  },
+  {
+   "index": 65,
+   "offset_hex": "0x691808",
+   "name": "Zunda"
+  },
+  {
+   "index": 66,
+   "offset_hex": "0x691810",
+   "name": "Viki"
+  },
+  {
+   "index": 67,
+   "offset_hex": "0x691818",
+   "name": "Zweig"
+  },
+  {
+   "index": 68,
+   "offset_hex": "0x691820",
+   "name": "Lu"
+  },
+  {
+   "index": 69,
+   "offset_hex": "0x691828",
+   "name": "Maroon"
+  },
+  {
+   "index": 70,
+   "offset_hex": "0x691830",
+   "name": "Taylor"
+  },
+  {
+   "index": 71,
+   "offset_hex": "0x691838",
+   "name": "Oboro"
+  },
+  {
+   "index": 72,
+   "offset_hex": "0x691840",
+   "name": "Lelei"
+  },
+  {
+   "index": 73,
+   "offset_hex": "0x691848",
+   "name": "Genoh"
+  },
+  {
+   "index": 74,
+   "offset_hex": "0x691850",
+   "name": "Meroon"
+  },
+  {
+   "index": 75,
+   "offset_hex": "0x691858",
+   "name": "Dongo"
+  },
+  {
+   "index": 76,
+   "offset_hex": "0x691860",
+   "name": "Fuyo"
+  },
+  {
+   "index": 77,
+   "offset_hex": "0x691868",
+   "name": "Logg"
+  },
+  {
+   "index": 78,
+   "offset_hex": "0x691870",
+   "name": "Lun"
+  },
+  {
+   "index": 79,
+   "offset_hex": "0x691878",
+   "name": "Retso"
+  },
+  {
+   "index": 80,
+   "offset_hex": "0x691880",
+   "name": "Egbert"
+  },
+  {
+   "index": 81,
+   "offset_hex": "0x691888",
+   "name": "Chuck"
+  },
+  {
+   "index": 82,
+   "offset_hex": "0x691890",
+   "name": "Kisara"
+  },
+  {
+   "index": 83,
+   "offset_hex": "0x691898",
+   "name": "Nikea"
+  },
+  {
+   "index": 84,
+   "offset_hex": "0x6918a0",
+   "name": "Linfa"
+  },
+  {
+   "index": 85,
+   "offset_hex": "0x6918a8",
+   "name": "Faylon"
+  },
+  {
+   "index": 86,
+   "offset_hex": "0x6918b0",
+   "name": "Faylen"
+  },
+  {
+   "index": 87,
+   "offset_hex": "0x6918b8",
+   "name": "Subala"
+  },
+  {
+   "index": 88,
+   "offset_hex": "0x6918c0",
+   "name": "Urda"
+  },
+  {
+   "index": 89,
+   "offset_hex": "0x6918c8",
+   "name": "Miroon"
+  },
+  {
+   "index": 90,
+   "offset_hex": "0x6918d0",
+   "name": "Chisato"
+  },
+  {
+   "index": 91,
+   "offset_hex": "0x6918d8",
+   "name": "Takamu"
+  },
+  {
+   "index": 92,
+   "offset_hex": "0x6918e0",
+   "name": "Roy"
+  },
+  {
+   "index": 93,
+   "offset_hex": "0x6918e8",
+   "name": "Sairoh"
+  },
+  {
+   "index": 94,
+   "offset_hex": "0x6918f0",
+   "name": "Euram"
+  },
+  {
+   "index": 95,
+   "offset_hex": "0x6918f8",
+   "name": "Arshtat"
+  },
+  {
+   "index": 96,
+   "offset_hex": "0x691900",
+   "name": "Ferid"
+  },
+  {
+   "index": 97,
+   "offset_hex": "0x691908",
+   "name": "Zahhak"
+  },
+  {
+   "index": 98,
+   "offset_hex": "0x691910",
+   "name": "Alenia"
+  },
+  {
+   "index": 99,
+   "offset_hex": "0x691918",
+   "name": "Marscal"
+  },
+  {
+   "index": 100,
+   "offset_hex": "0x691920",
+   "name": "Gizel"
+  },
+  {
+   "index": 101,
+   "offset_hex": "0x691928",
+   "name": "Dolph"
+  },
+  {
+   "index": 102,
+   "offset_hex": "0x691930",
+   "name": "Bahram"
+  },
+  {
+   "index": 103,
+   "offset_hex": "0x691938",
+   "name": "Dilber"
+  },
+  {
+   "index": 104,
+   "offset_hex": "0x691940",
+   "name": "Salum"
+  },
+  {
+   "index": 105,
+   "offset_hex": "0x691948",
+   "name": "E"
+  },
+  {
+   "index": 106,
+   "offset_hex": "0x691950",
+   "name": "I"
+  },
+  {
+   "index": 107,
+   "offset_hex": "0x691958",
+   "name": "S"
+  },
+  {
+   "index": 108,
+   "offset_hex": "0x691960",
+   "name": "Skald"
+  },
+  {
+   "index": 109,
+   "offset_hex": "0x691968",
+   "name": "Maha"
+  },
+  {
+   "index": 110,
+   "offset_hex": "0x691970",
+   "name": "Jidan"
+  },
+  {
+   "index": 111,
+   "offset_hex": "0x691978",
+   "name": "Leknaat"
+  },
+  {
+   "index": 112,
+   "offset_hex": "0x691980",
+   "name": "Raulbel"
+  },
+  {
+   "index": 113,
+   "offset_hex": "0x691988",
+   "name": "ReMiFa"
+  },
+  {
+   "index": 114,
+   "offset_hex": "0x691990",
+   "name": "MiFaSo"
+  },
+  {
+   "index": 115,
+   "offset_hex": "0x691998",
+   "name": "FaSoLa"
+  },
+  {
+   "index": 116,
+   "offset_hex": "0x6919a0",
+   "name": "SoLaTi"
+  },
+  {
+   "index": 117,
+   "offset_hex": "0x6919a8",
+   "name": "LaTiDo"
+  },
+  {
+   "index": 118,
+   "offset_hex": "0x6919b0",
+   "name": "Bandana"
+  },
+  {
+   "index": 120,
+   "offset_hex": "0x6919c0",
+   "name": "Turban"
+  },
+  {
+   "index": 121,
+   "offset_hex": "0x6919c8",
+   "name": "Plume"
+  },
+  {
+   "index": 122,
+   "offset_hex": "0x6919d0",
+   "name": "Circlet"
+  },
+  {
+   "index": 124,
+   "offset_hex": "0x6919e0",
+   "name": "Reif"
+  },
+  {
+   "index": 125,
+   "offset_hex": "0x6919e8",
+   "name": "Diadema"
+  },
+  {
+   "index": 126,
+   "offset_hex": "0x6919f0",
+   "name": "Cuffia"
+  },
+  {
+   "index": 127,
+   "offset_hex": "0x6919f8",
+   "name": "Windhut"
+  },
+  {
+   "index": 128,
+   "offset_hex": "0x691a00",
+   "name": "Calotte"
+  },
+  {
+   "index": 129,
+   "offset_hex": "0x691a08",
+   "name": "Robe"
+  },
+  {
+   "index": 130,
+   "offset_hex": "0x691a10",
+   "name": "Tunique"
+  },
+  {
+   "index": 131,
+   "offset_hex": "0x691a18",
+   "name": "Toga"
+  },
+  {
+   "index": 132,
+   "offset_hex": "0x691a20",
+   "name": "Dress"
+  },
+  {
+   "index": 133,
+   "offset_hex": "0x691a28",
+   "name": "Vestito"
+  },
+  {
+   "index": 134,
+   "offset_hex": "0x691a30",
+   "name": "Kleid"
+  },
+  {
+   "index": 135,
+   "offset_hex": "0x691a38",
+   "name": "Vestido"
+  },
+  {
+   "index": 136,
+   "offset_hex": "0x691a40",
+   "name": "Clothes"
+  },
+  {
+   "index": 137,
+   "offset_hex": "0x691a48",
+   "name": "Abiti"
+  },
+  {
+   "index": 138,
+   "offset_hex": "0x691a50",
+   "name": "Outfit"
+  },
+  {
+   "index": 139,
+   "offset_hex": "0x691a58",
+   "name": "Ropas"
+  },
+  {
+   "index": 140,
+   "offset_hex": "0x691a60",
+   "name": "Poncho"
+  },
+  {
+   "index": 141,
+   "offset_hex": "0x691a68",
+   "name": "Bandage"
+  },
+  {
+   "index": 142,
+   "offset_hex": "0x691a70",
+   "name": "Bande"
+  },
+  {
+   "index": 143,
+   "offset_hex": "0x691a78",
+   "name": "Benda"
+  },
+  {
+   "index": 144,
+   "offset_hex": "0x691a80",
+   "name": "Vendaje"
+  },
+  {
+   "index": 145,
+   "offset_hex": "0x691a88",
+   "name": "Armreif"
+  },
+  {
+   "index": 146,
+   "offset_hex": "0x691a90",
+   "name": "Polsini"
+  },
+  {
+   "index": 147,
+   "offset_hex": "0x691a98",
+   "name": "Gloves"
+  },
+  {
+   "index": 148,
+   "offset_hex": "0x691aa0",
+   "name": "Gants"
+  },
+  {
+   "index": 149,
+   "offset_hex": "0x691aa8",
+   "name": "Guanti"
+  },
+  {
+   "index": 150,
+   "offset_hex": "0x691ab0",
+   "name": "Guantes"
+  },
+  {
+   "index": 151,
+   "offset_hex": "0x691ab8",
+   "name": "Bracer"
+  },
+  {
+   "index": 152,
+   "offset_hex": "0x691ac0",
+   "name": "Brazal"
+  },
+  {
+   "index": 153,
+   "offset_hex": "0x691ac8",
+   "name": "Mules"
+  },
+  {
+   "index": 154,
+   "offset_hex": "0x691ad0",
+   "name": "Anklet"
+  },
+  {
+   "index": 156,
+   "offset_hex": "0x691ae0",
+   "name": "Sandals"
+  },
+  {
+   "index": 157,
+   "offset_hex": "0x691ae8",
+   "name": "Sandali"
+  },
+  {
+   "index": 158,
+   "offset_hex": "0x691af0",
+   "name": "Boots"
+  },
+  {
+   "index": 159,
+   "offset_hex": "0x691af8",
+   "name": "Bottes"
+  },
+  {
+   "index": 160,
+   "offset_hex": "0x691b00",
+   "name": "Stivali"
+  },
+  {
+   "index": 161,
+   "offset_hex": "0x691b08",
+   "name": "Stiefel"
+  },
+  {
+   "index": 162,
+   "offset_hex": "0x691b10",
+   "name": "Botas"
+  },
+  {
+   "index": 163,
+   "offset_hex": "0x691b18",
+   "name": "Greaves"
+  },
+  {
+   "index": 164,
+   "offset_hex": "0x691b20",
+   "name": "Cape"
+  },
+  {
+   "index": 165,
+   "offset_hex": "0x691b28",
+   "name": "Umhang"
+  },
+  {
+   "index": 166,
+   "offset_hex": "0x691b30",
+   "name": "Capa"
+  },
+  {
+   "index": 167,
+   "offset_hex": "0x691b38",
+   "name": "Scarf"
+  },
+  {
+   "index": 168,
+   "offset_hex": "0x691b40",
+   "name": "Echarpe"
+  },
+  {
+   "index": 169,
+   "offset_hex": "0x691b48",
+   "name": "Sciarpa"
+  },
+  {
+   "index": 170,
+   "offset_hex": "0x691b50",
+   "name": "Schal"
+  },
+  {
+   "index": 171,
+   "offset_hex": "0x691b58",
+   "name": "Bufanda"
+  },
+  {
+   "index": 172,
+   "offset_hex": "0x691b60",
+   "name": "Erdring"
+  },
+  {
+   "index": 173,
+   "offset_hex": "0x691b68",
+   "name": "Gear"
+  },
+  {
+   "index": 175,
+   "offset_hex": "0x691b78",
+   "name": "Equipo"
+  },
+  {
+   "index": 176,
+   "offset_hex": "0x691b80",
+   "name": "Medizin"
+  },
+  {
+   "index": 177,
+   "offset_hex": "0x691b88",
+   "name": "Herbes"
+  },
+  {
+   "index": 178,
+   "offset_hex": "0x691b90",
+   "name": "Sali"
+  },
+  {
+   "index": 179,
+   "offset_hex": "0x691b98",
+   "name": "Juice"
+  },
+  {
+   "index": 180,
+   "offset_hex": "0x691ba0",
+   "name": "Succo"
+  },
+  {
+   "index": 181,
+   "offset_hex": "0x691ba8",
+   "name": "Saft"
+  },
+  {
+   "index": 182,
+   "offset_hex": "0x691bb0",
+   "name": "Zumo"
+  },
+  {
+   "index": 184,
+   "offset_hex": "0x691bc0",
+   "name": "Son 1"
+  },
+  {
+   "index": 185,
+   "offset_hex": "0x691bc8",
+   "name": "Son 2"
+  },
+  {
+   "index": 186,
+   "offset_hex": "0x691bd0",
+   "name": "Son 3"
+  },
+  {
+   "index": 187,
+   "offset_hex": "0x691bd8",
+   "name": "Son 4"
+  },
+  {
+   "index": 188,
+   "offset_hex": "0x691be0",
+   "name": "Son 5"
+  },
+  {
+   "index": 189,
+   "offset_hex": "0x691be8",
+   "name": "Voix 1"
+  },
+  {
+   "index": 190,
+   "offset_hex": "0x691bf0",
+   "name": "Voix 2"
+  },
+  {
+   "index": 191,
+   "offset_hex": "0x691bf8",
+   "name": "Voix 3"
+  },
+  {
+   "index": 192,
+   "offset_hex": "0x691c00",
+   "name": "Voix 4"
+  },
+  {
+   "index": 193,
+   "offset_hex": "0x691c08",
+   "name": "Voix 5"
+  },
+  {
+   "index": 194,
+   "offset_hex": "0x691c10",
+   "name": "Squid"
+  },
+  {
+   "index": 195,
+   "offset_hex": "0x691c18",
+   "name": "Calmar"
+  },
+  {
+   "index": 196,
+   "offset_hex": "0x691c20",
+   "name": "Kalmar"
+  },
+  {
+   "index": 197,
+   "offset_hex": "0x691c28",
+   "name": "Calamar"
+  },
+  {
+   "index": 198,
+   "offset_hex": "0x691c30",
+   "name": "Octopus"
+  },
+  {
+   "index": 199,
+   "offset_hex": "0x691c38",
+   "name": "Poulpe"
+  },
+  {
+   "index": 200,
+   "offset_hex": "0x691c40",
+   "name": "Polpo"
+  },
+  {
+   "index": 201,
+   "offset_hex": "0x691c48",
+   "name": "Pulpo"
+  },
+  {
+   "index": 202,
+   "offset_hex": "0x691c50",
+   "name": "Tuna"
+  },
+  {
+   "index": 203,
+   "offset_hex": "0x691c58",
+   "name": "Thon"
+  },
+  {
+   "index": 204,
+   "offset_hex": "0x691c60",
+   "name": "Tonno"
+  },
+  {
+   "index": 206,
+   "offset_hex": "0x691c70",
+   "name": "Abalone"
+  },
+  {
+   "index": 207,
+   "offset_hex": "0x691c78",
+   "name": "Ormeau"
+  },
+  {
+   "index": 208,
+   "offset_hex": "0x691c80",
+   "name": "Seeohr"
+  },
+  {
+   "index": 210,
+   "offset_hex": "0x691c90",
+   "name": "Crab"
+  },
+  {
+   "index": 211,
+   "offset_hex": "0x691c98",
+   "name": "Crabe"
+  },
+  {
+   "index": 212,
+   "offset_hex": "0x691ca0",
+   "name": "Krabbe"
+  },
+  {
+   "index": 213,
+   "offset_hex": "0x691ca8",
+   "name": "Truffes"
+  },
+  {
+   "index": 214,
+   "offset_hex": "0x691cb0",
+   "name": "Tartufi"
+  },
+  {
+   "index": 216,
+   "offset_hex": "0x691cc0",
+   "name": "Trufas"
+  },
+  {
+   "index": 217,
+   "offset_hex": "0x691cc8",
+   "name": "Sugar"
+  },
+  {
+   "index": 218,
+   "offset_hex": "0x691cd0",
+   "name": "Sucre"
+  },
+  {
+   "index": 219,
+   "offset_hex": "0x691cd8",
+   "name": "Zucker"
+  },
+  {
+   "index": 221,
+   "offset_hex": "0x691ce8",
+   "name": "Salt"
+  },
+  {
+   "index": 222,
+   "offset_hex": "0x691cf0",
+   "name": "Sel"
+  },
+  {
+   "index": 223,
+   "offset_hex": "0x691cf8",
+   "name": "Sale"
+  },
+  {
+   "index": 224,
+   "offset_hex": "0x691d00",
+   "name": "Salz"
+  },
+  {
+   "index": 225,
+   "offset_hex": "0x691d08",
+   "name": "Sal"
+  },
+  {
+   "index": 226,
+   "offset_hex": "0x691d10",
+   "name": "Soja"
+  },
+  {
+   "index": 228,
+   "offset_hex": "0x691d20",
+   "name": "Verdure"
+  },
+  {
+   "index": 230,
+   "offset_hex": "0x691d30",
+   "name": "Verdura"
+  },
+  {
+   "index": 231,
+   "offset_hex": "0x691d38",
+   "name": "Fruit"
+  },
+  {
+   "index": 232,
+   "offset_hex": "0x691d40",
+   "name": "Fruits"
+  },
+  {
+   "index": 233,
+   "offset_hex": "0x691d48",
+   "name": "Frutta"
+  },
+  {
+   "index": 234,
+   "offset_hex": "0x691d50",
+   "name": "Obst"
+  },
+  {
+   "index": 235,
+   "offset_hex": "0x691d58",
+   "name": "Fruta"
+  },
+  {
+   "index": 236,
+   "offset_hex": "0x691d60",
+   "name": "Wheat"
+  },
+  {
+   "index": 238,
+   "offset_hex": "0x691d70",
+   "name": "Grano"
+  },
+  {
+   "index": 239,
+   "offset_hex": "0x691d78",
+   "name": "Weizen"
+  },
+  {
+   "index": 240,
+   "offset_hex": "0x691d80",
+   "name": "Harina"
+  },
+  {
+   "index": 241,
+   "offset_hex": "0x691d88",
+   "name": "Rice"
+  },
+  {
+   "index": 242,
+   "offset_hex": "0x691d90",
+   "name": "Riz"
+  },
+  {
+   "index": 243,
+   "offset_hex": "0x691d98",
+   "name": "Riso"
+  },
+  {
+   "index": 244,
+   "offset_hex": "0x691da0",
+   "name": "Reis"
+  },
+  {
+   "index": 245,
+   "offset_hex": "0x691da8",
+   "name": "Arroz"
+  },
+  {
+   "index": 246,
+   "offset_hex": "0x691db0",
+   "name": "Kunst"
+  },
+  {
+   "index": 247,
+   "offset_hex": "0x691db8",
+   "name": "Spices"
+  },
+  {
+   "index": 248,
+   "offset_hex": "0x691dc0",
+   "name": "Epices"
+  },
+  {
+   "index": 249,
+   "offset_hex": "0x691dc8",
+   "name": "Spezie"
+  },
+  {
+   "index": 251,
+   "offset_hex": "0x691dd8",
+   "name": "Coffee"
+  },
+  {
+   "index": 254,
+   "offset_hex": "0x691df0",
+   "name": "Kaffee"
+  },
+  {
+   "index": 255,
+   "offset_hex": "0x691df8",
+   "name": "Tea"
+  },
+  {
+   "index": 258,
+   "offset_hex": "0x691e10",
+   "name": "Iron"
+  },
+  {
+   "index": 259,
+   "offset_hex": "0x691e18",
+   "name": "Fer"
+  },
+  {
+   "index": 260,
+   "offset_hex": "0x691e20",
+   "name": "Ferro"
+  },
+  {
+   "index": 261,
+   "offset_hex": "0x691e28",
+   "name": "Eisen"
+  },
+  {
+   "index": 262,
+   "offset_hex": "0x691e30",
+   "name": "Hierro"
+  },
+  {
+   "index": 263,
+   "offset_hex": "0x691e38",
+   "name": "Pearls"
+  },
+  {
+   "index": 264,
+   "offset_hex": "0x691e40",
+   "name": "Perles"
+  },
+  {
+   "index": 265,
+   "offset_hex": "0x691e48",
+   "name": "Perle"
+  },
+  {
+   "index": 266,
+   "offset_hex": "0x691e50",
+   "name": "Perlen"
+  },
+  {
+   "index": 267,
+   "offset_hex": "0x691e58",
+   "name": "Perlas"
+  },
+  {
+   "index": 268,
+   "offset_hex": "0x691e60",
+   "name": "Beer"
+  },
+  {
+   "index": 270,
+   "offset_hex": "0x691e70",
+   "name": "Birra"
+  },
+  {
+   "index": 271,
+   "offset_hex": "0x691e78",
+   "name": "Bier"
+  },
+  {
+   "index": 272,
+   "offset_hex": "0x691e80",
+   "name": "Cerveza"
+  },
+  {
+   "index": 273,
+   "offset_hex": "0x691e88",
+   "name": "Wine"
+  },
+  {
+   "index": 274,
+   "offset_hex": "0x691e90",
+   "name": "Vino"
+  },
+  {
+   "index": 275,
+   "offset_hex": "0x691e98",
+   "name": "Wein"
+  },
+  {
+   "index": 276,
+   "offset_hex": "0x691ea0",
+   "name": "Sake"
+  },
+  {
+   "index": 278,
+   "offset_hex": "0x691eb0",
+   "name": "\"Alba\""
+  },
+  {
+   "index": 279,
+   "offset_hex": "0x691eb8",
+   "name": "\"Dusk\""
+  },
+  {
+   "index": 280,
+   "offset_hex": "0x691ec0",
+   "name": "\"Ruins\""
+  },
+  {
+   "index": 281,
+   "offset_hex": "0x691ec8",
+   "name": "Ruinas"
+  },
+  {
+   "index": 282,
+   "offset_hex": "0x691ed0",
+   "name": "? Pot"
+  },
+  {
+   "index": 283,
+   "offset_hex": "0x691ed8",
+   "name": "Vaso ?"
+  },
+  {
+   "index": 285,
+   "offset_hex": "0x691ee8",
+   "name": "? Olla"
+  },
+  {
+   "index": 286,
+   "offset_hex": "0x691ef0",
+   "name": "Pot or"
+  },
+  {
+   "index": 287,
+   "offset_hex": "0x691ef8",
+   "name": "Citrus"
+  },
+  {
+   "index": 288,
+   "offset_hex": "0x691f00",
+   "name": "Citron"
+  },
+  {
+   "index": 289,
+   "offset_hex": "0x691f08",
+   "name": "Agrume"
+  },
+  {
+   "index": 290,
+   "offset_hex": "0x691f10",
+   "name": "Zitrus"
+  },
+  {
+   "index": 292,
+   "offset_hex": "0x691f20",
+   "name": "Nariqua"
+  },
+  {
+   "index": 293,
+   "offset_hex": "0x691f28",
+   "name": "Creeper"
+  },
+  {
+   "index": 294,
+   "offset_hex": "0x691f30",
+   "name": "Snail"
+  },
+  {
+   "index": 295,
+   "offset_hex": "0x691f38",
+   "name": "Peckles"
+  },
+  {
+   "index": 296,
+   "offset_hex": "0x691f40",
+   "name": "Kantara"
+  },
+  {
+   "index": 297,
+   "offset_hex": "0x691f48",
+   "name": "Picker"
+  },
+  {
+   "index": 298,
+   "offset_hex": "0x691f50",
+   "name": "Schwein"
+  },
+  {
+   "index": 299,
+   "offset_hex": "0x691f58",
+   "name": "Rorcual"
+  },
+  {
+   "index": 300,
+   "offset_hex": "0x691f60",
+   "name": "Skelett"
+  },
+  {
+   "index": 301,
+   "offset_hex": "0x691f68",
+   "name": "Banshee"
+  },
+  {
+   "index": 302,
+   "offset_hex": "0x691f70",
+   "name": "Siren"
+  },
+  {
+   "index": 304,
+   "offset_hex": "0x691f80",
+   "name": "Sirena"
+  },
+  {
+   "index": 305,
+   "offset_hex": "0x691f88",
+   "name": "Sirene"
+  },
+  {
+   "index": 306,
+   "offset_hex": "0x691f90",
+   "name": "Mad Dog"
+  },
+  {
+   "index": 307,
+   "offset_hex": "0x691f98",
+   "name": "Blight"
+  },
+  {
+   "index": 308,
+   "offset_hex": "0x691fa0",
+   "name": "Teigne"
+  },
+  {
+   "index": 310,
+   "offset_hex": "0x691fb0",
+   "name": "Plaga"
+  },
+  {
+   "index": 311,
+   "offset_hex": "0x691fb8",
+   "name": "Libelle"
+  },
+  {
+   "index": 312,
+   "offset_hex": "0x691fc0",
+   "name": "Monoeye"
+  },
+  {
+   "index": 313,
+   "offset_hex": "0x691fc8",
+   "name": "Cyclope"
+  },
+  {
+   "index": 314,
+   "offset_hex": "0x691fd0",
+   "name": "Einauge"
+  },
+  {
+   "index": 315,
+   "offset_hex": "0x691fd8",
+   "name": "Monoojo"
+  },
+  {
+   "index": 316,
+   "offset_hex": "0x691fe0",
+   "name": "Zadom"
+  },
+  {
+   "index": 317,
+   "offset_hex": "0x691fe8",
+   "name": "Ulse"
+  },
+  {
+   "index": 318,
+   "offset_hex": "0x691ff0",
+   "name": "Urs"
+  },
+  {
+   "index": 319,
+   "offset_hex": "0x691ff8",
+   "name": "Furball"
+  },
+  {
+   "index": 320,
+   "offset_hex": "0x692000",
+   "name": "Nemesis"
+  },
+  {
+   "index": 322,
+   "offset_hex": "0x692010",
+   "name": "Nemesi"
+  },
+  {
+   "index": 325,
+   "offset_hex": "0x692028",
+   "name": "Wyvern"
+  },
+  {
+   "index": 326,
+   "offset_hex": "0x692030",
+   "name": "Gudalim"
+  },
+  {
+   "index": 327,
+   "offset_hex": "0x692038",
+   "name": "Dagon"
+  },
+  {
+   "index": 328,
+   "offset_hex": "0x692040",
+   "name": "Zombie"
+  },
+  {
+   "index": 329,
+   "offset_hex": "0x692048",
+   "name": "Zombi"
+  },
+  {
+   "index": 330,
+   "offset_hex": "0x692050",
+   "name": "Mummy"
+  },
+  {
+   "index": 331,
+   "offset_hex": "0x692058",
+   "name": "Momie"
+  },
+  {
+   "index": 332,
+   "offset_hex": "0x692060",
+   "name": "Mummia"
+  },
+  {
+   "index": 333,
+   "offset_hex": "0x692068",
+   "name": "Mumie"
+  },
+  {
+   "index": 334,
+   "offset_hex": "0x692070",
+   "name": "Momia"
+  },
+  {
+   "index": 335,
+   "offset_hex": "0x692078",
+   "name": "Embryo"
+  },
+  {
+   "index": 336,
+   "offset_hex": "0x692080",
+   "name": "Embrio"
+  },
+  {
+   "index": 338,
+   "offset_hex": "0x692090",
+   "name": "Hydra"
+  },
+  {
+   "index": 339,
+   "offset_hex": "0x692098",
+   "name": "Hydre"
+  },
+  {
+   "index": 340,
+   "offset_hex": "0x6920a0",
+   "name": "Idra"
+  },
+  {
+   "index": 341,
+   "offset_hex": "0x6920a8",
+   "name": "Hidra"
+  },
+  {
+   "index": 342,
+   "offset_hex": "0x6920b0",
+   "name": "Thug"
+  },
+  {
+   "index": 343,
+   "offset_hex": "0x6920b8",
+   "name": "Voyou"
+  },
+  {
+   "index": 344,
+   "offset_hex": "0x6920c0",
+   "name": "Bullo"
+  },
+  {
+   "index": 346,
+   "offset_hex": "0x6920d0",
+   "name": "Asesino"
+  },
+  {
+   "index": 348,
+   "offset_hex": "0x6920e0",
+   "name": "Custode"
+  },
+  {
+   "index": 349,
+   "offset_hex": "0x6920e8",
+   "name": "Bandit"
+  },
+  {
+   "index": 350,
+   "offset_hex": "0x6920f0",
+   "name": "Bandito"
+  },
+  {
+   "index": 351,
+   "offset_hex": "0x6920f8",
+   "name": "Bandido"
+  },
+  {
+   "index": 352,
+   "offset_hex": "0x692100",
+   "name": "Stamina"
+  },
+  {
+   "index": 353,
+   "offset_hex": "0x692108",
+   "name": "StaminF"
+  },
+  {
+   "index": 354,
+   "offset_hex": "0x692110",
+   "name": "StaminI"
+  },
+  {
+   "index": 355,
+   "offset_hex": "0x692118",
+   "name": "StaminG"
+  },
+  {
+   "index": 356,
+   "offset_hex": "0x692120",
+   "name": "StaminS"
+  },
+  {
+   "index": 357,
+   "offset_hex": "0x692128",
+   "name": "Max HP+"
+  },
+  {
+   "index": 358,
+   "offset_hex": "0x692130",
+   "name": "Max HPF"
+  },
+  {
+   "index": 359,
+   "offset_hex": "0x692138",
+   "name": "Max HPI"
+  },
+  {
+   "index": 360,
+   "offset_hex": "0x692140",
+   "name": "Max HPG"
+  },
+  {
+   "index": 361,
+   "offset_hex": "0x692148",
+   "name": "Max HPS"
+  },
+  {
+   "index": 362,
+   "offset_hex": "0x692150",
+   "name": "Attack"
+  },
+  {
+   "index": 363,
+   "offset_hex": "0x692158",
+   "name": "AttacF"
+  },
+  {
+   "index": 364,
+   "offset_hex": "0x692160",
+   "name": "AttacI"
+  },
+  {
+   "index": 365,
+   "offset_hex": "0x692168",
+   "name": "AttacG"
+  },
+  {
+   "index": 366,
+   "offset_hex": "0x692170",
+   "name": "AttacS"
+  },
+  {
+   "index": 367,
+   "offset_hex": "0x692178",
+   "name": "Attack+"
+  },
+  {
+   "index": 368,
+   "offset_hex": "0x692180",
+   "name": "AttackF"
+  },
+  {
+   "index": 369,
+   "offset_hex": "0x692188",
+   "name": "AttackI"
+  },
+  {
+   "index": 370,
+   "offset_hex": "0x692190",
+   "name": "AttackG"
+  },
+  {
+   "index": 371,
+   "offset_hex": "0x692198",
+   "name": "AttackS"
+  },
+  {
+   "index": 372,
+   "offset_hex": "0x6921a0",
+   "name": "Defense"
+  },
+  {
+   "index": 373,
+   "offset_hex": "0x6921a8",
+   "name": "DefensF"
+  },
+  {
+   "index": 374,
+   "offset_hex": "0x6921b0",
+   "name": "DefensI"
+  },
+  {
+   "index": 375,
+   "offset_hex": "0x6921b8",
+   "name": "DefensG"
+  },
+  {
+   "index": 376,
+   "offset_hex": "0x6921c0",
+   "name": "DefensS"
+  },
+  {
+   "index": 377,
+   "offset_hex": "0x6921c8",
+   "name": "Agility"
+  },
+  {
+   "index": 378,
+   "offset_hex": "0x6921d0",
+   "name": "AgilitF"
+  },
+  {
+   "index": 379,
+   "offset_hex": "0x6921d8",
+   "name": "AgilitI"
+  },
+  {
+   "index": 380,
+   "offset_hex": "0x6921e0",
+   "name": "AgilitG"
+  },
+  {
+   "index": 381,
+   "offset_hex": "0x6921e8",
+   "name": "AgilitS"
+  },
+  {
+   "index": 382,
+   "offset_hex": "0x6921f0",
+   "name": "Magic"
+  },
+  {
+   "index": 383,
+   "offset_hex": "0x6921f8",
+   "name": "MagiF"
+  },
+  {
+   "index": 384,
+   "offset_hex": "0x692200",
+   "name": "MagiI"
+  },
+  {
+   "index": 385,
+   "offset_hex": "0x692208",
+   "name": "MagiG"
+  },
+  {
+   "index": 386,
+   "offset_hex": "0x692210",
+   "name": "MagiS"
+  },
+  {
+   "index": 387,
+   "offset_hex": "0x692218",
+   "name": "Magic+"
+  },
+  {
+   "index": 388,
+   "offset_hex": "0x692220",
+   "name": "MagicF"
+  },
+  {
+   "index": 389,
+   "offset_hex": "0x692228",
+   "name": "MagicI"
+  },
+  {
+   "index": 390,
+   "offset_hex": "0x692230",
+   "name": "MagicG"
+  },
+  {
+   "index": 391,
+   "offset_hex": "0x692238",
+   "name": "MagicS"
+  },
+  {
+   "index": 392,
+   "offset_hex": "0x692240",
+   "name": "Thief"
+  },
+  {
+   "index": 393,
+   "offset_hex": "0x692248",
+   "name": "ThieF"
+  },
+  {
+   "index": 394,
+   "offset_hex": "0x692250",
+   "name": "ThieI"
+  },
+  {
+   "index": 395,
+   "offset_hex": "0x692258",
+   "name": "ThieG"
+  },
+  {
+   "index": 396,
+   "offset_hex": "0x692260",
+   "name": "ThieS"
+  },
+  {
+   "index": 397,
+   "offset_hex": "0x692268",
+   "name": "Pierce"
+  },
+  {
+   "index": 398,
+   "offset_hex": "0x692270",
+   "name": "PiercF"
+  },
+  {
+   "index": 399,
+   "offset_hex": "0x692278",
+   "name": "PiercI"
+  },
+  {
+   "index": 400,
+   "offset_hex": "0x692280",
+   "name": "PiercG"
+  },
+  {
+   "index": 401,
+   "offset_hex": "0x692288",
+   "name": "PiercS"
+  },
+  {
+   "index": 402,
+   "offset_hex": "0x692290",
+   "name": "Freeze"
+  },
+  {
+   "index": 403,
+   "offset_hex": "0x692298",
+   "name": "FreezF"
+  },
+  {
+   "index": 404,
+   "offset_hex": "0x6922a0",
+   "name": "FreezI"
+  },
+  {
+   "index": 405,
+   "offset_hex": "0x6922a8",
+   "name": "FreezG"
+  },
+  {
+   "index": 406,
+   "offset_hex": "0x6922b0",
+   "name": "FreezS"
+  },
+  {
+   "index": 407,
+   "offset_hex": "0x6922b8",
+   "name": "Barrage"
+  },
+  {
+   "index": 408,
+   "offset_hex": "0x6922c0",
+   "name": "BarragF"
+  },
+  {
+   "index": 409,
+   "offset_hex": "0x6922c8",
+   "name": "BarragI"
+  },
+  {
+   "index": 410,
+   "offset_hex": "0x6922d0",
+   "name": "BarragG"
+  },
+  {
+   "index": 411,
+   "offset_hex": "0x6922d8",
+   "name": "BarragS"
+  },
+  {
+   "index": 412,
+   "offset_hex": "0x6922e0",
+   "name": "Forge"
+  },
+  {
+   "index": 413,
+   "offset_hex": "0x6922e8",
+   "name": "ForgF"
+  },
+  {
+   "index": 414,
+   "offset_hex": "0x6922f0",
+   "name": "ForgI"
+  },
+  {
+   "index": 415,
+   "offset_hex": "0x6922f8",
+   "name": "ForgG"
+  },
+  {
+   "index": 416,
+   "offset_hex": "0x692300",
+   "name": "ForgS"
+  },
+  {
+   "index": 417,
+   "offset_hex": "0x692308",
+   "name": "Analyze"
+  },
+  {
+   "index": 418,
+   "offset_hex": "0x692310",
+   "name": "SeF"
+  },
+  {
+   "index": 419,
+   "offset_hex": "0x692318",
+   "name": "SeG"
+  },
+  {
+   "index": 420,
+   "offset_hex": "0x692320",
+   "name": "Healing"
+  },
+  {
+   "index": 421,
+   "offset_hex": "0x692328",
+   "name": "HealinF"
+  },
+  {
+   "index": 422,
+   "offset_hex": "0x692330",
+   "name": "HealinI"
+  },
+  {
+   "index": 423,
+   "offset_hex": "0x692338",
+   "name": "HealinG"
+  },
+  {
+   "index": 424,
+   "offset_hex": "0x692340",
+   "name": "HealinS"
+  },
+  {
+   "index": 425,
+   "offset_hex": "0x692348",
+   "name": "Haggle"
+  },
+  {
+   "index": 426,
+   "offset_hex": "0x692350",
+   "name": "HagglF"
+  },
+  {
+   "index": 427,
+   "offset_hex": "0x692358",
+   "name": "HagglI"
+  },
+  {
+   "index": 428,
+   "offset_hex": "0x692360",
+   "name": "HagglG"
+  },
+  {
+   "index": 429,
+   "offset_hex": "0x692368",
+   "name": "HagglS"
+  },
+  {
+   "index": 430,
+   "offset_hex": "0x692370",
+   "name": "Cook"
+  },
+  {
+   "index": 431,
+   "offset_hex": "0x692378",
+   "name": "CooF"
+  },
+  {
+   "index": 432,
+   "offset_hex": "0x692380",
+   "name": "CooI"
+  },
+  {
+   "index": 433,
+   "offset_hex": "0x692388",
+   "name": "CooG"
+  },
+  {
+   "index": 434,
+   "offset_hex": "0x692390",
+   "name": "CooS"
+  },
+  {
+   "index": 435,
+   "offset_hex": "0x692398",
+   "name": "Bard"
+  },
+  {
+   "index": 436,
+   "offset_hex": "0x6923a0",
+   "name": "BarF"
+  },
+  {
+   "index": 437,
+   "offset_hex": "0x6923a8",
+   "name": "BarI"
+  },
+  {
+   "index": 438,
+   "offset_hex": "0x6923b0",
+   "name": "BarG"
+  },
+  {
+   "index": 439,
+   "offset_hex": "0x6923b8",
+   "name": "BarS"
+  },
+  {
+   "index": 440,
+   "offset_hex": "0x6923c0",
+   "name": "Bath"
+  },
+  {
+   "index": 441,
+   "offset_hex": "0x6923c8",
+   "name": "BatF"
+  },
+  {
+   "index": 442,
+   "offset_hex": "0x6923d0",
+   "name": "BatI"
+  },
+  {
+   "index": 443,
+   "offset_hex": "0x6923d8",
+   "name": "BatG"
+  },
+  {
+   "index": 444,
+   "offset_hex": "0x6923e0",
+   "name": "BatS"
+  },
+  {
+   "index": 445,
+   "offset_hex": "0x6923e8",
+   "name": "Tutor"
+  },
+  {
+   "index": 446,
+   "offset_hex": "0x6923f0",
+   "name": "TutoF"
+  },
+  {
+   "index": 447,
+   "offset_hex": "0x6923f8",
+   "name": "TutoI"
+  },
+  {
+   "index": 448,
+   "offset_hex": "0x692400",
+   "name": "TutoG"
+  },
+  {
+   "index": 449,
+   "offset_hex": "0x692408",
+   "name": "TutoS"
+  },
+  {
+   "index": 451,
+   "offset_hex": "0x692418",
+   "name": "Eveil"
+  },
+  {
+   "index": 452,
+   "offset_hex": "0x692420",
+   "name": "Weckruf"
+  },
+  {
+   "index": 453,
+   "offset_hex": "0x692428",
+   "name": "Orage"
+  },
+  {
+   "index": 454,
+   "offset_hex": "0x692430",
+   "name": "Eisodem"
+  },
+  {
+   "index": 456,
+   "offset_hex": "0x692440",
+   "name": "Comet"
+  },
+  {
+   "index": 458,
+   "offset_hex": "0x692450",
+   "name": "Cometa"
+  },
+  {
+   "index": 459,
+   "offset_hex": "0x692458",
+   "name": "Komet"
+  },
+  {
+   "index": 460,
+   "offset_hex": "0x692460",
+   "name": "Ready!"
+  },
+  {
+   "index": 461,
+   "offset_hex": "0x692468",
+   "name": "Pronti!"
+  },
+  {
+   "index": 462,
+   "offset_hex": "0x692470",
+   "name": "Set!"
+  },
+  {
+   "index": 464,
+   "offset_hex": "0x692480",
+   "name": "Fertig!"
+  },
+  {
+   "index": 465,
+   "offset_hex": "0x692488",
+   "name": "Go!"
+  },
+  {
+   "index": 466,
+   "offset_hex": "0x692490",
+   "name": "Via!"
+  },
+  {
+   "index": 467,
+   "offset_hex": "0x692498",
+   "name": "Los!"
+  },
+  {
+   "index": 468,
+   "offset_hex": "0x6924a0",
+   "name": "!Ya!"
+  },
+  {
+   "index": 469,
+   "offset_hex": "0x6924a8",
+   "name": "Fugue"
+  },
+  {
+   "index": 470,
+   "offset_hex": "0x6924b0",
+   "name": "Fuga"
+  },
+  {
+   "index": 471,
+   "offset_hex": "0x6924b8",
+   "name": "Fuge"
+  },
+  {
+   "index": 472,
+   "offset_hex": "0x6924c0",
+   "name": "March"
+  },
+  {
+   "index": 473,
+   "offset_hex": "0x6924c8",
+   "name": "Marche"
+  },
+  {
+   "index": 474,
+   "offset_hex": "0x6924d0",
+   "name": "Marcia"
+  },
+  {
+   "index": 475,
+   "offset_hex": "0x6924d8",
+   "name": "Marsch"
+  },
+  {
+   "index": 476,
+   "offset_hex": "0x6924e0",
+   "name": "Marcha"
+  },
+  {
+   "index": 477,
+   "offset_hex": "0x6924e8",
+   "name": "Dispute"
+  },
+  {
+   "index": 478,
+   "offset_hex": "0x6924f0",
+   "name": "Yell"
+  },
+  {
+   "index": 479,
+   "offset_hex": "0x6924f8",
+   "name": "Cri"
+  },
+  {
+   "index": 480,
+   "offset_hex": "0x692500",
+   "name": "Grido"
+  },
+  {
+   "index": 482,
+   "offset_hex": "0x692510",
+   "name": "Grito"
+  },
+  {
+   "index": 483,
+   "offset_hex": "0x692518",
+   "name": "Scream"
+  },
+  {
+   "index": 484,
+   "offset_hex": "0x692520",
+   "name": "Urlo"
+  },
+  {
+   "index": 485,
+   "offset_hex": "0x692528",
+   "name": "Level 1"
+  },
+  {
+   "index": 486,
+   "offset_hex": "0x692530",
+   "name": "Stufe 1"
+  },
+  {
+   "index": 487,
+   "offset_hex": "0x692538",
+   "name": "Nivel 1"
+  },
+  {
+   "index": 488,
+   "offset_hex": "0x692540",
+   "name": "Level 2"
+  },
+  {
+   "index": 489,
+   "offset_hex": "0x692548",
+   "name": "Stufe 2"
+  },
+  {
+   "index": 490,
+   "offset_hex": "0x692550",
+   "name": "Nivel 2"
+  },
+  {
+   "index": 491,
+   "offset_hex": "0x692558",
+   "name": "Level 3"
+  },
+  {
+   "index": 492,
+   "offset_hex": "0x692560",
+   "name": "Stufe 3"
+  },
+  {
+   "index": 493,
+   "offset_hex": "0x692568",
+   "name": "Nivel 3"
+  },
+  {
+   "index": 494,
+   "offset_hex": "0x692570",
+   "name": "Level 4"
+  },
+  {
+   "index": 495,
+   "offset_hex": "0x692578",
+   "name": "Stufe 4"
+  },
+  {
+   "index": 496,
+   "offset_hex": "0x692580",
+   "name": "Nivel 4"
+  },
+  {
+   "index": 497,
+   "offset_hex": "0x692588",
+   "name": "Family"
+  },
+  {
+   "index": 498,
+   "offset_hex": "0x692590",
+   "name": "Famille"
+  },
+  {
+   "index": 499,
+   "offset_hex": "0x692598",
+   "name": "Familia"
+  },
+  {
+   "index": 500,
+   "offset_hex": "0x6925a0",
+   "name": "Rivalen"
+  },
+  {
+   "index": 501,
+   "offset_hex": "0x6925a8",
+   "name": "Oops!"
+  },
+  {
+   "index": 502,
+   "offset_hex": "0x6925b0",
+   "name": "Oups !"
+  },
+  {
+   "index": 503,
+   "offset_hex": "0x6925b8",
+   "name": "!Uups!"
+  },
+  {
+   "index": 505,
+   "offset_hex": "0x6925c8",
+   "name": "Ansturm"
+  },
+  {
+   "index": 506,
+   "offset_hex": "0x6925d0",
+   "name": "Bloqueo"
+  },
+  {
+   "index": 507,
+   "offset_hex": "0x6925d8",
+   "name": "Tunnel"
+  },
+  {
+   "index": 508,
+   "offset_hex": "0x6925e0",
+   "name": "DoReMi"
+  },
+  {
+   "index": 510,
+   "offset_hex": "0x6925f0",
+   "name": "Conceit"
+  },
+  {
+   "index": 512,
+   "offset_hex": "0x692600",
+   "name": "Fate"
+  },
+  {
+   "index": 513,
+   "offset_hex": "0x692608",
+   "name": "Destin"
+  },
+  {
+   "index": 514,
+   "offset_hex": "0x692610",
+   "name": "Destino"
+  },
+  {
+   "index": 515,
+   "offset_hex": "0x692618",
+   "name": "???"
+  },
+  {
+   "index": 516,
+   "offset_hex": "0x692620",
+   "name": "Normale"
+  },
+  {
+   "index": 517,
+   "offset_hex": "0x692628",
+   "name": "Goose"
+  },
+  {
+   "index": 518,
+   "offset_hex": "0x692630",
+   "name": "Oie"
+  },
+  {
+   "index": 519,
+   "offset_hex": "0x692638",
+   "name": "Gans"
+  },
+  {
+   "index": 520,
+   "offset_hex": "0x692640",
+   "name": "Ganso"
+  },
+  {
+   "index": 521,
+   "offset_hex": "0x692648",
+   "name": "Cross"
+  },
+  {
+   "index": 522,
+   "offset_hex": "0x692650",
+   "name": "Croix"
+  },
+  {
+   "index": 523,
+   "offset_hex": "0x692658",
+   "name": "Croce"
+  },
+  {
+   "index": 524,
+   "offset_hex": "0x692660",
+   "name": "Kreuz"
+  },
+  {
+   "index": 525,
+   "offset_hex": "0x692668",
+   "name": "Cruce"
+  },
+  {
+   "index": 526,
+   "offset_hex": "0x692670",
+   "name": "Tiger"
+  },
+  {
+   "index": 527,
+   "offset_hex": "0x692678",
+   "name": "Tigre"
+  },
+  {
+   "index": 529,
+   "offset_hex": "0x692688",
+   "name": "Circle"
+  },
+  {
+   "index": 530,
+   "offset_hex": "0x692690",
+   "name": "Cercle"
+  },
+  {
+   "index": 531,
+   "offset_hex": "0x692698",
+   "name": "Cerchio"
+  },
+  {
+   "index": 532,
+   "offset_hex": "0x6926a0",
+   "name": "Kreis"
+  },
+  {
+   "index": 534,
+   "offset_hex": "0x6926b0",
+   "name": "Sorcery"
+  },
+  {
+   "index": 535,
+   "offset_hex": "0x6926b8",
+   "name": "Hexerei"
+  },
+  {
+   "index": 537,
+   "offset_hex": "0x6926c8",
+   "name": "Eclair"
+  }
+ ]
+}

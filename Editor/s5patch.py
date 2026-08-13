@@ -1,128 +1,168 @@
 #!/usr/bin/env python3
 """
-Suikoden V (USA, SLUS-21291) ISO patcher / research tool.
+Suikoden V (USA, SLUS-21291) ISO engine + CLI.
 
-Reverse-engineered from Suikoden5EditorV10.exe (by Tony H) via monodis, and validated
-against a real "Suikoden V" ISO. Offsets are RAW byte positions into the ISO (the game
-data sits in a flat region; no LBA/sector math needed for the character table).
+Reverse-engineered from Suikoden5EditorV10.exe (Tony H) via monodis and validated
+against a real ISO. See s5fields.py for what is VERIFIED vs research.
 
-Character table: base 0x498C00, stride 180 bytes. Record i at 0x498C00 + i*180.
-The 180-byte record layout lives in s5fields.CHAR_FIELDS (offsets authoritative).
-
-Usage:
-  python3 s5patch.py verify    "ISO/Suikoden V - OG.iso"
-  python3 s5patch.py dump-char "ISO/..." --index 0
-  python3 s5patch.py set-field "ISO/..." --index 0 --off 0x02 --u16 999
+Commands:
+  verify     <iso>                      check the serial
+  names      <iso> [--limit N]          dump the 0x691600 character-name table
+  find-name  <iso> --name Lyon          find ASCII occurrences of a name in the ISO
+  set-name   <iso> --index I --name X   rename entry I in the name table (<=7 chars)
+  ladder     <iso>                      dump the 0x4986C0 numeric ladder
+  peek       <iso> --off 0x.. --len N   raw hex read at an absolute offset
+  poke       <iso> --off 0x.. --u8/--u16/--hex ..   raw write (makes a .bak)
 """
-import argparse, os, struct, sys, shutil, datetime
+import argparse, os, sys, shutil
 import s5fields as F
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 class Iso:
-    """Thin random-access wrapper over the ISO file."""
     def __init__(self, path, writable=False):
         self.path = path
         self.f = open(path, "r+b" if writable else "rb")
         self.writable = writable
-
     def close(self):
         try: self.f.close()
         except Exception: pass
-
     def __enter__(self): return self
     def __exit__(self, *a): self.close()
-
-    def rd(self, off, n):
-        self.f.seek(off); return self.f.read(n)
-
-    def wr(self, off, data):
+    def rd(self, off, n): self.f.seek(off); return self.f.read(n)
+    def wr(self, off, b):
         if not self.writable: raise IOError("ISO opened read-only")
-        self.f.seek(off); self.f.write(data)
-
-    def ru(self, off, w):
-        return int.from_bytes(self.rd(off, w), "little")
-
-    def wu(self, off, w, val):
-        maxv = (1 << (8 * w)) - 1
-        if not (0 <= val <= maxv):
-            raise ValueError(f"value {val} out of range for {w}-byte field")
-        self.wr(off, int(val).to_bytes(w, "little"))
+        self.f.seek(off); self.f.write(b)
+    def ru(self, off, w): return int.from_bytes(self.rd(off, w), "little")
+    def wu(self, off, w, v):
+        if not (0 <= v < (1 << 8*w)): raise ValueError(f"{v} out of range for {w}B")
+        self.wr(off, int(v).to_bytes(w, "little"))
 
 
 def is_valid(iso):
-    """True if the ISO's serial region matches SLUS-21291."""
     return iso.rd(F.SERIAL_OFF, len(F.SERIAL_STR)) == F.SERIAL_STR
 
 
-def char_offset(index):
-    return F.CHAR_TABLE_BASE + index * F.CHAR_STRIDE
-
-
-def read_char(iso, index):
-    """Return [{label, off, width, kind, value}] for character `index`."""
-    base = char_offset(index)
-    out = []
-    for label, off, w, kind in F.CHAR_FIELDS:
-        out.append({"label": label, "off": off, "width": w, "kind": kind,
-                    "value": iso.ru(base + off, w)})
+def read_names(iso, limit=0):
+    """Enumerate the 8-byte name table until a run of empty/non-ASCII slots."""
+    out = []; empty = 0; i = 0
+    while True:
+        rec = iso.rd(F.NAME_TABLE_BASE + i * F.NAME_ENTRY_SIZE, F.NAME_ENTRY_SIZE)
+        nm = rec.split(b"\x00")[0]
+        ok = 1 <= len(nm) <= F.NAME_MAX_CHARS and all(32 <= c < 127 for c in nm)
+        if ok:
+            out.append({"index": i, "off": F.NAME_TABLE_BASE + i*F.NAME_ENTRY_SIZE,
+                        "name": nm.decode("ascii")}); empty = 0
+        else:
+            empty += 1
+            if empty >= 3 and out: break
+        i += 1
+        if limit and len(out) >= limit: break
+        if i > 4000: break
     return out
 
 
-def write_field(iso, index, off, width, value):
-    iso.wu(char_offset(index) + off, width, value)
+def find_name(iso, name, maxhits=8):
+    """Search the whole ISO for ASCII `name`; return byte offsets."""
+    needle = name.encode("ascii")
+    hits = []; CH = 8 << 20; ov = len(needle); pos = 0
+    sz = os.path.getsize(iso.path)
+    while pos < sz and len(hits) < maxhits:
+        buf = iso.rd(pos, CH)
+        if not buf: break
+        j = buf.find(needle)
+        while j >= 0 and len(hits) < maxhits:
+            hits.append(pos + j); j = buf.find(needle, j + 1)
+        pos += CH - ov
+    return hits
+
+
+def set_name(iso, index, name):
+    if len(name) > F.NAME_MAX_CHARS:
+        raise ValueError(f"name too long (max {F.NAME_MAX_CHARS} chars)")
+    slot = name.encode("ascii").ljust(F.NAME_ENTRY_SIZE, b"\x00")
+    iso.wr(F.NAME_TABLE_BASE + index * F.NAME_ENTRY_SIZE, slot)
 
 
 def backup(path):
     bak = path + ".bak"
-    if not os.path.exists(bak):
-        shutil.copy2(path, bak)
+    if not os.path.exists(bak): shutil.copy2(path, bak)
     return bak
 
 
 # --------------------------------------------------------------------------- CLI
-def _cmd_verify(a):
+def _verify(a):
     with Iso(a.iso) as iso:
-        ok = is_valid(iso)
-        print("VALID SLUS-21291" if ok else "NOT a recognized Suikoden V (USA) ISO")
+        ok = is_valid(iso); print("VALID SLUS-21291" if ok else "NOT a recognized S5 (USA) ISO")
         return 0 if ok else 2
 
-
-def _cmd_dump_char(a):
+def _names(a):
     with Iso(a.iso) as iso:
-        if not is_valid(iso):
-            print("warning: serial check failed; dumping anyway", file=sys.stderr)
-        print(f"Character #{a.index} @ 0x{char_offset(a.index):X}")
-        for row in read_char(iso, a.index):
-            print(f"  +0x{row['off']:02X} {row['width']}B  {row['label']:<24} = {row['value']}")
+        for e in read_names(iso, a.limit):
+            print(f"  #{e['index']:>3} 0x{e['off']:X}  {e['name']}")
     return 0
 
+def _find(a):
+    with Iso(a.iso) as iso:
+        hits = find_name(iso, a.name)
+        print(f"{a.name}: " + (", ".join(hex(h) for h in hits) if hits else "not found"))
+    return 0
 
-def _cmd_set_field(a):
-    if a.u8 is None and a.u16 is None:
-        print("provide --u8 or --u16", file=sys.stderr); return 2
-    width, val = (1, a.u8) if a.u8 is not None else (2, a.u16)
+def _setname(a):
     backup(a.iso)
     with Iso(a.iso, writable=True) as iso:
-        write_field(iso, a.index, int(a.off, 0), width, val)
-    print(f"wrote {val} ({width}B) to char #{a.index} +0x{int(a.off,0):02X}")
+        set_name(iso, a.index, a.name)
+    print(f"renamed entry #{a.index} -> {a.name!r}")
+    return 0
+
+def _ladder(a):
+    with Iso(a.iso) as iso:
+        vals = [iso.ru(F.LADDER_OFF + i*2, 2) for i in range(F.LADDER_COUNT)]
+        print("extra @0x%X:" % F.LADDER_EXTRA_OFF, iso.ru(F.LADDER_EXTRA_OFF, 2))
+        for g in range(0, F.LADDER_COUNT, 10):
+            print(" ", vals[g:g+10])
+    return 0
+
+def _peek(a):
+    with Iso(a.iso) as iso:
+        b = iso.rd(int(a.off, 0), max(1, min(256, a.len)))
+    print(b.hex(" "))
+    print("".join(chr(c) if 32 <= c < 127 else "." for c in b))
+    return 0
+
+def _poke(a):
+    backup(a.iso)
+    with Iso(a.iso, writable=True) as iso:
+        off = int(a.off, 0)
+        if a.hex is not None:
+            iso.wr(off, bytes.fromhex(a.hex.replace(" ", "")))
+        elif a.u16 is not None:
+            iso.wu(off, 2, a.u16)
+        elif a.u8 is not None:
+            iso.wu(off, 1, a.u8)
+        else:
+            print("provide --u8/--u16/--hex", file=sys.stderr); return 2
+    print(f"wrote to 0x{off:X}")
     return 0
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="Suikoden V ISO patcher")
+    p = argparse.ArgumentParser(description="Suikoden V ISO engine")
     sub = p.add_subparsers(dest="cmd", required=True)
-
-    v = sub.add_parser("verify"); v.add_argument("iso"); v.set_defaults(fn=_cmd_verify)
-    d = sub.add_parser("dump-char"); d.add_argument("iso")
-    d.add_argument("--index", type=int, default=0); d.set_defaults(fn=_cmd_dump_char)
-    s = sub.add_parser("set-field"); s.add_argument("iso")
-    s.add_argument("--index", type=int, required=True)
-    s.add_argument("--off", required=True, help="offset within record, e.g. 0x02")
-    s.add_argument("--u8", type=int); s.add_argument("--u16", type=int)
-    s.set_defaults(fn=_cmd_set_field)
-
+    def add(name, fn, args=()):
+        sp = sub.add_parser(name); sp.add_argument("iso")
+        for aa in args: sp.add_argument(*aa[0], **aa[1])
+        sp.set_defaults(fn=fn); return sp
+    add("verify", _verify)
+    add("names", _names, [(("--limit",), dict(type=int, default=0))])
+    add("find-name", _find, [(("--name",), dict(required=True))])
+    add("set-name", _setname, [(("--index",), dict(type=int, required=True)),
+                               (("--name",), dict(required=True))])
+    add("ladder", _ladder)
+    add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
+    add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
+                        (("--u16",), dict(type=int)), (("--hex",), dict())])
     a = p.parse_args(argv)
     return a.fn(a)
 
