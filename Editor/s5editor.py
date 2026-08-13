@@ -9,6 +9,7 @@ tables, plus name renaming and a raw hex peek. See Suikoden5_ISO_offsets.md.
 import http.server, json, os, socketserver, webbrowser, threading
 import s5patch as P
 import s5fields as F
+import s5save as SV
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, ".s5editor.json")
@@ -54,6 +55,13 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
  </div>
  <div id=sections></div>
  <hr style="border-color:#4a2b26;margin:18px 0">
+ <h3 style="color:#f0c05a;font-size:15px">Memory-card saves</h3>
+ <div class=row>
+   Search folder: <input id=saveroot size=40 placeholder="(defaults to ./Saves)">
+   <button class=ghost onclick=scanSaves()>Scan for S5 saves</button>
+ </div>
+ <div id=saves></div>
+ <hr style="border-color:#4a2b26;margin:18px 0">
  <div class=row>
    Raw read: off <input id=roff size=10 value=0x828BD> len <input id=rlen size=4 value=16>
    <button class=ghost onclick=peek()>Read</button>
@@ -98,6 +106,26 @@ async function saveChar(){const inps=[...document.querySelectorAll('#sections in
   const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
   document.getElementById('csave').textContent=s.error?('error: '+s.error):('saved '+edits.length+' field(s)');
   if(!s.error)loadChar();}
+async function scanSaves(){const s=await j('/api/savescan',{root:document.getElementById('saveroot').value});
+  const d=document.getElementById('saves');
+  if(s.error){d.textContent=s.error;return}
+  if(!s.saves.length){d.innerHTML='<p class=note>No Suikoden V saves found.</p>';return}
+  d.innerHTML=s.saves.map((sv,i)=>{const fl=sv.fields||{};
+    return `<div class=sec><h3>${sv.card} — ${sv.folder} <span class=note>${(sv.meta&&sv.meta.title)||''}</span></h3>`+
+    `<div class=grid>`+
+    `<div class=fld><label>Hero name</label><input id="sv${i}_heroName" value="${fl.heroName||''}" maxlength=15></div>`+
+    `<div class=fld><label>Castle name</label><input id="sv${i}_castleName" value="${fl.castleName||''}" maxlength=15></div>`+
+    `<div class=fld><label>Level</label><input id="sv${i}_level" type=number min=0 max=255 value="${fl.level||0}"></div>`+
+    `<div class=fld><label>&nbsp;</label><button onclick='saveWrite(${i})'>Write to card</button></div>`+
+    `</div></div>`;}).join('');
+  window._saves=s.saves;}
+async function saveWrite(i){const sv=window._saves[i];
+  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
+    castleName:document.getElementById('sv'+i+'_castleName').value,
+    level:parseInt(document.getElementById('sv'+i+'_level').value)};
+  if(!confirm('Write to '+sv.card+'? A .bak is made. (Save checksum unverified — verify it loads in-game.)'))return;
+  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
+  alert(r.error?('Error: '+r.error):('Wrote '+r.changed+' field(s). '+(r.warn||'')));}
 async function peek(){const s=await j('/api/peek',{iso:iso(),
   off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
   document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii);}
@@ -121,8 +149,8 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             d = self._body(); iso = d.get("iso", "")
-            need_iso = self.path != "/api/nope"
-            if need_iso and self.path != "/api/chars_static" and not os.path.exists(iso):
+            ISO_PATHS = ("/api/verify", "/api/chars", "/api/char", "/api/setchar", "/api/peek")
+            if self.path in ISO_PATHS and not os.path.exists(iso):
                 return self._send(200, json.dumps({"error": "file not found"}))
             if self.path == "/api/verify":
                 with P.Iso(iso) as g: ok = P.is_valid(g)
@@ -139,6 +167,20 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/savescan":
+                roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
+                if d.get("root"): roots.insert(0, d["root"])
+                saves = []
+                for card in SV.scan_memcards(roots):
+                    if not card["hasS5"]: continue
+                    try:
+                        for s in SV.read_all_saves(card["path"]):
+                            s["card"] = card["name"]; s["cardPath"] = card["path"]; saves.append(s)
+                    except Exception: pass
+                return self._send(200, json.dumps({"saves": saves}))
+            if self.path == "/api/savewrite":
+                r = SV.write_save_fields(d["card"], d["folder"], d.get("edits", {}))
+                return self._send(200, json.dumps(r))
             if self.path == "/api/peek":
                 off = int(str(d.get("off", "0")), 0); ln = max(1, min(256, int(str(d.get("len", "16")), 0)))
                 with P.Iso(iso) as g: b = g.rd(off, ln)
