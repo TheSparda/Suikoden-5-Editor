@@ -1,0 +1,1034 @@
+[
+ {
+  "off": "0x6510f0",
+  "name": "Boundary Piece"
+ },
+ {
+  "off": "0x651110",
+  "name": "Pezzo di Confine"
+ },
+ {
+  "off": "0x651130",
+  "name": "Abgrenzungs-Stck"
+ },
+ {
+  "off": "0x651248",
+  "name": "Steel Piece"
+ },
+ {
+  "off": "0x651270",
+  "name": "Pezzo d'Acciaio"
+ },
+ {
+  "off": "0x651290",
+  "name": "Trozo de acero"
+ },
+ {
+  "off": "0x651378",
+  "name": "Violence Piece"
+ },
+ {
+  "off": "0x6513a0",
+  "name": "Pezzo di Rabbia"
+ },
+ {
+  "off": "0x6513c0",
+  "name": "Trozo de violencia"
+ },
+ {
+  "off": "0x6514d0",
+  "name": "Boost Piece"
+ },
+ {
+  "off": "0x6514f0",
+  "name": "Pezzo Incremento"
+ },
+ {
+  "off": "0x651520",
+  "name": "Trozo de mejora"
+ },
+ {
+  "off": "0x651608",
+  "name": "Fortune Piece"
+ },
+ {
+  "off": "0x651630",
+  "name": "Pz Buona fortuna"
+ },
+ {
+  "off": "0x651660",
+  "name": "Tr. buena fortuna"
+ },
+ {
+  "off": "0x651770",
+  "name": "Prosperity Piece"
+ },
+ {
+  "off": "0x6517b0",
+  "name": "Pz Denaro facile"
+ },
+ {
+  "off": "0x6517e0",
+  "name": "Tr. dinero afort."
+ },
+ {
+  "off": "0x6518f0",
+  "name": "Great Firefly Pc"
+ },
+ {
+  "off": "0x651930",
+  "name": "Pz Gran lucciola"
+ },
+ {
+  "off": "0x651aa8",
+  "name": "h#j"
+ },
+ {
+  "off": "0x651aac",
+  "name": "x#j"
+ },
+ {
+  "off": "0x651ac8",
+  "name": "@$j"
+ },
+ {
+  "off": "0x651acc",
+  "name": "p$j"
+ },
+ {
+  "off": "0x651ae8",
+  "name": "@%j"
+ },
+ {
+  "off": "0x651aec",
+  "name": "p%j"
+ },
+ {
+  "off": "0x651af9",
+  "name": "&j"
+ },
+ {
+  "off": "0x651b00",
+  "name": " &j"
+ },
+ {
+  "off": "0x651b04",
+  "name": "0&j"
+ },
+ {
+  "off": "0x651b08",
+  "name": "P&j"
+ },
+ {
+  "off": "0x651b0c",
+  "name": "p&j"
+ },
+ {
+  "off": "0x651b19",
+  "name": "'j"
+ },
+ {
+  "off": "0x651b1c",
+  "name": "0'j"
+ },
+ {
+  "off": "0x651b20",
+  "name": "`'j"
+ },
+ {
+  "off": "0x651b24",
+  "name": "p'j"
+ },
+ {
+  "off": "0x651b39",
+  "name": "(j"
+ },
+ {
+  "off": "0x651b3c",
+  "name": "0(j"
+ },
+ {
+  "off": "0x651b40",
+  "name": "`(j"
+ },
+ {
+  "off": "0x651b55",
+  "name": ")j"
+ },
+ {
+  "off": "0x651b5c",
+  "name": "0)j"
+ },
+ {
+  "off": "0x651b60",
+  "name": "`)j"
+ },
+ {
+  "off": "0x651b70",
+  "name": " *j"
+ },
+ {
+  "off": "0x651b74",
+  "name": "0*j"
+ },
+ {
+  "off": "0x651b78",
+  "name": "P*j"
+ },
+ {
+  "off": "0x651b7c",
+  "name": "`*j"
+ },
+ {
+  "off": "0x651b80",
+  "name": "p*j"
+ },
+ {
+  "off": "0x651b90",
+  "name": " +j"
+ },
+ {
+  "off": "0x651b94",
+  "name": "P+j"
+ },
+ {
+  "off": "0x651bad",
+  "name": ",j"
+ },
+ {
+  "off": "0x651bb0",
+  "name": "0,j"
+ },
+ {
+  "off": "0x651bb4",
+  "name": "`,j"
+ },
+ {
+  "off": "0x651c15",
+  "name": "-j"
+ },
+ {
+  "off": "0x651c1c",
+  "name": " -j"
+ },
+ {
+  "off": "0x651c20",
+  "name": "0-j"
+ },
+ {
+  "off": "0x651c24",
+  "name": "@-j"
+ },
+ {
+  "off": "0x651c28",
+  "name": "p-j"
+ },
+ {
+  "off": "0x651c3c",
+  "name": "(.j"
+ },
+ {
+  "off": "0x651c40",
+  "name": "8.j"
+ },
+ {
+  "off": "0x651c44",
+  "name": "P.j"
+ },
+ {
+  "off": "0x651c48",
+  "name": "`.j"
+ },
+ {
+  "off": "0x651c4c",
+  "name": "p.j"
+ },
+ {
+  "off": "0x651c5c",
+  "name": " /j"
+ },
+ {
+  "off": "0x651c60",
+  "name": "P/j"
+ },
+ {
+  "off": "0x651c74",
+  "name": "p/j"
+ },
+ {
+  "off": "0x651c99",
+  "name": "0j"
+ },
+ {
+  "off": "0x651c9c",
+  "name": " 0j"
+ },
+ {
+  "off": "0x651ca0",
+  "name": "P0j"
+ },
+ {
+  "off": "0x651cb4",
+  "name": "(1j"
+ },
+ {
+  "off": "0x651cb8",
+  "name": "@1j"
+ },
+ {
+  "off": "0x651cbc",
+  "name": "P1j"
+ },
+ {
+  "off": "0x651cc0",
+  "name": "p1j"
+ },
+ {
+  "off": "0x651cd0",
+  "name": " 2j"
+ },
+ {
+  "off": "0x651cd4",
+  "name": "P2j"
+ },
+ {
+  "off": "0x651cd8",
+  "name": "x2j"
+ },
+ {
+  "off": "0x651cf0",
+  "name": " 3j"
+ },
+ {
+  "off": "0x651cf4",
+  "name": "P3j"
+ },
+ {
+  "off": "0x651d09",
+  "name": "4j"
+ },
+ {
+  "off": "0x651d10",
+  "name": " 4j"
+ },
+ {
+  "off": "0x651d14",
+  "name": "@4j"
+ },
+ {
+  "off": "0x651d18",
+  "name": "p4j"
+ },
+ {
+  "off": "0x651d2c",
+  "name": "05j"
+ },
+ {
+  "off": "0x651d30",
+  "name": "@5j"
+ },
+ {
+  "off": "0x651d34",
+  "name": "P5j"
+ },
+ {
+  "off": "0x651d38",
+  "name": "p5j"
+ },
+ {
+  "off": "0x651d48",
+  "name": " 6j"
+ },
+ {
+  "off": "0x651d4c",
+  "name": "P6j"
+ },
+ {
+  "off": "0x651d65",
+  "name": "7j"
+ },
+ {
+  "off": "0x651d68",
+  "name": "07j"
+ },
+ {
+  "off": "0x651d6c",
+  "name": "`7j"
+ },
+ {
+  "off": "0x651d7d",
+  "name": "8j"
+ },
+ {
+  "off": "0x651d84",
+  "name": "08j"
+ },
+ {
+  "off": "0x651d88",
+  "name": "P8j"
+ },
+ {
+  "off": "0x651d8c",
+  "name": "`8j"
+ },
+ {
+  "off": "0x651d9c",
+  "name": " 9j"
+ },
+ {
+  "off": "0x651da0",
+  "name": "H9j"
+ },
+ {
+  "off": "0x651da4",
+  "name": "X9j"
+ },
+ {
+  "off": "0x651da8",
+  "name": "p9j"
+ },
+ {
+  "off": "0x651dbd",
+  "name": ":j"
+ },
+ {
+  "off": "0x651dc0",
+  "name": "0:j"
+ },
+ {
+  "off": "0x651dc4",
+  "name": "P:j"
+ },
+ {
+  "off": "0x651dc8",
+  "name": "x:j"
+ },
+ {
+  "off": "0x651de4",
+  "name": "@;j"
+ },
+ {
+  "off": "0x651de8",
+  "name": "p;j"
+ },
+ {
+  "off": "0x651e00",
+  "name": " <j"
+ },
+ {
+  "off": "0x651e04",
+  "name": "0<j"
+ },
+ {
+  "off": "0x651e08",
+  "name": "`<j"
+ },
+ {
+  "off": "0x651e20",
+  "name": "0=j"
+ },
+ {
+  "off": "0x651e24",
+  "name": "H=j"
+ },
+ {
+  "off": "0x651e28",
+  "name": "`=j"
+ },
+ {
+  "off": "0x651e3c",
+  "name": "@>j"
+ },
+ {
+  "off": "0x651e40",
+  "name": "p>j"
+ },
+ {
+  "off": "0x651e55",
+  "name": "?j"
+ },
+ {
+  "off": "0x651e58",
+  "name": "0?j"
+ },
+ {
+  "off": "0x651e5c",
+  "name": "`?j"
+ },
+ {
+  "off": "0x651e70",
+  "name": "0@j"
+ },
+ {
+  "off": "0x651e74",
+  "name": "P@j"
+ },
+ {
+  "off": "0x651e78",
+  "name": "p@j"
+ },
+ {
+  "off": "0x651e88",
+  "name": " Aj"
+ },
+ {
+  "off": "0x651e8c",
+  "name": "PAj"
+ },
+ {
+  "off": "0x651e90",
+  "name": "Medicine"
+ },
+ {
+  "off": "0x651eb0",
+  "name": "Medicina"
+ },
+ {
+  "off": "0x651ec0",
+  "name": "Recover 100 HP"
+ },
+ {
+  "off": "0x651ef0",
+  "name": "Recupera 100 PS"
+ },
+ {
+  "off": "0x651f18",
+  "name": "Mega Medicine"
+ },
+ {
+  "off": "0x651f38",
+  "name": "Mega medicina"
+ },
+ {
+  "off": "0x651f48",
+  "name": "Mega-Medizin"
+ },
+ {
+  "off": "0x651f58",
+  "name": "Megamedicina"
+ },
+ {
+  "off": "0x651f68",
+  "name": "Recover 200 HP"
+ },
+ {
+  "off": "0x651fa0",
+  "name": "Recupera 200 PS"
+ },
+ {
+  "off": "0x651fd0",
+  "name": "ImmortalMedicine"
+ },
+ {
+  "off": "0x652000",
+  "name": "Medicina immort."
+ },
+ {
+  "off": "0x652020",
+  "name": "Unsterbl.Medizin"
+ },
+ {
+  "off": "0x652040",
+  "name": "Medicina inmortal"
+ },
+ {
+  "off": "0x652058",
+  "name": "Recover all HP"
+ },
+ {
+  "off": "0x652090",
+  "name": "Recupera ogni PS"
+ },
+ {
+  "off": "0x6520d0",
+  "name": "Recupera todos PS"
+ },
+ {
+  "off": "0x6520e8",
+  "name": "Dragon Incense"
+ },
+ {
+  "off": "0x6520f8",
+  "name": "Encens dragon"
+ },
+ {
+  "off": "0x652110",
+  "name": "Incenso del drago"
+ },
+ {
+  "off": "0x652128",
+  "name": "Drachenrauch"
+ },
+ {
+  "off": "0x652250",
+  "name": "Cheesecake"
+ },
+ {
+  "off": "0x652260",
+  "name": "Cheese-cake"
+ },
+ {
+  "off": "0x652270",
+  "name": "Torta di ricotta"
+ },
+ {
+  "off": "0x652298",
+  "name": "Tarta de queso"
+ },
+ {
+  "off": "0x6522a8",
+  "name": "Recover 50 HP"
+ },
+ {
+  "off": "0x6522d8",
+  "name": "Recupera 50 PS"
+ },
+ {
+  "off": "0x652310",
+  "name": "Baked Cheesecake"
+ },
+ {
+  "off": "0x652330",
+  "name": "Cheese-cake cuit"
+ },
+ {
+  "off": "0x652350",
+  "name": "Tor. ricotta cotta"
+ },
+ {
+  "off": "0x652380",
+  "name": "T. queso al horno"
+ },
+ {
+  "off": "0x652398",
+  "name": "Recover 150 HP"
+ },
+ {
+  "off": "0x6523d0",
+  "name": "Recupera 150 PS"
+ },
+ {
+  "off": "0x652400",
+  "name": "Rare Cheesecake"
+ },
+ {
+  "off": "0x652410",
+  "name": "Cheesecake rare"
+ },
+ {
+  "off": "0x652420",
+  "name": "T. ricotta rara"
+ },
+ {
+  "off": "0x652440",
+  "name": "Tarta queso rara"
+ },
+ {
+  "off": "0x652458",
+  "name": "Recover 300 HP"
+ },
+ {
+  "off": "0x652490",
+  "name": "Recupera 300 PS"
+ },
+ {
+  "off": "0x6524b8",
+  "name": "Mixed Herbs"
+ },
+ {
+  "off": "0x6524c8",
+  "name": "Erbe miste"
+ },
+ {
+  "off": "0x6524f0",
+  "name": "Mezcla de hierbas"
+ },
+ {
+  "off": "0x652508",
+  "name": "Recover all MP"
+ },
+ {
+  "off": "0x652520",
+  "name": "Recupera ogni PM"
+ },
+ {
+  "off": "0x652560",
+  "name": "Recupera todos PM"
+ },
+ {
+  "off": "0x652580",
+  "name": "Sacrificial Jizo"
+ },
+ {
+  "off": "0x6525a0",
+  "name": "Jizo sacrificiel"
+ },
+ {
+  "off": "0x6525c0",
+  "name": "Jizo sacrificale"
+ },
+ {
+  "off": "0x6525d8",
+  "name": "Jizo-Opfer"
+ },
+ {
+  "off": "0x6525f0",
+  "name": "Jizo expiatorio"
+ },
+ {
+  "off": "0x6526f0",
+  "name": "Sacrificial Buddha"
+ },
+ {
+  "off": "0x652710",
+  "name": "Bouddha sacrif."
+ },
+ {
+  "off": "0x652720",
+  "name": "Budda sacrificale"
+ },
+ {
+  "off": "0x652738",
+  "name": "Buddha-Opfer"
+ },
+ {
+  "off": "0x652750",
+  "name": "Buddha expiatorio"
+ },
+ {
+  "off": "0x652860",
+  "name": "Antitoxin"
+ },
+ {
+  "off": "0x652870",
+  "name": "Antitoxine"
+ },
+ {
+  "off": "0x652880",
+  "name": "Antitossina"
+ },
+ {
+  "off": "0x652890",
+  "name": "Gegengift"
+ },
+ {
+  "off": "0x6528a0",
+  "name": "Antitoxina"
+ },
+ {
+  "off": "0x652998",
+  "name": "Cough Drop"
+ },
+ {
+  "off": "0x6529a8",
+  "name": "Sirop toux"
+ },
+ {
+  "off": "0x6529c0",
+  "name": "Pastiglia tosse"
+ },
+ {
+  "off": "0x6529d0",
+  "name": "Hustentropfen"
+ },
+ {
+  "off": "0x6529e0",
+  "name": "Gota de tos"
+ },
+ {
+  "off": "0x652a60",
+  "name": "Heilt den Stillestatus"
+ },
+ {
+  "off": "0x652aa8",
+  "name": "Eye Drops"
+ },
+ {
+  "off": "0x652ab8",
+  "name": "Gouttes yeux"
+ },
+ {
+  "off": "0x652ac8",
+  "name": "Gocce occhi"
+ },
+ {
+  "off": "0x652ad8",
+  "name": "Augentropfen"
+ },
+ {
+  "off": "0x652ae8",
+  "name": "Gotas oculares"
+ },
+ {
+  "off": "0x652b80",
+  "name": "Heilt den Dunkelheitstatus"
+ },
+ {
+  "off": "0x652bc8",
+  "name": "Smelling Salts"
+ },
+ {
+  "off": "0x652be8",
+  "name": "Riechsalz"
+ },
+ {
+  "off": "0x652c80",
+  "name": "Heilt den Schlafstatus"
+ },
+ {
+  "off": "0x652cc0",
+  "name": "Tomato Salad"
+ },
+ {
+  "off": "0x652cd0",
+  "name": "Salade tomates"
+ },
+ {
+  "off": "0x652ce0",
+  "name": "Insalata pomodori"
+ },
+ {
+  "off": "0x652cf8",
+  "name": "Tomatensalat"
+ },
+ {
+  "off": "0x652d10",
+  "name": "Ensalada de tomate"
+ },
+ {
+  "off": "0x652e18",
+  "name": "Potato Salad"
+ },
+ {
+  "off": "0x652e28",
+  "name": "Salade patates"
+ },
+ {
+  "off": "0x652e40",
+  "name": "Insalata patate"
+ },
+ {
+  "off": "0x652e50",
+  "name": "Kartoffelsalat"
+ },
+ {
+  "off": "0x652e60",
+  "name": "Ensalada de patata"
+ },
+ {
+  "off": "0x652f70",
+  "name": "Carpaccio Salad"
+ },
+ {
+  "off": "0x652f80",
+  "name": "Salade carpaccio"
+ },
+ {
+  "off": "0x652f98",
+  "name": "Carpaccio"
+ },
+ {
+  "off": "0x652fa8",
+  "name": "Carpacciosalat"
+ },
+ {
+  "off": "0x652fc0",
+  "name": "Ensalada carpaccio"
+ },
+ {
+  "off": "0x6530d0",
+  "name": "Deluxe Salad"
+ },
+ {
+  "off": "0x6530e0",
+  "name": "Salade extra"
+ },
+ {
+  "off": "0x6530f0",
+  "name": "Insalata deluxe"
+ },
+ {
+  "off": "0x653100",
+  "name": "Luxussalat"
+ },
+ {
+  "off": "0x653110",
+  "name": "Ensalada especial"
+ },
+ {
+  "off": "0x653220",
+  "name": "Jus de fruit"
+ },
+ {
+  "off": "0x653318",
+  "name": "Fruit Punch"
+ },
+ {
+  "off": "0x653330",
+  "name": "Cocktail jus fruit"
+ },
+ {
+  "off": "0x653350",
+  "name": "Ponce alla frutta"
+ },
+ {
+  "off": "0x653368",
+  "name": "Fruchtpunsch"
+ },
+ {
+  "off": "0x653380",
+  "name": "Refresco de frutas"
+ },
+ {
+  "off": "0x653490",
+  "name": "Vegetable Juice"
+ },
+ {
+  "off": "0x6534b0",
+  "name": "Succo di verdure"
+ },
+ {
+  "off": "0x6534e0",
+  "name": "Zumo de verduras"
+ },
+ {
+  "off": "0x6535f0",
+  "name": "Retso Nectar"
+ },
+ {
+  "off": "0x653600",
+  "name": "Nectar Retso"
+ },
+ {
+  "off": "0x653610",
+  "name": "Nettare Retso"
+ },
+ {
+  "off": "0x653620",
+  "name": "Retso-Nektar"
+ },
+ {
+  "off": "0x653730",
+  "name": "Broiled Eel"
+ },
+ {
+  "off": "0x653760",
+  "name": "Anguilla grigliata"
+ },
+ {
+  "off": "0x653778",
+  "name": "Gegrillter Aal"
+ },
+ {
+  "off": "0x653788",
+  "name": "Anguila asada"
+ },
+ {
+  "off": "0x653888",
+  "name": "Sashimi Combo"
+ },
+ {
+  "off": "0x653898",
+  "name": "Combo sashimi"
+ },
+ {
+  "off": "0x6538b0",
+  "name": "Combo di sashimi"
+ },
+ {
+  "off": "0x6538c8",
+  "name": "Sashimi-Combo"
+ },
+ {
+  "off": "0x6538e0",
+  "name": "Combo de sashimi"
+ },
+ {
+  "off": "0x6539f0",
+  "name": "Deluxe Sashimi"
+ },
+ {
+  "off": "0x653a00",
+  "name": "Sashimi extra"
+ },
+ {
+  "off": "0x653a10",
+  "name": "Sashimi deluxe"
+ },
+ {
+  "off": "0x653a20",
+  "name": "Luxus-Sashimi"
+ },
+ {
+  "off": "0x653a30",
+  "name": "Sashimi especial"
+ },
+ {
+  "off": "0x653b40",
+  "name": "Imperial Fish"
+ },
+ {
+  "off": "0x653b70",
+  "name": "Pesce imperiale"
+ },
+ {
+  "off": "0x653b80",
+  "name": "Kaiserfisch"
+ },
+ {
+  "off": "0x653b90",
+  "name": "Pescado imperial"
+ },
+ {
+  "off": "0x653c68",
+  "name": "Rolled Cabbage"
+ },
+ {
+  "off": "0x653c90",
+  "name": "Involtino cavolo"
+ },
+ {
+  "off": "0x653ca8",
+  "name": "Kohlrouladen"
+ },
+ {
+  "off": "0x653cb8",
+  "name": "Col enrollada"
+ },
+ {
+  "off": "0x653db8",
+  "name": "Carp Soup"
+ },
+ {
+  "off": "0x653dc8",
+  "name": "Soupe carpe"
+ },
+ {
+  "off": "0x653dd8",
+  "name": "Zuppa di carpa"
+ },
+ {
+  "off": "0x653de8",
+  "name": "Karpfensuppe"
+ },
+ {
+  "off": "0x653df8",
+  "name": "Sopa de carpa"
+ },
+ {
+  "off": "0x653ef8",
+  "name": "Beef Stew"
+ },
+ {
+  "off": "0x653f20",
+  "name": "Stufato di manzo"
+ },
+ {
+  "off": "0x653f40",
+  "name": "Rindfleischeintopf"
+ },
+ {
+  "off": "0x653f60",
+  "name": "Asado de ternera"
+ }
+]

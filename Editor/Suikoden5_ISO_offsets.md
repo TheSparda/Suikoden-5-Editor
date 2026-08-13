@@ -45,6 +45,25 @@ seeks in `list1RTB_Click` at bases not yet resolved — currently READ-ONLY/omit
   shops, enemy list, boot-ELF text table — not yet located. Approach: find boot ELF
   PT_LOAD extent, anchor on name/description string pools, score fields vs ground truth.
 
+## Boot ELF + string pools  (VERIFIED — basis for spells/gear/text RE)
+- Main boot ELF at ISO **0xAD800** (MIPS ET_EXEC, entry 0x100008).
+- PT_LOAD1: **vaddr 0x100000 ↔ ISO file 0xAD900**, size 0x951600 (ISO 0xAD900..0x9FEF00).
+  Conversion: `file = vaddr - 0x100000 + 0xAD900`; `vaddr = file - 0xAD900 + 0x100000`.
+- PT_LOAD2: vaddr 0xA51600 ↔ ISO 0x9FEF00, size 0x92A80.
+- All character tables above sit inside PT_LOAD1 (e.g. stats 0x49F0DC = vaddr 0x5497DC).
+- String pools (found by known names; multi-language: EN/FR/DE/IT/ES packed):
+  - Rune names: ISO ~0x663E00 (va ~0x6B6500). 47 EN rune names → `s5_rune_names.json`.
+  - Item names: ISO ~0x651000 (va ~0x6A3B00) → `s5_item_pool.json` (multi-lang).
+  - Spell names: ISO ~0x66BF30 (va ~0x6BE630); spell names also embedded in a
+    description pool ~0x655xxx.
+- Rune name POINTER array at ISO 0x666070 (u32 vaddr pointers into the rune pool).
+
+## Still to RE (editable stat tables — need ground-truth validation)
+Record tables that reference the pools via (name_ptr, desc_ptr) — spells (power/cast/
+element/target/AOE/status), rune→spell grants, unite attacks, gear (DEF/price/effects),
+weapons (sharpen curve), foods, shops. Per methodology, score each field vs description
+text / a stat guide to ≥95% before writing. NOT YET verified — do not write blind.
+
 ## Save-side (RAM) struct
 `s5_char_struct.json` (from the Cheat Engine table) — reliable RAM layout for the
 memory-card save editor; unrelated to these ISO offsets.
