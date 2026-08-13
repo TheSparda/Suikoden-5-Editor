@@ -64,6 +64,19 @@ def write_field(iso, table, cid, label, value):
     raise KeyError(f"no field {label!r} in {table}")
 
 
+def read_cstring(iso, off, maxlen=64):
+    b = iso.rd(off, maxlen); e = b.find(b"\x00")
+    return b[:e if e >= 0 else maxlen]
+
+def set_cstring(iso, off, text):
+    """Overwrite a null-terminated string in place, capped to its original byte
+    length (never overruns into the next string). Returns bytes written."""
+    orig = read_cstring(iso, off, 128)
+    cap = len(orig)
+    s = text.encode("latin1", "replace")[:cap]
+    iso.wr(off, s + b"\x00" * (cap - len(s)))   # keep same field length
+    return cap
+
 def read_names(iso, limit=0):
     out = []; empty = 0; i = 0
     while True:
@@ -178,6 +191,12 @@ def _ids(a):
         for r in rows[:a.limit]: print(f"  {r['off']}  {r['name']}")
     return 0
 
+def _setstring(a):
+    backup(a.iso)
+    with Iso(a.iso, writable=True) as g:
+        cap = set_cstring(g, int(a.off, 0), a.text)
+    print(f"wrote string @0x{int(a.off,0):X} (cap {cap} bytes)"); return 0
+
 def _poke(a):
     backup(a.iso)
     with Iso(a.iso, writable=True) as g:
@@ -207,6 +226,7 @@ def main(argv=None):
     add("find-bytes", _findbytes, [(("--hex",), dict(required=True)), (("--max",), dict(type=int, default=16))])
     add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])
     add("ids", _ids, [(("--category",), dict()), (("--filter",), dict()), (("--limit",), dict(type=int, default=200))])
+    add("set-string", _setstring, [(("--off",), dict(required=True)), (("--text",), dict(required=True))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
