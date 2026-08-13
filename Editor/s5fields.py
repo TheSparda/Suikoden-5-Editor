@@ -18,11 +18,13 @@ SERIAL_STR = b"SLUS_212.91"
 
 # ---- per-character tables: name -> (base, stride, [(label, off, width, kind), ...])
 # kind: num | rank (0..7 skill grade) | item | rune
-STAT_LABELS = [  # twelve u16 at +0x02.. ; HP confirmed, rest tentative (CT order)
-    ("HP", "num"), ("SP (?)", "num"), ("Attack (?)", "num"), ("Magic (?)", "num"),
-    ("PDF (?)", "num"), ("MDF (?)", "num"), ("Technique (?)", "num"),
-    ("Accuracy (?)", "num"), ("Evasion (?)", "num"), ("Speed (?)", "num"),
-    ("Stat11 (?)", "num"), ("Stat12 (?)", "num"),
+STAT_LABELS = [  # twelve u16 at +0x02..; order VERIFIED vs the L60 Character Database
+    # guide (Hp, Spell Count, Atk, Mag, Pdf, Mdf, Tec, Acc, Eva, Spd, Luk).
+    ("HP", "num"), ("Spell Count", "num"), ("Attack", "num"), ("Magic", "num"),
+    ("PDF", "num"), ("MDF", "num"), ("Technique", "num"), ("Accuracy", "num"),
+    ("Evasion", "num"), ("Speed", "num"),
+    ("Field11 (~const, unverified)", "num"),   # ~2500 across chars; not a listed stat
+    ("Luck", "num"),
 ]
 
 def _stat_fields():
@@ -52,6 +54,14 @@ TABLES = {
 NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8
 NAME_MAX_CHARS  = 7
+
+# Item/equipment PRICE table (VERIFIED vs the community rune guide: buy+sell u32,
+# sell == buy/2; e.g. record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500
+# (Shield Rune)). Records are in item-id order; names live in a parallel pool.
+PRICE_BASE  = 0x49433C
+PRICE_STRIDE = 148          # 0x94
+PRICE_COUNT = 148
+PRICE_FIELDS = [("buy", 0x00, 4), ("sell", 0x04, 4)]
 
 # Fixed cost/threshold ladder (purpose unconfirmed).
 LADDER_OFF = 0x4986C0

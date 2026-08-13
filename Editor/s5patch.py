@@ -64,6 +64,23 @@ def write_field(iso, table, cid, label, value):
     raise KeyError(f"no field {label!r} in {table}")
 
 
+def read_prices(iso, limit=0):
+    out = []
+    n = F.PRICE_COUNT if not limit else min(limit, F.PRICE_COUNT)
+    for i in range(n):
+        base = F.PRICE_BASE + i * F.PRICE_STRIDE
+        rec = {"index": i, "off": base}
+        for name, off, w in F.PRICE_FIELDS:
+            rec[name] = iso.ru(base + off, w)
+        out.append(rec)
+    return out
+
+def write_price(iso, index, field, value):
+    off = next((o for (n, o, w) in F.PRICE_FIELDS if n == field), None)
+    w = next((w for (n, o, w) in F.PRICE_FIELDS if n == field), None)
+    if off is None: raise KeyError(field)
+    iso.wu(F.PRICE_BASE + index * F.PRICE_STRIDE + off, w, value)
+
 def read_cstring(iso, off, maxlen=64):
     b = iso.rd(off, maxlen); e = b.find(b"\x00")
     return b[:e if e >= 0 else maxlen]
@@ -272,6 +289,18 @@ def main(argv=None):
         else: n = hardmode_apply(a.iso, a.factor); print(f"scaled stats of {n} chars x{a.factor}")
         return 0
     add("hardmode", _hm, [(("--factor",), dict(type=float, default=0.5)), (("--restore",), dict(action="store_true"))])
+    def _prices(a):
+        with Iso(a.iso) as g:
+            for r in read_prices(g, a.limit):
+                if r["buy"] or r["sell"]: print(f"  #{r['index']:3d} buy={r['buy']:>7} sell={r['sell']:>7}")
+        return 0
+    add("prices", _prices, [(("--limit",), dict(type=int, default=0))])
+    def _setprice(a):
+        backup(a.iso)
+        with Iso(a.iso, writable=True) as g: write_price(g, a.index, a.field, a.value)
+        print(f"price #{a.index} {a.field}={a.value}"); return 0
+    add("set-price", _setprice, [(("--index",), dict(type=int, required=True)),
+        (("--field",), dict(required=True, choices=["buy", "sell"])), (("--value",), dict(type=int, required=True))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
