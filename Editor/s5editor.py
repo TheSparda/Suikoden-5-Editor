@@ -51,6 +51,8 @@ PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
    Character: <select id=csel onchange=loadChar()></select>
    <input id=cfilter size=14 placeholder="filter…" oninput=filterChars()>
    <button onclick=saveChar()>Save changes</button>
+   <button class=ghost onclick=revertChar()>Revert</button>
+   <button class=ghost onclick=toggleTheme()>Theme</button>
    <span id=csave class=note></span>
  </div>
  <div id=sections></div>
@@ -103,10 +105,22 @@ async function loadChar(){const sel=document.getElementById('csel');if(!sel.valu
     rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;
       const max=r.width==1?255:65535;
       g.innerHTML+=`<div class=fld><label>${r.label} <span class=note>(${r.width}B ≤${max})</span></label>`+
-        `<input type=number min=0 max=${max} value=${r.value} data-k="${key}" `+
-        `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])"></div>`;});
+        `<span style="display:flex;gap:4px"><input type=number min=0 max=${max} value=${r.value} data-k="${key}" `+
+        `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])" style="flex:1">`+
+        `<button class=ghost title="restore" onclick="restoreField(this)" data-k="${key}">↺</button></span></div>`;});
     div.appendChild(g);secs.appendChild(div);}
+  if(s.rawStats){const rd=document.createElement('div');rd.className='sec';
+    rd.innerHTML=`<h3 onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display=='none'?'block':'none'">raw bytes (stats record @0x${(s.rawOff||0).toString(16)})</h3>`+
+      `<div style="display:none;padding:10px"><pre style="white-space:pre-wrap">${s.rawStats}</pre></div>`;
+    secs.appendChild(rd);}
   document.getElementById('csave').textContent='';}
+function restoreField(btn){const inp=document.querySelector('#sections input[data-k="'+btn.dataset.k+'"]');
+  if(inp){inp.value=ORIG[btn.dataset.k];inp.classList.remove('chg');}}
+function revertChar(){document.querySelectorAll('#sections input[data-k]').forEach(i=>{
+  i.value=ORIG[i.dataset.k];i.classList.remove('chg');});document.getElementById('csave').textContent='reverted';}
+function toggleTheme(){const b=document.body;const light=b.style.background==='rgb(244, 236, 224)';
+  if(light){b.style.background='#1a1113';b.style.color='#f2e6d8';}
+  else{b.style.background='#f4ece0';b.style.color='#2a1c14';}}
 async function saveChar(){const inps=[...document.querySelectorAll('#sections input[data-k]')];
   const edits=[];inps.forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const [t,f]=i.dataset.k.split('|');
     edits.push({table:t,field:f,value:parseInt(i.value)});}});
@@ -187,8 +201,12 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/chars":
                 return self._send(200, json.dumps({"chars": F.load_characters()}))
             if self.path == "/api/char":
-                with P.Iso(iso) as g: tbls = P.read_character(g, int(d["id"]))
-                return self._send(200, json.dumps({"tables": tbls}))
+                cid = int(d["id"])
+                with P.Iso(iso) as g:
+                    tbls = P.read_character(g, cid)
+                    raw = g.rd(P.table_addr("stats", cid), F.TABLES["stats"][1]).hex(" ")
+                return self._send(200, json.dumps({"tables": tbls, "rawStats": raw,
+                    "rawOff": P.table_addr("stats", cid)}))
             if self.path == "/api/setchar":
                 P.backup(iso)
                 with P.Iso(iso, writable=True) as g:
