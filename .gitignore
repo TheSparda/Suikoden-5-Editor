@@ -1,0 +1,40 @@
+# Game images — never commit (large, copyrighted)
+*.iso
+*.bin
+*.img
+ISO/
+
+# PS2 saves / memory cards — not distributed
+*.ps2
+*.psu
+*.psv
+*.cbs
+*.sps
+*.max
+Saves/
+
+# Backups the editor makes before writing
+*.bak
+
+# Third-party binary (Tony H's editor) — not distributed
+Prior Editor/
+# Its decompiled IL/CS — derived from the third-party binary, not distributed
+Editor/Suikoden5Editor_monodis.il
+Editor/*_monodis.il
+Editor/_monodis.err
+
+# Local cheat/reference files — not distributed
+Cheats/
+
+# Editor local state
+Editor/.s5editor.json
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# editor/session config
+.claude/

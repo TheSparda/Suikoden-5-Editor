@@ -1,0 +1,483 @@
+{
+  "_note": "RAM offsets from Cheat Engine table; base pointers resolved via AOB. Save-file offsets TBD by mapping onto real .ps2 gamedata.",
+  "bases": {
+    "exp": "FirstPartyExpPtr",
+    "item": "FirstPartyItemOneQtyPtr",
+    "iPartySlot": "per-character stride index"
+  },
+  "char_struct": [
+    {
+      "field": "SP",
+      "base": "exp",
+      "offset": 2,
+      "size": 2
+    },
+    {
+      "field": "ATK",
+      "base": "exp",
+      "offset": 10,
+      "size": 2
+    },
+    {
+      "field": "MAG",
+      "base": "exp",
+      "offset": 12,
+      "size": 2
+    },
+    {
+      "field": "PDF",
+      "base": "exp",
+      "offset": 14,
+      "size": 2
+    },
+    {
+      "field": "MDF",
+      "base": "exp",
+      "offset": 16,
+      "size": 2
+    },
+    {
+      "field": "TEC",
+      "base": "exp",
+      "offset": 18,
+      "size": 2
+    },
+    {
+      "field": "ACC",
+      "base": "exp",
+      "offset": 20,
+      "size": 2
+    },
+    {
+      "field": "EVA",
+      "base": "exp",
+      "offset": 22,
+      "size": 2
+    },
+    {
+      "field": "SPD",
+      "base": "exp",
+      "offset": 24,
+      "size": 2
+    },
+    {
+      "field": "LUK",
+      "base": "exp",
+      "offset": 26,
+      "size": 2
+    },
+    {
+      "field": "Equipped Skill Slot 1",
+      "base": "exp",
+      "offset": 36,
+      "size": 1
+    },
+    {
+      "field": "Equipped Skill Slot 2",
+      "base": "exp",
+      "offset": 37,
+      "size": 1
+    },
+    {
+      "field": "Attack",
+      "base": "exp",
+      "offset": 76,
+      "size": 1
+    },
+    {
+      "field": "Defense",
+      "base": "exp",
+      "offset": 77,
+      "size": 1
+    },
+    {
+      "field": "Technique",
+      "base": "exp",
+      "offset": 78,
+      "size": 1
+    },
+    {
+      "field": "Vitality",
+      "base": "exp",
+      "offset": 79,
+      "size": 1
+    },
+    {
+      "field": "Agility",
+      "base": "exp",
+      "offset": 80,
+      "size": 1
+    },
+    {
+      "field": "Magic",
+      "base": "exp",
+      "offset": 81,
+      "size": 1
+    },
+    {
+      "field": "Magic Defense",
+      "base": "exp",
+      "offset": 82,
+      "size": 1
+    },
+    {
+      "field": "Incantation",
+      "base": "exp",
+      "offset": 83,
+      "size": 1
+    },
+    {
+      "field": "Sword of Magic",
+      "base": "exp",
+      "offset": 84,
+      "size": 1
+    },
+    {
+      "field": "Raging Lion",
+      "base": "exp",
+      "offset": 85,
+      "size": 1
+    },
+    {
+      "field": "Fate Control",
+      "base": "exp",
+      "offset": 86,
+      "size": 1
+    },
+    {
+      "field": "Karmic Effect",
+      "base": "exp",
+      "offset": 87,
+      "size": 1
+    },
+    {
+      "field": "Armor of Gods",
+      "base": "exp",
+      "offset": 88,
+      "size": 1
+    },
+    {
+      "field": "Swift Foot",
+      "base": "exp",
+      "offset": 89,
+      "size": 1
+    },
+    {
+      "field": "Triple Harmony",
+      "base": "exp",
+      "offset": 90,
+      "size": 1
+    },
+    {
+      "field": "All-Out Strike",
+      "base": "exp",
+      "offset": 91,
+      "size": 1
+    },
+    {
+      "field": "Untold Clarity",
+      "base": "exp",
+      "offset": 92,
+      "size": 1
+    },
+    {
+      "field": "Divine Right",
+      "base": "exp",
+      "offset": 93,
+      "size": 1
+    },
+    {
+      "field": "Zen Sword",
+      "base": "exp",
+      "offset": 94,
+      "size": 1
+    },
+    {
+      "field": "Sacred Oath",
+      "base": "exp",
+      "offset": 95,
+      "size": 1
+    },
+    {
+      "field": "Royal Paradise",
+      "base": "exp",
+      "offset": 96,
+      "size": 1
+    },
+    {
+      "field": "Thief",
+      "base": "exp",
+      "offset": 97,
+      "size": 1
+    },
+    {
+      "field": "Mow Down",
+      "base": "exp",
+      "offset": 98,
+      "size": 1
+    },
+    {
+      "field": "Pierce",
+      "base": "exp",
+      "offset": 99,
+      "size": 1
+    },
+    {
+      "field": "Freeze",
+      "base": "exp",
+      "offset": 100,
+      "size": 1
+    },
+    {
+      "field": "Barrage",
+      "base": "exp",
+      "offset": 102,
+      "size": 1
+    },
+    {
+      "field": "Long Throw",
+      "base": "exp",
+      "offset": 103,
+      "size": 1
+    },
+    {
+      "field": "Dragon Special",
+      "base": "exp",
+      "offset": 104,
+      "size": 1
+    },
+    {
+      "field": "Forge",
+      "base": "exp",
+      "offset": 105,
+      "size": 1
+    },
+    {
+      "field": "Combat Teacher",
+      "base": "exp",
+      "offset": 106,
+      "size": 1
+    },
+    {
+      "field": "Chain Magic",
+      "base": "exp",
+      "offset": 107,
+      "size": 1
+    },
+    {
+      "field": "Analyze",
+      "base": "exp",
+      "offset": 108,
+      "size": 1
+    },
+    {
+      "field": "Potch Finder",
+      "base": "exp",
+      "offset": 109,
+      "size": 1
+    },
+    {
+      "field": "Treasure Hunt",
+      "base": "exp",
+      "offset": 110,
+      "size": 1
+    },
+    {
+      "field": "Escape Route",
+      "base": "exp",
+      "offset": 111,
+      "size": 1
+    },
+    {
+      "field": "Healing",
+      "base": "exp",
+      "offset": 112,
+      "size": 1
+    },
+    {
+      "field": "Treatment",
+      "base": "exp",
+      "offset": 113,
+      "size": 1
+    },
+    {
+      "field": "Haggle",
+      "base": "exp",
+      "offset": 114,
+      "size": 1
+    },
+    {
+      "field": "Trade In",
+      "base": "exp",
+      "offset": 115,
+      "size": 1
+    },
+    {
+      "field": "Cook",
+      "base": "exp",
+      "offset": 116,
+      "size": 1
+    },
+    {
+      "field": "Rune Sage",
+      "base": "exp",
+      "offset": 117,
+      "size": 1
+    },
+    {
+      "field": "Bard",
+      "base": "exp",
+      "offset": 118,
+      "size": 1
+    },
+    {
+      "field": "Perfect Pitch",
+      "base": "exp",
+      "offset": 119,
+      "size": 1
+    },
+    {
+      "field": "Appraisal",
+      "base": "exp",
+      "offset": 120,
+      "size": 1
+    },
+    {
+      "field": "Bath",
+      "base": "exp",
+      "offset": 121,
+      "size": 1
+    },
+    {
+      "field": "Tutor",
+      "base": "exp",
+      "offset": 122,
+      "size": 1
+    },
+    {
+      "field": "Max HP 2 (Base)",
+      "base": "exp",
+      "offset": 280,
+      "size": 2
+    },
+    {
+      "field": "ATK 2 (Base)",
+      "base": "exp",
+      "offset": 282,
+      "size": 2
+    },
+    {
+      "field": "PDF 2 (Base)",
+      "base": "exp",
+      "offset": 284,
+      "size": 2
+    },
+    {
+      "field": "MDF 2 (Base)",
+      "base": "exp",
+      "offset": 286,
+      "size": 2
+    },
+    {
+      "field": "TEC 2 (Base)",
+      "base": "exp",
+      "offset": 288,
+      "size": 2
+    },
+    {
+      "field": "ACC 2 (Base)",
+      "base": "exp",
+      "offset": 288,
+      "size": 2
+    },
+    {
+      "field": "MAG 2 (Base)",
+      "base": "exp",
+      "offset": 290,
+      "size": 2
+    },
+    {
+      "field": "EVA 2 (Base)",
+      "base": "exp",
+      "offset": 292,
+      "size": 2
+    },
+    {
+      "field": "SPD 2 (Base)",
+      "base": "exp",
+      "offset": 294,
+      "size": 2
+    },
+    {
+      "field": "LUK 2 (Base)",
+      "base": "exp",
+      "offset": 296,
+      "size": 2
+    },
+    {
+      "field": "Recruited (Set to 0x0302 or 770 in decimal to recruit)",
+      "base": "exp",
+      "offset": 306,
+      "size": 2
+    },
+    {
+      "field": "Head Rune",
+      "base": "item",
+      "offset": -14,
+      "size": 1
+    },
+    {
+      "field": "Right Hand Rune",
+      "base": "item",
+      "offset": -13,
+      "size": 1
+    },
+    {
+      "field": "Left Hand Rune",
+      "base": "item",
+      "offset": -12,
+      "size": 1
+    },
+    {
+      "field": "Equipped Armor",
+      "base": "item",
+      "offset": -5,
+      "size": 1
+    },
+    {
+      "field": "Equipped Gloves",
+      "base": "item",
+      "offset": -4,
+      "size": 1
+    },
+    {
+      "field": "Equipped Boots",
+      "base": "item",
+      "offset": -3,
+      "size": 1
+    }
+  ],
+  "globals": {
+    "InfiniteGP": "Infinite Potch",
+    "GPMultiplier": "Potch Multiplier",
+    "InfinitePartySP": "Infinite Party SP",
+    "PartySPMultiplier": "Party SP Multiplier",
+    "InfiniteItem": "Infinite Equipped Item",
+    "InfiniteRuneUse": "Infinite Rune Use (Out of Battle)",
+    "QuickLevelGain": "Quick Level Gain (Set XP to 999)",
+    "SetSPAllParty": "Set SP All Party To 5000",
+    "SetAllSkillsToSS": "Set Skills To SS (All Party Members)",
+    "SetAllPDFToMax": "Set All Characters PDF To Max",
+    "SetAllMDFToMax": "Set All Characters MDF To Max",
+    "SetAllAffinitiesToSAllChars": "Set All Characters Affinities To S Rank",
+    "InfiniteHP": "Infinite HP (In-Battle)",
+    "InfiniteRuneUseBattle": "Infinite Rune Use (In-Battle)",
+    "TrainOnceForSSRank": "Train Skill Once For SS Rank (Reset and Load From Memory Card After Turning On)",
+    "ForgeOnceSetsLevelToMax": "Forge Once Sets Weapon Level To Max (Reset and Load From Memory Card After Turning On)",
+    "BlacksmithsCanForgeToMaxLevel": "Blacksmiths Can Forge To Max Level (Reset and Load From Memory Card After Turning On)",
+    "AlliesTakeNoDamageWarBattles": "Allies Take No Damage (War Battles) (Reset and Load From Memory Card After Turning On)",
+    "EnemiesInstantDeathWarBattles": "Enemies Instant Death (War Battles) (Reset and Load From Memory Card After Turning On)",
+    "PotchOffset": "Potch",
+    "PartySPOffset": "Party SP"
+  }
+}
