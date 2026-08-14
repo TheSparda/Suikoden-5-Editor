@@ -191,14 +191,15 @@ async function scanSaves(){const s=await j('/api/savescan',{root:document.getEle
     `<div class=grid>`+
     `<div class=fld><label>Hero name</label><input id="sv${i}_heroName" value="${fl.heroName||''}" maxlength=15></div>`+
     `<div class=fld><label>Castle name</label><input id="sv${i}_castleName" value="${fl.castleName||''}" maxlength=15></div>`+
-    `<div class=fld><label>Level</label><input id="sv${i}_level" type=number min=0 max=255 value="${fl.level||0}"></div>`+
+    `<div class=fld><label>New Game Plus (fast-forward)</label>`+
+    `<label style="font-size:13px"><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''}> enabled</label></div>`+
     `<div class=fld><label>&nbsp;</label><button onclick='saveWrite(${i})'>Write to card</button></div>`+
     `</div></div>`;}).join('');
   window._saves=s.saves;}
 async function saveWrite(i){const sv=window._saves[i];
   const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
     castleName:document.getElementById('sv'+i+'_castleName').value,
-    level:parseInt(document.getElementById('sv'+i+'_level').value)};
+    newGamePlus:document.getElementById('sv'+i+'_ngp').checked?1:0};
   if(!confirm('Write to '+sv.card+'? A .bak is made. (Save checksum unverified — verify it loads in-game.)'))return;
   const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
   alert(r.error?('Error: '+r.error):('Wrote '+r.changed+' field(s). '+(r.warn||'')));}
