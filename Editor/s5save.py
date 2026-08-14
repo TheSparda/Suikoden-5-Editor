@@ -60,12 +60,16 @@ PAYLOAD_IS_FOLDER_NAME = True   # payload filename == folder name (not "gamedata
 #   - New Game Plus flag (357 bytes differ across different playthroughs -> can't isolate)
 #   - gamedata checksum algorithm (no whole-payload sum checksum found)
 #   - character stat/party/gold/recruit field offsets
-NG_PLUS_FLAG = None
-# VERIFIED gamedata fields (confirmed across multiple saves): hero + castle names.
+# VERIFIED New Game Plus / cleared-game flag: gamedata byte @0x12, 1=on 0=off.
+# Confirmed 6/6 across saves: every cleared/NG+ save reads 1, every in-progress save 0
+# (isolated by diffing a same-playthrough pre-end vs post-end save pair).
+NG_PLUS_OFF = 0x12
+# VERIFIED gamedata fields (confirmed across multiple saves): hero + castle + NG+.
 # (0x28 was NOT level — it varies 39/58/867/2873/3130 across saves; removed.)
 S5_FIELDS = {
-    "heroName":   (0x00, 16, "str"),
-    "castleName": (0x14, 16, "str"),
+    "heroName":    (0x00, 16, "str"),
+    "castleName":  (0x14, 16, "str"),
+    "newGamePlus": (0x12, 1,  "num"),   # 1 = New Game Plus / cleared (enables fast-forward)
 }
 
 # ---- Individual save-file decoders (CodeBreaker .cbs, SharkPort/X-Port .sps/.xps).

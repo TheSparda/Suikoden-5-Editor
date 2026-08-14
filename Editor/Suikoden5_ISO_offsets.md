@@ -85,7 +85,11 @@ validated on real cards. S5 save specifics:
   folder, NOT "gamedata"). Payload size **74024 bytes** (0x12128).
 - PS2-browser title (icon.sys) e.g. "SuikodenV 01LV.39/019:16" → slot / level / playtime.
 - gamedata fields (VERIFIED): **heroName @0x00 (16B)**, **castleName @0x14 (16B)**,
-  **level @0x28** (u32; low byte). `field25` scene id @0x4C, event .rom @0x8C.
+  **New Game Plus / cleared flag @0x12 (u8, 1=on)** — isolated by diffing a same-
+  playthrough pre-end vs post-end pair, confirmed 6/6 (all cleared saves=1, in-progress=0).
+  (0x28 is NOT level — varies 39/58/867/2873/3130 across saves.) `field25` @0x4C, event .rom @0x8C.
+- Individual save formats decoded (py3, from mymc): CodeBreaker .cbs (RC4+zlib),
+  SharkPort/X-Port .sps/.xps. Payload file is named like the folder (BASLUS-21291NN).
 - Checksum: S3-style sum-zero is FALSE here; S5's checksum (if any) is uncracked —
   writes carry a warning + .bak; test on a card copy. Write path round-trips with ECC
   intact on a copied card.
