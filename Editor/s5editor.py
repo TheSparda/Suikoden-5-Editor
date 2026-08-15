@@ -566,7 +566,13 @@ class H(http.server.BaseHTTPRequestHandler):
                 if ok: s = load_state(); s["iso"] = iso; save_state(s)
                 return self._send(200, json.dumps({"ok": ok, "msg": "Valid SLUS-21291" if ok else "not a recognized S5 ISO"}))
             if self.path == "/api/chars":
-                return self._send(200, json.dumps({"chars": F.load_characters()}))
+                chars = F.load_characters()
+                # Hide garbage/dummy unit records (HP==0), e.g. unit 0.
+                if os.path.exists(iso):
+                    with P.Iso(iso) as g:
+                        chars = [c for c in chars
+                                 if g.ru(P.table_addr("stats", c["id"]) + 2, 2) != 0]
+                return self._send(200, json.dumps({"chars": chars}))
             if self.path == "/api/char":
                 cid = int(d["id"])
                 with P.Iso(iso) as g:
