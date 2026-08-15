@@ -121,6 +121,30 @@ def write_rune_field(iso, rid, label, value):
     raise KeyError(f"no rune field {label!r}")
 
 
+def enemy_addr(eid): return F.ENEMY_BASE + eid * F.ENEMY_STRIDE
+
+def read_enemy(iso, eid):
+    base = enemy_addr(eid)
+    return [{"label": l, "off": o, "width": w, "kind": k, "value": iso.ru(base + o, w)}
+            for (l, o, w, k) in F.ENEMY_FIELDS]
+
+def read_enemies(iso, names=None):
+    """List unit records that have HP (enemies + units), with best-effort names."""
+    names = names or {}
+    out = []
+    for eid in range(F.ENEMY_MAX):
+        hp = iso.ru(enemy_addr(eid) + 2, 2)
+        if 0 < hp < 60000:
+            out.append({"id": eid, "hp": hp, "name": names.get(str(eid)) or f"Enemy {eid}"})
+    return out
+
+def write_enemy_field(iso, eid, label, value):
+    for (l, o, w, k) in F.ENEMY_FIELDS:
+        if l == label:
+            iso.wu(enemy_addr(eid) + o, w, value); return True
+    raise KeyError(f"no enemy field {label!r}")
+
+
 def read_cstring(iso, off, maxlen=64):
     b = iso.rd(off, maxlen); e = b.find(b"\x00")
     return b[:e if e >= 0 else maxlen]

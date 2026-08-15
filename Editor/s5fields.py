@@ -136,6 +136,20 @@ SECTION_HELP = {
 }
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
 
+# ---- Enemy / unit editor -----------------------------------------------------
+# Enemies live in the SAME record table as characters (0x49F0DC/0x7C), indexed by
+# a unit id. Combat stats are the shared u16 stat block (+0x02..); enemy-specific
+# fields VERIFIED via enemy 004 Nariqua (drop 0x1007 "Drain Piece" in the 20% slot):
+#   drops at +0x2c/0x34/0x3c/0x44/0x4c (40/20/10/5/1%), Starting Potch +0x54 (all u16).
+ENEMY_BASE, ENEMY_STRIDE, ENEMY_MAX = 0x49F0DC, 0x7C, 584
+def _enemy_fields():
+    f = [(lbl, 0x02 + i*2, 2, "num") for i, (lbl, _k) in enumerate(STAT_LABELS)]
+    for pct, off in [("40%", 0x2c), ("20%", 0x34), ("10%", 0x3c), ("5%", 0x44), ("1%", 0x4c)]:
+        f.append((f"Drop {pct} (item hex id)", off, 2, "num"))
+    f.append(("Starting Potch", 0x54, 2, "num"))
+    return f
+ENEMY_FIELDS = _enemy_fields()
+
 def load_characters():
     """[{id, name}] playable list; falls back to empty if json missing."""
     try:

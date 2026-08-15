@@ -115,3 +115,16 @@ save layout once located.
   contiguous pool range (the data model has no per-slot spell list).
 - Verified against Guides/'s5 rune guide.rtf' (ground truth) + cross-checked spell targets
   in the 0x4E87F0 table (Dancing Flames=Cluster 0x44, Blazing Wall=Row 0x24, Explosion=All 0x0C).
+
+## Enemy / unit fields  (VERIFIED via enemy 004 Nariqua)
+- Enemies share the character stat table **0x49F0DC / 0x7C**, indexed by unit id
+  (Nariqua = record 4). Combat stats = the shared u16 block +0x02..+0x18.
+- Enemy-specific fields (all u16): item drops **40% +0x2c, 20% +0x34, 10% +0x3c,
+  5% +0x44, 1% +0x4c** (values are item HEX ids), **Starting Potch +0x54**.
+- VERIFIED: record 4 (Nariqua) HP@0x02=1800, drop@0x34=0x1007 (Drain Piece) — matches
+  the community exe's help text ("enemy 004 Nariqua ... 1007 in the 20% slot").
+- Enemy NAMES are best-effort (5-lang pointer groups near ISO 0x65f90c, EN first);
+  not perfectly record-aligned → s5_enemy_names.json is approximate.
+- Resistances / Other-Runes bitflag / target: documented by the exe (0=E..6=S, 6 rune
+  bits) and live in the +0x1a..0x29 byte block, but exact sub-offsets NOT yet verified
+  against ground truth → left out of the editor for now.
