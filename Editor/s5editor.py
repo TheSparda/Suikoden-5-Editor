@@ -22,6 +22,30 @@ def save_state(s):
     try: json.dump(s, open(STATE, "w"))
     except Exception: pass
 
+def pick_iso_dialog():
+    """Open a native OS file-open dialog on the server machine (it runs locally, so
+    the dialog appears on the user's own desktop). macOS uses AppleScript; other
+    platforms fall back to tkinter. Returns {path} / {cancelled} / {error}."""
+    import sys
+    try:
+        if sys.platform == "darwin":
+            import subprocess
+            script = ('set f to choose file with prompt "Select a Suikoden V ISO" '
+                      'of type {"iso","bin","img"}\nPOSIX path of f')
+            r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=300)
+            out = r.stdout.strip()
+            if r.returncode != 0 or not out: return {"cancelled": True}
+            return {"path": out}
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
+        path = filedialog.askopenfilename(title="Select a Suikoden V ISO",
+            filetypes=[("PS2 ISO", "*.iso *.bin *.img"), ("All files", "*.*")])
+        root.update(); root.destroy()
+        return {"path": path} if path else {"cancelled": True}
+    except Exception as e:
+        return {"error": f"no native file dialog available: {e}"}
+
 PAGE = r"""<!doctype html><html><head><meta charset=utf-8>
 <title>Suikoden V Editor</title>
 <style>
@@ -143,8 +167,10 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 </nav>
 <div id=isobar>
  <span class=note>ISO</span>
- <input id=iso size=54 placeholder="/path/to/Suikoden V.iso">
+ <input id=iso size=46 placeholder="/path/to/Suikoden V.iso">
+ <button onclick=browseIso()>Browse…</button>
  <button onclick=verify()>Open / Verify</button>
+ <button class=ghost id=lastbtn onclick=reopenLast() style=display:none title="">Reopen last ISO</button>
  <span id=status class=note></span>
 </div>
 <main>
@@ -262,6 +288,11 @@ async function j(u,b){spin(true);try{
  const r=await fetch(u,{method:b?'POST':'GET',body:b&&JSON.stringify(b),headers:{'content-type':'application/json'}});
  return await r.json();}catch(e){toast('Request failed: '+e,'bad');return{error:String(e)}}finally{spin(false)}}
 function iso(){return document.getElementById('iso').value}
+let LASTISO='';
+async function browseIso(){const r=await j('/api/pickiso',{});
+ if(r&&r.path){document.getElementById('iso').value=r.path;verify();}
+ else if(r&&r.error)toast(r.error,'bad');}
+function reopenLast(){if(LASTISO){document.getElementById('iso').value=LASTISO;verify();}}
 function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char');return false}return true}
 function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));}
@@ -272,6 +303,7 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
  const el=document.getElementById('status');const msg=s.msg||s.error||'error';
  el.textContent=(s.ok?'✓ ':'✗ ')+msg;el.className='note '+(s.ok?'ok':'bad');
  if(s.ok){document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
+  LASTISO=iso();{const lb=document.getElementById('lastbtn');if(lb){lb.style.display='';lb.title=iso();}}
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
   document.getElementById('charrow').style.display='';
   document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();
@@ -405,7 +437,9 @@ async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getEle
 
 (async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
  MAPS=await j('/api/maps',{}); refInit();
- const st=%STATE%;if(st.iso){document.getElementById('iso').value=st.iso;verify();}})();
+ const st=%STATE%;if(st.iso){LASTISO=st.iso;
+  const lb=document.getElementById('lastbtn');lb.style.display='';lb.title=st.iso;
+  document.getElementById('iso').value=st.iso;verify();}})();
 </script></body></html>
 """
 
@@ -447,6 +481,8 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/pickiso":
+                return self._send(200, json.dumps(pick_iso_dialog()))
             if self.path == "/api/spells":
                 try: names = json.load(open(os.path.join(HERE, "s5_spell_names.json")))
                 except Exception: names = []
