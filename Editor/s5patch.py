@@ -95,6 +95,29 @@ def write_spell_field(iso, sid, label, value):
     raise KeyError(f"no spell field {label!r}")
 
 
+def rune_addr(rid): return F.RUNE_GRANT_BASE + rid * F.RUNE_GRANT_STRIDE
+
+def read_rune(iso, rid):
+    base = rune_addr(rid)
+    return [{"label": l, "off": o, "width": w, "kind": k, "value": iso.ru(base + o, w)}
+            for (l, o, w, k) in F.RUNE_GRANT_FIELDS]
+
+def read_runes(iso):
+    """All 24 grant records: id, name, start, count (for the grouped UI)."""
+    out = []
+    for rid in range(F.RUNE_GRANT_COUNT):
+        base = rune_addr(rid)
+        out.append({"id": rid, "name": F.RUNE_GRANT_NAMES[rid] if rid < len(F.RUNE_GRANT_NAMES) else f"Rune {rid}",
+                    "start": iso.ru(base, 1), "count": iso.ru(base + 2, 1)})
+    return out
+
+def write_rune_field(iso, rid, label, value):
+    for (l, o, w, k) in F.RUNE_GRANT_FIELDS:
+        if l == label:
+            iso.wu(rune_addr(rid) + o, w, value); return True
+    raise KeyError(f"no rune field {label!r}")
+
+
 def read_cstring(iso, off, maxlen=64):
     b = iso.rd(off, maxlen); e = b.find(b"\x00")
     return b[:e if e >= 0 else maxlen]
