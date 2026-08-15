@@ -78,6 +78,16 @@ LADDER_EXTRA_OFF = 0x31A6BC
 
 RANK_HELP = "skill rank byte: 0..7 (higher = better; 07 ~ SS)"
 
+# Per-section help, drawn from the original community editor's own labels/messages.
+SECTION_HELP = {
+    "stats":      "Edit character stats here. These are starting values — ISO edits apply to a NEW GAME.",
+    "thresholds": "Magic Points thresholds: when a character's Magic stat rises above a threshold, they gain another spell slot.",
+    "skills":     "Per-skill affinity / aptitude. Rank 01=E, 02=D, 03=C, 04=B, 05=A, 06=S, 07=SS (higher learns faster / caps higher).",
+    "items":      "Items the character is carrying when you start a new game.",
+    "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
+}
+GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
+
 def load_characters():
     """[{id, name}] playable list; falls back to empty if json missing."""
     try:
