@@ -124,6 +124,10 @@ input.chg,select.chg,input[type=range].chg{border-color:var(--chg-bd);background
 .sld{display:flex;align-items:center;gap:10px}
 .sld input[type=range]{flex:1;accent-color:var(--gold)}
 .sld .sldval{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;color:var(--mut);font-size:13px}
+.sec.build{border:1px solid var(--gold);box-shadow:0 0 0 1px rgba(230,184,78,.15)}
+.setlist{margin:4px 0 0;padding-left:26px}
+.setlist li{padding:3px 0}
+.setlist li::marker{color:var(--gold);font-weight:700}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
 thead th{position:sticky;top:0;background:var(--thead);color:var(--mut);font-size:11px;
@@ -191,7 +195,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-rune>
   <h2>Runes &amp; Spells</h2>
-  <p class=sub>Pick a rune to edit the spells it teaches — each spell's Element, Power and Target, right here. Use <b>Change spell set</b> to repoint the rune at other spells (custom runes).</p>
+  <p class=sub>Pick a rune, then use <b>Build spell set</b> to choose which spells it teaches (custom runes), and edit each spell's Element, Power and Target right below.</p>
   <div class=row id=rrow style=display:none>
    <span class=note>Rune</span>
    <select id=rsel onchange=loadRune()></select>
@@ -366,22 +370,31 @@ async function loadRune(){const sel=document.getElementById('rsel');if(!sel.valu
  const box=document.getElementById('runesections');
  if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
  RORIG={};box.innerHTML='';
- // one editable section per spell the rune teaches
+ // SPELL SET BUILDER (real grant records only): choose the rune's spell block.
+ if(s.grant&&s.grant.length){const sec=document.createElement('div');sec.className='sec build';
+  const g=document.createElement('div');g.className='grid';
+  const hp='<div class=note style="grid-column:1/-1;margin:-2px 0 6px">Choose which spells this rune teaches. Spells are a contiguous block, so pick the <b>first spell</b> and how many <b>levels</b>. Save to apply — the editable spells below then refresh.</div>';
+  g.innerHTML=hp;
+  s.grant.forEach(r=>{const key=`grant|${r.label}`;RORIG[key]=r.value;
+   const disp=r.label=='Start spell'?'First spell (Lv1)':r.label=='Spell count'?'Levels':r.label;
+   g.innerHTML+=fldHTML({...r,label:disp},key);});
+  g.innerHTML+='<div style="grid-column:1/-1"><div class=note style="margin:2px 0">This rune will teach:</div><ol id=setpreview class=setlist></ol></div>';
+  sec.innerHTML='<h3 onclick=toggleSec(this)>⚙ Build spell set</h3>';sec.appendChild(g);box.appendChild(sec);
+  g.querySelectorAll('[data-k]').forEach(el=>{el.addEventListener('input',runeSetPreview);el.addEventListener('change',runeSetPreview);});}
+ // one editable section per spell the rune currently teaches (restat inline)
  (s.spells||[]).forEach(sp=>{const sec=document.createElement('div');sec.className='sec';
   const g=document.createElement('div');g.className='grid';
   sp.fields.forEach(r=>{const key=`sp${sp.id}|${r.label}`;RORIG[key]=r.value;g.innerHTML+=fldHTML(r,key);});
   sec.innerHTML=`<h3 onclick=toggleSec(this)>Lv${sp.level} · ${sp.name} <span class=note>(spell ${sp.id})</span></h3>`;
   sec.appendChild(g);box.appendChild(sec);});
- if(!s.spells||!s.spells.length){box.innerHTML='<p class=note>This rune teaches no spells.</p>';}
- // advanced: change which spells this rune teaches (only for real grant records)
- if(s.grant&&s.grant.length){const sec=document.createElement('div');sec.className='sec';
-  const g=document.createElement('div');g.className='grid';
-  const hp='<div class=note style="grid-column:1/-1;margin:-2px 0 2px">Repoint this rune at a different contiguous block of spells (custom rune). Save to apply, then the spells above refresh.</div>';
-  g.innerHTML=hp;
-  s.grant.forEach(r=>{const key=`grant|${r.label}`;RORIG[key]=r.value;g.innerHTML+=fldHTML(r,key);});
-  sec.innerHTML='<h3 class=closed onclick=toggleSec(this)>Change spell set (advanced)</h3>';
-  g.style.display='none';sec.appendChild(g);box.appendChild(sec);}
- document.getElementById('rsave').textContent='';}
+ if(!s.spells||!s.spells.length){box.insertAdjacentHTML('beforeend','<p class=note>This rune teaches no spells.</p>');}
+ runeSetPreview();document.getElementById('rsave').textContent='';}
+function runeSetPreview(){const sEl=document.querySelector('#runesections [data-k="grant|Start spell"]');
+ const cEl=document.querySelector('#runesections [data-k="grant|Spell count"]');
+ const box=document.getElementById('setpreview');if(!sEl||!cEl||!box)return;
+ const start=+sEl.value,cnt=+cEl.value;let items='';
+ for(let k=0;k<cnt;k++){const id=start+k;items+=`<li><b>${SPELLS[id]||('#'+id)}</b> <span class=note>(spell ${id})</span></li>`;}
+ box.innerHTML=items||'<li class=note>(no spells)</li>';}
 function restoreRuneField(btn){const i=document.querySelector('#runesections [data-k="'+btn.dataset.k+'"]');
  if(i){i.value=RORIG[btn.dataset.k];i.classList.remove('chg')}}
 function revertRune(){document.querySelectorAll('#runesections [data-k]').forEach(i=>{i.value=RORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
