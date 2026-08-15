@@ -370,17 +370,6 @@ async function loadRune(){const sel=document.getElementById('rsel');if(!sel.valu
  const box=document.getElementById('runesections');
  if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
  RORIG={};box.innerHTML='';
- // SPELL SET BUILDER (real grant records only): choose the rune's spell block.
- if(s.grant&&s.grant.length){const sec=document.createElement('div');sec.className='sec build';
-  const g=document.createElement('div');g.className='grid';
-  const hp='<div class=note style="grid-column:1/-1;margin:-2px 0 6px">Choose which spells this rune teaches. Spells are a contiguous block, so pick the <b>first spell</b> and how many <b>levels</b>. Save to apply — the editable spells below then refresh.</div>';
-  g.innerHTML=hp;
-  s.grant.forEach(r=>{const key=`grant|${r.label}`;RORIG[key]=r.value;
-   const disp=r.label=='Start spell'?'First spell (Lv1)':r.label=='Spell count'?'Levels':r.label;
-   g.innerHTML+=fldHTML({...r,label:disp},key);});
-  g.innerHTML+='<div style="grid-column:1/-1"><div class=note style="margin:2px 0">This rune will teach:</div><ol id=setpreview class=setlist></ol></div>';
-  sec.innerHTML='<h3 onclick=toggleSec(this)>⚙ Build spell set</h3>';sec.appendChild(g);box.appendChild(sec);
-  g.querySelectorAll('[data-k]').forEach(el=>{el.addEventListener('input',runeSetPreview);el.addEventListener('change',runeSetPreview);});}
  // one editable section per spell the rune currently teaches (restat inline)
  (s.spells||[]).forEach(sp=>{const sec=document.createElement('div');sec.className='sec';
   const g=document.createElement('div');g.className='grid';
@@ -388,6 +377,17 @@ async function loadRune(){const sel=document.getElementById('rsel');if(!sel.valu
   sec.innerHTML=`<h3 onclick=toggleSec(this)>Lv${sp.level} · ${sp.name} <span class=note>(spell ${sp.id})</span></h3>`;
   sec.appendChild(g);box.appendChild(sec);});
  if(!s.spells||!s.spells.length){box.insertAdjacentHTML('beforeend','<p class=note>This rune teaches no spells.</p>');}
+ // SPELL SET BUILDER (real grant records only): collapsed, below the spells.
+ if(s.grant&&s.grant.length){const sec=document.createElement('div');sec.className='sec build';
+  const g=document.createElement('div');g.className='grid';g.style.display='none';
+  const hp='<div class=note style="grid-column:1/-1;margin:-2px 0 6px">Choose which spells this rune teaches. Spells are a contiguous block, so pick the <b>first spell</b> and how many <b>levels</b>. Save to apply — the editable spells above then refresh.</div>';
+  g.innerHTML=hp;
+  s.grant.forEach(r=>{const key=`grant|${r.label}`;RORIG[key]=r.value;
+   const disp=r.label=='Start spell'?'First spell (Lv1)':r.label=='Spell count'?'Levels':r.label;
+   g.innerHTML+=fldHTML({...r,label:disp},key);});
+  g.innerHTML+='<div style="grid-column:1/-1"><div class=note style="margin:2px 0">This rune will teach:</div><ol id=setpreview class=setlist></ol></div>';
+  sec.innerHTML='<h3 class=closed onclick=toggleSec(this)>⚙ Build spell set (change which spells)</h3>';sec.appendChild(g);box.appendChild(sec);
+  g.querySelectorAll('[data-k]').forEach(el=>{el.addEventListener('input',runeSetPreview);el.addEventListener('change',runeSetPreview);});}
  runeSetPreview();document.getElementById('rsave').textContent='';}
 function runeSetPreview(){const sEl=document.querySelector('#runesections [data-k="grant|Start spell"]');
  const cEl=document.querySelector('#runesections [data-k="grant|Spell count"]');
