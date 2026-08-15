@@ -97,7 +97,8 @@ RUNE_GRANT_FIELDS = [("Start spell", 0, 1, "spellid"), ("Spell count", 2, 1, "nu
 # spell is still reachable + editable from the Runes tab (no separate Spells tab).
 SYNTH_RUNE_BASE = 100
 SYNTH_RUNES = [
-    {"name": "Sun Rune (Prince)", "start": 0, "count": 8},
+    {"name": "Dawn Rune", "start": 0, "count": 4},       # Time of Wakening..Crimson Sky
+    {"name": "Twilight Rune", "start": 4, "count": 4},    # Evening Dusk..Vermilion Sky
     {"name": "Other · Level placeholders", "start": 82, "count": 24},
 ]
 
