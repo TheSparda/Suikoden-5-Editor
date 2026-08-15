@@ -38,7 +38,9 @@ def _skill_label(i):
 RANK_NAMES = ["—", "E", "D", "C", "B", "A", "S", "SS"]
 
 def _stat_fields():
-    f = [("Level", 0x00, 1, "num"), ("Level cap (?)", 0x01, 1, "num")]
+    # +0x01 (u8) hidden: labeled "Level cap" tentatively but it's unverified — not in
+    # the L60 stat guide and its values are varied (13/17/35/45), not a uniform cap.
+    f = [("Level", 0x00, 1, "num")]
     for i, (lbl, kind) in enumerate(STAT_LABELS):
         f.append((lbl, 0x02 + i*2, 2, kind))
     # +0x1A..0x29: per-skill growth bytes (values 0..~50, NOT the 0..7 E-SS grade —
