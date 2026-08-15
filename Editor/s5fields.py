@@ -93,6 +93,14 @@ RUNE_GRANT_NAMES = [
 ]
 RUNE_GRANT_FIELDS = [("Start spell", 0, 1, "spellid"), ("Spell count", 2, 1, "num")]
 
+# Spells not owned by any grant record, surfaced as read-only "runes" so every
+# spell is still reachable + editable from the Runes tab (no separate Spells tab).
+SYNTH_RUNE_BASE = 100
+SYNTH_RUNES = [
+    {"name": "Sun Rune (Prince)", "start": 0, "count": 8},
+    {"name": "Other · Level placeholders", "start": 82, "count": 24},
+]
+
 # Character name table (separate index order from the NNN id list).
 NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8
