@@ -13,7 +13,7 @@ import s5save as SV
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, ".s5editor.json")
-PORT = 8055
+PORT = int(os.environ.get("PORT", "8055"))
 
 def load_state():
     try: return json.load(open(STATE))
@@ -245,7 +245,8 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
  el.textContent=(s.ok?'✓ ':'✗ ')+msg;el.className='note '+(s.ok?'ok':'bad');
  if(s.ok){document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
-  document.getElementById('charrow').style.display='';document.getElementById('charhint').style.display='none';loadChar();}
+  document.getElementById('charrow').style.display='';
+  document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
@@ -259,6 +260,8 @@ async function loadChar(){const sel=document.getElementById('csel');if(!sel.valu
  for(const [tbl,rows] of Object.entries(s.tables)){
   const div=document.createElement('div');div.className='sec';
   const g=document.createElement('div');g.className='grid';
+  const hp=(MAPS.help&&MAPS.help[tbl])?`<div class=note style="grid-column:1/-1;margin:-2px 0 2px">${MAPS.help[tbl]}</div>`:'';
+  g.innerHTML=hp;
   rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;
    g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='rank'?'rank':r.kind=='item'?'item':r.width+'B'}</span></label>`+
     `<div class=in>${ctrl(r,key)}`+
@@ -406,7 +409,8 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/maps":
                 try: items = json.load(open(os.path.join(HERE, "s5_item_names.json")))
                 except Exception: items = {}
-                return self._send(200, json.dumps({"items": items, "ranks": F.RANK_NAMES}))
+                return self._send(200, json.dumps({"items": items, "ranks": F.RANK_NAMES,
+                    "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP}))
             if self.path == "/api/reference":
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
