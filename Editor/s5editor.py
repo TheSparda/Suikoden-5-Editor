@@ -3,8 +3,8 @@
 Suikoden V (USA, SLUS-21291) editor — local web app.
 
 Runs an HTTP server on your machine and opens a browser tab. Nothing is uploaded.
-Character editor (stats/skills/equipment/runes/thresholds) over the VERIFIED ISO
-tables, plus name renaming and a raw hex peek. See Suikoden5_ISO_offsets.md.
+ISO editing (characters/stats/skills/equipment/runes/prices/Hard Mode/names/text) and
+PS2 save editing (hero/castle name + New Game Plus). See Suikoden5_ISO_offsets.md.
 """
 import http.server, json, os, socketserver, webbrowser, threading
 import s5patch as P
@@ -22,193 +22,318 @@ def save_state(s):
     try: json.dump(s, open(STATE, "w"))
     except Exception: pass
 
-PAGE = r"""<!doctype html><meta charset=utf-8><title>Suikoden V Editor</title>
+PAGE = r"""<!doctype html><html><head><meta charset=utf-8>
+<title>Suikoden V Editor</title>
 <style>
- body{font:14px system-ui;margin:0;background:#1a1113;color:#f2e6d8}
- header{background:#3a0d12;padding:10px 16px;border-bottom:2px solid #c8102e}
- h1{margin:0;font-size:17px;color:#f0c05a}
- main{padding:16px;max-width:1000px}
- input,button,select{font:14px system-ui;padding:5px 7px;border-radius:6px;border:1px solid #6b3b2e;background:#241619;color:#f2e6d8}
- button{background:#c8102e;border:0;cursor:pointer;color:#fff}
- button.ghost{background:#3a2a2d}
- .row{margin:9px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
- .ok{color:#8bd450}.bad{color:#ff6b6b}.note{color:#c9a96a;font-size:12px}
- .sec{margin:14px 0;border:1px solid #4a2b26;border-radius:8px}
- .sec h3{margin:0;padding:8px 12px;background:#2a1518;border-radius:8px 8px 0 0;font-size:14px;color:#f0c05a;cursor:pointer}
- .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:12px}
- .fld label{display:block;font-size:12px;color:#c9a96a;margin-bottom:2px}
- .fld input{width:100%}
- .fld input.chg{border-color:#f0c05a;background:#2e2410}
- pre{background:#0f0a0b;padding:10px;border-radius:6px;overflow:auto}
-</style>
-<header><h1>Suikoden V — ISO Editor</h1></header>
+/* ===== Suikoden V — "Falena" themes (Queendom blue + Sun Rune gold) =====
+   All colors flow through CSS variables. Default is the dark "Falena Twilight";
+   body.light switches to the pale "Sun Rune" parchment theme. */
+:root{
+ --bg:#0b1524; --bg2:#0e1a2d; --panel:#132340; --panel2:#1b2f52; --raise:#22406e;
+ --ink:#eaf1fb; --mut:#93a7c6; --line:#294066;
+ --gold:#e6b84e; --gold2:#f4d071; --goldink:#2a1c04;   /* Sun Rune gold buttons/tabs */
+ --teal:#4fb0d4;                                        /* Falena water accent */
+ --sun:#e8823a;                                         /* Sun Rune orange dividers */
+ --input:#0a1526; --thead:#16294a;
+ --ok:#67c07a; --bad:#ff7a76; --warn:#e6b84e;
+ --chg-bd:#f4d071; --chg-bg:#2a2708;
+ --title:"Trajan Pro","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+ --shadow:0 3px 14px rgba(0,0,0,.45); --focus:rgba(230,184,78,.30);
+ --hdr:60px; --navh:48px;
+}
+body.light{
+ --bg:#dfe7f2; --bg2:#eef3fa; --panel:#f4f7fc; --panel2:#e6edf7; --raise:#d6e2f2;
+ --ink:#182a44; --mut:#5a6f90; --line:#c2d1e6;
+ --gold:#b9821f; --gold2:#d19c33; --goldink:#fff7e6;
+ --teal:#1f7fa6; --sun:#c25a1b;
+ --input:#ffffff; --thead:#dde7f4;
+ --chg-bd:#b9821f; --chg-bg:#fdf3d6;
+ --shadow:0 2px 10px rgba(30,60,110,.20); --focus:rgba(185,130,31,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+ background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+a{color:var(--teal)}
+header{position:sticky;top:0;z-index:30;height:var(--hdr);display:flex;align-items:center;gap:14px;
+ padding:0 18px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+ border-bottom:2px solid var(--gold);box-shadow:var(--shadow)}
+header .logo{width:26px;height:26px;border-radius:50%;flex:0 0 auto;
+ background:radial-gradient(circle at 50% 45%,var(--gold2),var(--sun) 70%,#7a3d12);
+ box-shadow:0 0 10px rgba(232,130,58,.6)}
+header b{font-family:var(--title);font-size:18px;letter-spacing:.03em;color:var(--gold2)}
+header .sp{flex:1}
+header .iso{color:var(--mut);font-size:12px;max-width:48vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav{position:sticky;top:var(--hdr);z-index:29;display:flex;gap:4px;padding:7px 14px;flex-wrap:wrap;
+ background:var(--bg2);border-bottom:1px solid var(--line)}
+nav button{background:transparent;color:var(--mut);border:0;padding:8px 15px;border-radius:9px;
+ cursor:pointer;font:inherit;transition:.13s}
+nav button:hover:not(.on){background:var(--panel2);color:var(--ink)}
+nav button.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--goldink);font-weight:600}
+#isobar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:var(--bg2);
+ border-bottom:1px solid var(--line)}
+main{padding:18px;max-width:1080px;margin:0 auto}
+.panel{display:none}.panel.on{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+h2{font-family:var(--title);color:var(--gold2);font-size:19px;margin:2px 0 4px}
+.sub{color:var(--mut);font-size:12px;margin:0 0 14px}
+input,button,select{font:14px system-ui;padding:7px 9px;border-radius:8px;
+ border:1px solid var(--line);background:var(--input);color:var(--ink);outline:none}
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
+button{background:linear-gradient(180deg,var(--gold2),var(--gold));border:0;color:var(--goldink);
+ font-weight:600;cursor:pointer;transition:filter .12s}
+button:hover{filter:brightness(1.07)}button:active{filter:brightness(.94)}
+button.ghost{background:var(--raise);color:var(--ink);font-weight:500}
+button.mini{padding:4px 8px;font-size:13px}
+.row{margin:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.note{color:var(--mut);font-size:12px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sec{margin:14px 0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel)}
+.sec>h3{margin:0;padding:10px 14px;background:var(--panel2);font-size:13px;font-weight:600;
+ color:var(--gold2);cursor:pointer;letter-spacing:.03em;text-transform:uppercase;
+ display:flex;justify-content:space-between;align-items:center;user-select:none}
+.sec>h3::after{content:"▾";color:var(--mut);font-size:11px}
+.sec>h3.closed::after{content:"▸"}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:14px}
+.fld label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+.fld .in{display:flex;gap:5px}.fld input{width:100%}
+input.chg{border-color:var(--chg-bd);background:var(--chg-bg)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+thead th{position:sticky;top:0;background:var(--thead);color:var(--mut);font-size:11px;
+ text-transform:uppercase;letter-spacing:.04em;z-index:2}
+.scroll{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:1px solid var(--line);margin:0}
+.card-hd{padding:12px 14px;background:var(--panel2);border-bottom:1px solid var(--line);
+ font-weight:600;color:var(--gold2);border-radius:11px 11px 0 0}
+/* spinner overlay */
+#spin{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+ background:rgba(6,12,22,.45);backdrop-filter:blur(1.5px)}
+#spin.on{display:flex}
+.sun{width:52px;height:52px;border-radius:50%;border:5px solid rgba(230,184,78,.25);
+ border-top-color:var(--gold2);border-right-color:var(--sun);animation:spin .8s linear infinite;
+ box-shadow:0 0 18px rgba(232,130,58,.5)}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* toasts */
+#toast{position:fixed;right:18px;bottom:18px;z-index:70;display:flex;flex-direction:column;gap:8px}
+.tst{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--gold);
+ color:var(--ink);padding:10px 14px;border-radius:9px;box-shadow:var(--shadow);max-width:340px;
+ animation:tin .2s ease}
+.tst.ok{border-left-color:var(--ok)}.tst.bad{border-left-color:var(--bad)}
+@keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1}}
+.pill{display:inline-block;padding:1px 8px;border-radius:20px;background:var(--raise);color:var(--mut);font-size:11px}
+</style></head>
+<body>
+<header>
+ <span class=logo></span><b>Suikoden V</b><span class=note>ISO &amp; Save Editor</span>
+ <span class=sp></span>
+ <span class=iso id=isoLabel>no ISO loaded</span>
+ <button class="ghost mini" onclick=toggleTheme()>◐ Theme</button>
+</header>
+<nav id=nav>
+ <button data-tab=char class=on onclick=showTab('char')>Characters</button>
+ <button data-tab=price onclick=showTab('price')>Prices</button>
+ <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
+ <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
+ <button data-tab=save onclick=showTab('save')>Saves</button>
+ <button data-tab=tools onclick=showTab('tools')>Tools</button>
+</nav>
+<div id=isobar>
+ <span class=note>ISO</span>
+ <input id=iso size=54 placeholder="/path/to/Suikoden V.iso">
+ <button onclick=verify()>Open / Verify</button>
+ <span id=status class=note></span>
+</div>
 <main>
- <div class=row>
-   ISO: <input id=iso size=52 placeholder="/path/to/Suikoden V.iso">
-   <button onclick=verify()>Open / Verify</button><span id=status></span>
- </div>
- <div class=row id=charrow style=display:none>
-   Character: <select id=csel onchange=loadChar()></select>
-   <input id=cfilter size=14 placeholder="filter…" oninput=filterChars()>
+ <section class="panel on" id=p-char>
+  <h2>Character Editor</h2>
+  <p class=sub>Starting stats, growth/skill ranks, equipment, runes and thresholds — verified ISO tables.</p>
+  <div class=row id=charrow style=display:none>
+   <span class=note>Character</span>
+   <select id=csel onchange=loadChar()></select>
+   <input id=cfilter size=14 placeholder="filter name / id…" oninput=filterChars()>
    <button onclick=saveChar()>Save changes</button>
    <button class=ghost onclick=revertChar()>Revert</button>
-   <button class=ghost onclick=toggleTheme()>Theme</button>
    <span id=csave class=note></span>
- </div>
- <div id=sections></div>
- <hr style="border-color:#4a2b26;margin:18px 0">
- <h3 style="color:#f0c05a;font-size:15px">Item / equipment prices <span class=note>(buy + sell, verified)</span></h3>
- <div class=row><button onclick=loadPrices()>Load prices</button>
-   <input id=pricefilter size=10 placeholder="min buy…" oninput=priceShow()>
+  </div>
+  <div id=sections></div>
+  <p class=note id=charhint>Open your ISO above to begin.</p>
+ </section>
+
+ <section class=panel id=p-price>
+  <h2>Item &amp; Equipment Prices</h2>
+  <p class=sub>Buy / sell prices (verified vs stat guide; sell = buy ÷ 2). Records in item-id order.</p>
+  <div class=row><button onclick=loadPrices()>Load prices</button>
+   <input id=pricefilter size=12 placeholder="min buy…" oninput=priceShow()>
    <span id=pricenote class=note></span></div>
- <div id=prices style="max-height:280px;overflow:auto"></div>
- <hr style="border-color:#4a2b26;margin:18px 0">
- <h3 style="color:#f0c05a;font-size:15px">Hard Mode (party-wide starting-stat scaler)</h3>
- <div class=row>
-   Factor <input id=hmfactor type=number step=0.05 min=0.1 max=10 value=0.5 size=5>
+  <div class=scroll id=prices></div>
+ </section>
+
+ <section class=panel id=p-hard>
+  <h2>Hard Mode</h2>
+  <p class=sub>Party-wide starting-stat scaler. Idempotent: scales the original values; Restore is byte-exact.</p>
+  <div class=row>
+   <span class=note>Factor</span>
+   <input id=hmfactor type=number step=0.05 min=0.1 max=10 value=0.5 size=6>
    <button onclick="hardmode(false)">Apply to all characters</button>
    <button class=ghost onclick="hardmode(true)">Restore</button>
-   <span id=hmstatus class=note>idempotent: scales the original values; Restore is exact</span>
- </div>
- <hr style="border-color:#4a2b26;margin:18px 0">
- <h3 style="color:#f0c05a;font-size:15px">Reference lookup</h3>
- <div class=row>
+  </div>
+  <p class=note id=hmstatus>0.5 halves every character's starting stats. A .bak is made before writing.</p>
+ </section>
+
+ <section class=panel id=p-ref>
+  <h2>Reference &amp; Text Editor</h2>
+  <p class=sub>Item / rune / spell / skill / enemy names from the boot ELF. Edit a name and press Enter to write it back (byte-capped, in place).</p>
+  <div class=row>
    <select id=refcat onchange=refShow()></select>
-   <input id=reffilter size=18 placeholder="search names…" oninput=refShow()>
+   <input id=reffilter size=20 placeholder="search names…" oninput=refShow()>
    <span id=refcount class=note></span>
- </div>
- <div id=refout style="max-height:280px;overflow:auto;background:#0f0a0b;padding:8px;border-radius:6px">Loading reference…</div>
- <hr style="border-color:#4a2b26;margin:18px 0">
- <h3 style="color:#f0c05a;font-size:15px">Memory-card saves</h3>
- <div class=row>
-   Search folder: <input id=saveroot size=40 placeholder="(defaults to ./Saves)">
-   <button class=ghost onclick=scanSaves()>Scan for S5 saves</button>
- </div>
- <div id=saves></div>
- <hr style="border-color:#4a2b26;margin:18px 0">
- <div class=row>
-   Raw read: off <input id=roff size=10 value=0x828BD> len <input id=rlen size=4 value=16>
+  </div>
+  <div class=scroll id=refout style=padding:6px>Loading reference…</div>
+ </section>
+
+ <section class=panel id=p-save>
+  <h2>Memory-Card Saves</h2>
+  <p class=sub>Scan PS2 cards for Suikoden V saves. Edit hero / castle name and toggle New Game Plus (enables fast-forward). ECC + .bak handled automatically.</p>
+  <div class=row>
+   <span class=note>Search folder</span>
+   <input id=saveroot size=40 placeholder="(defaults to ./Saves)">
+   <button onclick=scanSaves()>Scan for saves</button>
+  </div>
+  <div id=saves></div>
+ </section>
+
+ <section class=panel id=p-tools>
+  <h2>Tools</h2>
+  <p class=sub>Raw hex read at any absolute ISO offset (research).</p>
+  <div class=row>
+   <span class=note>Offset</span><input id=roff size=12 value=0x828BD>
+   <span class=note>Length</span><input id=rlen size=5 value=16>
    <button class=ghost onclick=peek()>Read</button>
- </div>
- <pre id=out>Open your ISO to begin.</pre>
- <p class=note>Fields marked (?) hold verified per-character data; exact stat labels are
- still being confirmed. A .bak is made before the first write.</p>
+  </div>
+  <pre id=out>—</pre>
+ </section>
 </main>
+<div id=spin><div class=sun></div></div>
+<div id=toast></div>
 <script>
-let CHARS=[], CUR=null, ORIG={};
-async function j(u,b){const r=await fetch(u,{method:b?'POST':'GET',body:b&&JSON.stringify(b),
-  headers:{'content-type':'application/json'}});return r.json()}
+let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[];
+let _busy=0;
+function spin(on){_busy+=on?1:-1;document.getElementById('spin').classList.toggle('on',_busy>0)}
+function toast(msg,kind){const t=document.createElement('div');t.className='tst '+(kind||'');t.textContent=msg;
+ document.getElementById('toast').appendChild(t);setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.remove(),300)},3200)}
+async function j(u,b){spin(true);try{
+ const r=await fetch(u,{method:b?'POST':'GET',body:b&&JSON.stringify(b),headers:{'content-type':'application/json'}});
+ return await r.json();}catch(e){toast('Request failed: '+e,'bad');return{error:String(e)}}finally{spin(false)}}
 function iso(){return document.getElementById('iso').value}
+function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char');return false}return true}
+function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));}
+function toggleTheme(){const l=document.body.classList.toggle('light');
+ try{localStorage.s5theme=l?'light':'dark'}catch(e){}}
+
 async function verify(){const s=await j('/api/verify',{iso:iso()});
-  const el=document.getElementById('status');el.textContent=s.ok?' ✓ '+s.msg:' ✗ '+s.msg;
-  el.className=s.ok?'ok':'bad';
-  if(s.ok){CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
-    document.getElementById('charrow').style.display='';loadChar();}}
-function fillChars(){const sel=document.getElementById('csel');const f=(document.getElementById('cfilter').value||'').toLowerCase();
-  sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
-    .map(c=>`<option value="${c.id}">${c.id} - ${c.name}</option>`).join('');}
+ const el=document.getElementById('status');const msg=s.msg||s.error||'error';
+ el.textContent=(s.ok?'✓ ':'✗ ')+msg;el.className='note '+(s.ok?'ok':'bad');
+ if(s.ok){document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
+  CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
+  document.getElementById('charrow').style.display='';document.getElementById('charhint').style.display='none';loadChar();}
+ else toast(s.msg,'bad');}
+function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
+ sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
+  .map(c=>`<option value="${c.id}">${c.id} — ${c.name}</option>`).join('');}
 function filterChars(){fillChars();loadChar();}
 async function loadChar(){const sel=document.getElementById('csel');if(!sel.value)return;
-  CUR=parseInt(sel.value);const s=await j('/api/char',{iso:iso(),id:CUR});
-  if(s.error){document.getElementById('sections').innerHTML='<p class=bad>'+s.error+'</p>';return}
-  ORIG={};const secs=document.getElementById('sections');secs.innerHTML='';
-  for(const [tbl,rows] of Object.entries(s.tables)){
-    const div=document.createElement('div');div.className='sec';
-    div.innerHTML=`<h3 onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display=='none'?'grid':'none'">${tbl}</h3>`;
-    const g=document.createElement('div');g.className='grid';
-    rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;
-      const max=r.width==1?255:65535;
-      g.innerHTML+=`<div class=fld><label>${r.label} <span class=note>(${r.width}B ≤${max})</span></label>`+
-        `<span style="display:flex;gap:4px"><input type=number min=0 max=${max} value=${r.value} data-k="${key}" `+
-        `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])" style="flex:1">`+
-        `<button class=ghost title="restore" onclick="restoreField(this)" data-k="${key}">↺</button></span></div>`;});
-    div.appendChild(g);secs.appendChild(div);}
-  if(s.rawStats){const rd=document.createElement('div');rd.className='sec';
-    rd.innerHTML=`<h3 onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display=='none'?'block':'none'">raw bytes (stats record @0x${(s.rawOff||0).toString(16)})</h3>`+
-      `<div style="display:none;padding:10px"><pre style="white-space:pre-wrap">${s.rawStats}</pre></div>`;
-    secs.appendChild(rd);}
-  document.getElementById('csave').textContent='';}
-function restoreField(btn){const inp=document.querySelector('#sections input[data-k="'+btn.dataset.k+'"]');
-  if(inp){inp.value=ORIG[btn.dataset.k];inp.classList.remove('chg');}}
-function revertChar(){document.querySelectorAll('#sections input[data-k]').forEach(i=>{
-  i.value=ORIG[i.dataset.k];i.classList.remove('chg');});document.getElementById('csave').textContent='reverted';}
-function toggleTheme(){const b=document.body;const light=b.style.background==='rgb(244, 236, 224)';
-  if(light){b.style.background='#1a1113';b.style.color='#f2e6d8';}
-  else{b.style.background='#f4ece0';b.style.color='#2a1c14';}}
-async function saveChar(){const inps=[...document.querySelectorAll('#sections input[data-k]')];
-  const edits=[];inps.forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const [t,f]=i.dataset.k.split('|');
-    edits.push({table:t,field:f,value:parseInt(i.value)});}});
-  if(!edits.length){document.getElementById('csave').textContent='no changes';return}
-  const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
-  document.getElementById('csave').textContent=s.error?('error: '+s.error):('saved '+edits.length+' field(s)');
-  if(!s.error)loadChar();}
-let PRICES=[];
-async function loadPrices(){if(!iso()){alert('Open the ISO first');return}
-  const s=await j('/api/prices',{iso:iso()});if(s.error){alert(s.error);return}
-  PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();}
+ CUR=parseInt(sel.value);const s=await j('/api/char',{iso:iso(),id:CUR});
+ const secs=document.getElementById('sections');
+ if(s.error){secs.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ ORIG={};secs.innerHTML='';
+ for(const [tbl,rows] of Object.entries(s.tables)){
+  const div=document.createElement('div');div.className='sec';
+  const g=document.createElement('div');g.className='grid';
+  rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;const max=r.width==1?255:65535;
+   g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.width}B</span></label>`+
+    `<div class=in><input type=number min=0 max=${max} value=${r.value} data-k="${key}" `+
+    `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])">`+
+    `<button class="ghost mini" title=restore onclick=restoreField(this) data-k="${key}">↺</button></div></div>`;});
+  div.innerHTML=`<h3 onclick=toggleSec(this)>${tbl}</h3>`;div.appendChild(g);secs.appendChild(div);}
+ if(s.rawStats){const rd=document.createElement('div');rd.className='sec';
+  rd.innerHTML=`<h3 class=closed onclick=toggleSec(this)>raw bytes · stats @0x${(s.rawOff||0).toString(16)}</h3>`+
+   `<div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.rawStats}</pre></div>`;
+  secs.appendChild(rd);}
+ document.getElementById('csave').textContent='';}
+function toggleSec(h){h.classList.toggle('closed');const b=h.nextElementSibling;
+ b.style.display=b.style.display=='none'?(b.className=='grid'?'grid':'block'):'none';}
+function restoreField(btn){const i=document.querySelector('#sections input[data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=ORIG[btn.dataset.k];i.classList.remove('chg')}}
+function revertChar(){document.querySelectorAll('#sections input[data-k]').forEach(i=>{i.value=ORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+async function saveChar(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#sections input[data-k]').forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const[t,f]=i.dataset.k.split('|');edits.push({table:t,field:f,value:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadChar()}}
+
+async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
+ if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
 function priceShow(){const min=parseInt(document.getElementById('pricefilter').value||'0')||0;
-  const rows=PRICES.filter(p=>p.buy>=min);
-  document.getElementById('pricenote').textContent=rows.length+' items with a price';
-  const d=document.getElementById('prices');d.innerHTML='';
-  rows.slice(0,300).forEach(p=>{const line=document.createElement('div');line.className='row';
-    line.innerHTML=`<span class=note>#${p.index}</span> buy `+
-      `<input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setPrice(this)> sell `+
-      `<input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setPrice(this)>`;
-    d.appendChild(line);});}
-async function setPrice(inp){const r=await j('/api/setprice',{iso:iso(),
-    index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
-  inp.style.borderColor=r.error?'#ff6b6b':'#8bd450';}
-async function hardmode(restore){if(!iso()){alert('Open the ISO first');return}
-  const factor=parseFloat(document.getElementById('hmfactor').value);
-  if(!restore && !confirm('Scale ALL characters\' starting stats x'+factor+'? (.bak made; Restore available)'))return;
-  const r=await j('/api/hardmode',{iso:iso(),factor,restore});
-  document.getElementById('hmstatus').textContent=r.error?('error: '+r.error):(restore?('restored '+r.n+' chars'):('scaled '+r.n+' chars x'+factor));}
-let REF={};
+ const rows=PRICES.filter(p=>p.buy>=min);
+ document.getElementById('pricenote').textContent=rows.length+' items';
+ let h='<table><thead><tr><th>#</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
+ rows.slice(0,400).forEach(p=>{h+=`<tr><td class=note>${p.index}</td>`+
+  `<td><input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setPrice(this)></td>`+
+  `<td><input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setPrice(this)></td></tr>`});
+ document.getElementById('prices').innerHTML=h+'</tbody></table>';}
+async function setPrice(inp){const r=await j('/api/setprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Price #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
+
+async function hardmode(restore){if(!needIso())return;
+ const factor=parseFloat(document.getElementById('hmfactor').value);
+ if(!restore && !confirm('Scale ALL characters’ starting stats ×'+factor+'?  (.bak made; Restore available)'))return;
+ const r=await j('/api/hardmode',{iso:iso(),factor,restore});
+ if(r.error){toast('Error: '+r.error,'bad');return}
+ const m=restore?('Restored '+r.n+' characters'):('Scaled '+r.n+' characters ×'+factor);
+ document.getElementById('hmstatus').textContent=m;toast(m,'ok')}
+
 async function refInit(){REF=await j('/api/reference',{});
-  const sel=document.getElementById('refcat');
-  sel.innerHTML=Object.keys(REF).map(k=>`<option>${k} (${REF[k].length})</option>`).join('');
-  refShow();}
+ document.getElementById('refcat').innerHTML=Object.keys(REF).map(k=>`<option>${k} (${REF[k].length})</option>`).join('');refShow();}
 function refShow(){const cat=(document.getElementById('refcat').value||'').split(' ')[0];
-  const f=(document.getElementById('reffilter').value||'').toLowerCase();
-  const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f)).slice(0,400);
-  document.getElementById('refcount').textContent=rows.length+' shown (edit a name → Enter to write to ISO, byte-capped)';
-  const out=document.getElementById('refout');out.innerHTML='';
-  rows.forEach(e=>{const line=document.createElement('div');
-    line.innerHTML=`<span class=note>${e.off}</span> `+
-      `<input value="${e.name.replace(/"/g,'&quot;')}" data-off="${e.off}" size="24" `+
-      `onkeydown="if(event.key==='Enter')refWrite(this)">`;
-    out.appendChild(line);});}
-async function refWrite(inp){if(!iso()){alert('Open the ISO first');return}
-  const r=await j('/api/setstring',{iso:iso(),off:inp.dataset.off,text:inp.value});
-  inp.style.borderColor=r.error?'#ff6b6b':'#8bd450';
-  if(r.error)alert(r.error);}
+ const f=(document.getElementById('reffilter').value||'').toLowerCase();
+ const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f)).slice(0,500);
+ document.getElementById('refcount').textContent=rows.length+' shown · edit + Enter to write';
+ let h='<table><thead><tr><th>Offset</th><th>Name</th></tr></thead><tbody>';
+ rows.forEach(e=>{h+=`<tr><td class=note>${e.off}</td><td><input value="${e.name.replace(/"/g,'&quot;')}" data-off="${e.off}" size=26 onkeydown="if(event.key==='Enter')refWrite(this)"></td></tr>`});
+ document.getElementById('refout').innerHTML=h+'</tbody></table>';}
+async function refWrite(inp){if(!needIso())return;
+ const r=await j('/api/setstring',{iso:iso(),off:inp.dataset.off,text:inp.value});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Wrote name @'+inp.dataset.off,'ok')}
+
 async function scanSaves(){const s=await j('/api/savescan',{root:document.getElementById('saveroot').value});
-  const d=document.getElementById('saves');
-  if(s.error){d.textContent=s.error;return}
-  if(!s.saves.length){d.innerHTML='<p class=note>No Suikoden V saves found.</p>';return}
-  d.innerHTML=s.saves.map((sv,i)=>{const fl=sv.fields||{};
-    return `<div class=sec><h3>${sv.card} — ${sv.folder} <span class=note>${(sv.meta&&sv.meta.title)||''}</span></h3>`+
-    `<div class=grid>`+
-    `<div class=fld><label>Hero name</label><input id="sv${i}_heroName" value="${fl.heroName||''}" maxlength=15></div>`+
-    `<div class=fld><label>Castle name</label><input id="sv${i}_castleName" value="${fl.castleName||''}" maxlength=15></div>`+
-    `<div class=fld><label>New Game Plus (fast-forward)</label>`+
-    `<label style="font-size:13px"><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''}> enabled</label></div>`+
-    `<div class=fld><label>&nbsp;</label><button onclick='saveWrite(${i})'>Write to card</button></div>`+
-    `</div></div>`;}).join('');
-  window._saves=s.saves;}
+ const d=document.getElementById('saves');
+ if(s.error){d.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ if(!s.saves.length){d.innerHTML='<p class=note>No Suikoden V saves found in that folder.</p>';return}
+ window._saves=s.saves;
+ d.innerHTML=s.saves.map((sv,i)=>{const fl=sv.fields||{};
+  return `<div class=sec><div class=card-hd>${sv.folder} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
+   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${(fl.heroName||'').replace(/"/g,'&quot;')}" maxlength=15></div></div>`+
+   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${(fl.castleName||'').replace(/"/g,'&quot;')}" maxlength=15></div></div>`+
+   `<div class=fld><label>New Game Plus (fast-forward)</label><div class=in><label class=note style=padding-top:7px><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''}> enabled</label></div></div>`+
+   `<div class=fld><label>&nbsp;</label><button onclick=saveWrite(${i})>Write to card</button></div>`+
+   `</div></div>`}).join('');
+ toast('Found '+s.saves.length+' save(s)','ok')}
 async function saveWrite(i){const sv=window._saves[i];
-  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
-    castleName:document.getElementById('sv'+i+'_castleName').value,
-    newGamePlus:document.getElementById('sv'+i+'_ngp').checked?1:0};
-  if(!confirm('Write to '+sv.card+'? A .bak is made. (Save checksum unverified — verify it loads in-game.)'))return;
-  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
-  alert(r.error?('Error: '+r.error):('Wrote '+r.changed+' field(s). '+(r.warn||'')));}
-async function peek(){const s=await j('/api/peek',{iso:iso(),
-  off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
-  document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii);}
-refInit();
-(function(){const st=%STATE%;if(st.iso){document.getElementById('iso').value=st.iso}})();
-</script>
+ const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
+  castleName:document.getElementById('sv'+i+'_castleName').value,
+  newGamePlus:document.getElementById('sv'+i+'_ngp').checked?1:0};
+ if(!confirm('Write to '+sv.card+'?  A .bak is made.'))return;
+ const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
+ if(r.error)toast('Error: '+r.error,'bad');else toast('Wrote '+r.changed+' field(s) to card','ok')}
+
+async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
+ document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii)}
+
+(function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
+ refInit();
+ const st=%STATE%;if(st.iso){document.getElementById('iso').value=st.iso;verify();}})();
+</script></body></html>
 """
 
 
