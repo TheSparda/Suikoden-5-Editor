@@ -60,16 +60,13 @@ TABLES = {
     # so shown numerically.
     "starting equipment": (0x493112, 0x18, [("Head", 0, 1, "num"), ("Body", 1, 1, "num"),
                                             ("Arm", 2, 1, "num"), ("Feet", 3, 1, "num")]),
-    # The exe's "Magic/Potch" tab: per-character magic-point thresholds + starting Potch,
-    # stored at 0x2c..0x54 in the unit record (same offsets the enemy editor reads as
-    # item drops). Starting Potch (+0x54) is well-supported; thresholds are clean for
-    # spellcasters (e.g. Kyle 56/72/88/104/120) and may be unused on non-casters.
-    "magic / potch": (0x49F0DC, 0x7C, [("Magic threshold 1", 0x2c, 2, "num"),
-                                       ("Magic threshold 2", 0x34, 2, "num"),
-                                       ("Magic threshold 3", 0x3c, 2, "num"),
-                                       ("Magic threshold 4", 0x44, 2, "num"),
-                                       ("Magic threshold 5", 0x4c, 2, "num"),
-                                       ("Starting Potch",    0x54, 2, "num")]),
+    # Starting Potch (+0x54). NOTE: the original editor's "Magic Points Thresholds"
+    # fields at 0x2c..0x4c are actually the unit's ITEM-DROP slots (item hex ids) —
+    # 67/73 playable chars hold values >999 there (impossible for a real Magic
+    # threshold, which caps ~999) and they match the enemy drop pattern. So those are
+    # a mislabel in the original editor; drops are edited in the Enemy tab. Only Potch
+    # is kept here for characters.
+    "potch": (0x49F0DC, 0x7C, [("Starting Potch", 0x54, 2, "num")]),
     # NOTE: 0x4E87F0/0x54 is the SPELL DEFINITION table (element/power/target),
     # indexed by SPELL id — NOT per-character runes. It was previously (wrongly)
     # rendered here indexed by character id. Removed; see SPELLS below + the Spells tab.
@@ -146,7 +143,7 @@ SECTION_HELP = {
     "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the original editor's Weapon Growth tab.",
     "skills":     "Per-skill affinity / aptitude. Rank 01=E, 02=D, 03=C, 04=B, 05=A, 06=S, 07=SS (higher learns faster / caps higher).",
     "starting equipment": "Armor equipped at new-game start — Head / Body / Arm / Feet (armor ids).",
-    "magic / potch": "Magic-point thresholds (gain a spell slot as Magic rises) + starting Potch. Thresholds are meaningful for spellcasters; Starting Potch (+0x54) applies to all.",
+    "potch": "Starting Potch (money) this character brings. (The original editor's 'Magic Points Thresholds' fields turned out to be the unit's item-drop slots — a mislabel — so they're edited in the Enemy tab instead.)",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
 }
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
