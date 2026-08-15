@@ -128,3 +128,11 @@ save layout once located.
 - Resistances / Other-Runes bitflag / target: documented by the exe (0=E..6=S, 6 rune
   bits) and live in the +0x1a..0x29 byte block, but exact sub-offsets NOT yet verified
   against ground truth → left out of the editor for now.
+
+## "Magic/Potch" correction
+The original editor's "Magic Points Thresholds" fields (unit record +0x2c/0x34/0x3c/0x44/0x4c)
+are NOT magic thresholds — they are the unit's ITEM-DROP slots (item hex ids). Proof: 67/73
+playable characters hold a value >999 there (impossible for a Magic threshold, cap ~999),
+and the values match the enemy drop pattern (id4 = [0,4103,0,0,0]; 4103=0x1007 = Nariqua's
+verified drop). Only +0x54 = Starting Potch is real for characters. Drops are edited in the
+Enemy tab; the character editor exposes only Starting Potch.
