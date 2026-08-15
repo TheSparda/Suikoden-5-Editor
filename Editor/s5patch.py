@@ -81,6 +81,20 @@ def write_price(iso, index, field, value):
     if off is None: raise KeyError(field)
     iso.wu(F.PRICE_BASE + index * F.PRICE_STRIDE + off, w, value)
 
+def spell_addr(sid): return F.SPELL_BASE + sid * F.SPELL_STRIDE
+
+def read_spell(iso, sid):
+    base = spell_addr(sid)
+    return [{"label": l, "off": o, "width": w, "kind": k, "value": iso.ru(base + o, w)}
+            for (l, o, w, k) in F.SPELL_FIELDS]
+
+def write_spell_field(iso, sid, label, value):
+    for (l, o, w, k) in F.SPELL_FIELDS:
+        if l == label:
+            iso.wu(spell_addr(sid) + o, w, value); return True
+    raise KeyError(f"no spell field {label!r}")
+
+
 def read_cstring(iso, off, maxlen=64):
     b = iso.rd(off, maxlen); e = b.find(b"\x00")
     return b[:e if e >= 0 else maxlen]
