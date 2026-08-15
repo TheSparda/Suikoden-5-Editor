@@ -108,7 +108,10 @@ def read_runes(iso):
     for rid in range(F.RUNE_GRANT_COUNT):
         base = rune_addr(rid)
         out.append({"id": rid, "name": F.RUNE_GRANT_NAMES[rid] if rid < len(F.RUNE_GRANT_NAMES) else f"Rune {rid}",
-                    "start": iso.ru(base, 1), "count": iso.ru(base + 2, 1)})
+                    "start": iso.ru(base, 1), "count": iso.ru(base + 2, 1), "synthetic": False})
+    for i, sr in enumerate(F.SYNTH_RUNES):
+        out.append({"id": F.SYNTH_RUNE_BASE + i, "name": sr["name"],
+                    "start": sr["start"], "count": sr["count"], "synthetic": True})
     return out
 
 def write_rune_field(iso, rid, label, value):
