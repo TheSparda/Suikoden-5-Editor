@@ -52,11 +52,10 @@ TABLES = {
     "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "slider") for i in range(16)]),
     "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
     "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
+    # value(@2,u16) + flag(@5,u8) are hidden: their meaning is unverified.
     "runes":      (0x4E87F0, 0x54, [("Rune slot 1 (id)", 0, 1, "rune"),
                                     ("Rune slot 2 (id)", 1, 1, "rune"),
-                                    ("Rune value (u16)", 2, 2, "num"),
-                                    ("Rune slot 3 (id)", 4, 1, "rune"),
-                                    ("Rune flag",        5, 1, "num")]),
+                                    ("Rune slot 3 (id)", 4, 1, "rune")]),
 }
 
 # Character name table (separate index order from the NNN id list).
