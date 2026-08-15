@@ -93,6 +93,12 @@ nav button{background:transparent;color:var(--mut);border:0;padding:8px 15px;bor
  cursor:pointer;font:inherit;transition:.13s}
 nav button:hover:not(.on){background:var(--panel2);color:var(--ink)}
 nav button.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--goldink);font-weight:600}
+.navdrop{position:relative;display:inline-block}
+.navmenu{position:absolute;top:calc(100% + 4px);left:0;min-width:180px;display:none;z-index:40;
+ background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px;
+ box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.navmenu.open{display:block}
+.navmenu button{display:block;width:100%;text-align:left;border-radius:7px}
 #isobar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:var(--bg2);
  border-bottom:1px solid var(--line)}
 main{padding:18px;max-width:1080px;margin:0 auto}
@@ -163,11 +169,16 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
  <button data-tab=rune onclick=showTab('rune')>Runes &amp; Spells</button>
- <button data-tab=price onclick=showTab('price')>Prices</button>
- <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
- <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
  <button data-tab=save onclick=showTab('save')>Saves</button>
- <button data-tab=tools onclick=showTab('tools')>Tools</button>
+ <div class=navdrop>
+  <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
+  <div class=navmenu id=othermenu>
+   <button data-tab=price onclick=showTab('price')>Prices</button>
+   <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
+   <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
+   <button data-tab=tools onclick=showTab('tools')>Tools</button>
+  </div>
+ </div>
 </nav>
 <div id=isobar>
  <span class=note>ISO</span>
@@ -303,7 +314,12 @@ async function browseIso(){const r=await j('/api/pickiso',{});
 function reopenLast(){if(LASTISO){document.getElementById('iso').value=LASTISO;verify();}}
 function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char');return false}return true}
 function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
- document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));}
+ document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));
+ const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['price','hard','ref','tools'].includes(name));
+ const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}
+function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
+document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
+ if(d&&!d.contains(e.target)){const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}});
 function toggleTheme(){const l=document.body.classList.toggle('light');
  try{localStorage.s5theme=l?'light':'dark'}catch(e){}}
 
