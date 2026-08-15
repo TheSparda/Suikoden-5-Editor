@@ -27,27 +27,35 @@ STAT_LABELS = [  # twelve u16 at +0x02..; order VERIFIED vs the L60 Character Da
     ("Luck", "num"),
 ]
 
+def _skill_names():
+    try: return json.load(open(os.path.join(HERE, "s5_skill_names.json")))
+    except Exception: return []
+SKILL_NAMES = _skill_names()
+def _skill_label(i):
+    return SKILL_NAMES[i] if i < len(SKILL_NAMES) else f"Skill {i+1}"
+
+# Skill-rank byte value -> grade (verified 01=E .. 07=SS).
+RANK_NAMES = ["—", "E", "D", "C", "B", "A", "S", "SS"]
+
 def _stat_fields():
     f = [("Level", 0x00, 1, "num"), ("Level cap (?)", 0x01, 1, "num")]
     for i, (lbl, kind) in enumerate(STAT_LABELS):
         f.append((lbl, 0x02 + i*2, 2, kind))
+    # +0x1A..0x29: per-skill affinity ranks, labeled positionally (Stamina, Attack, ...)
     for i in range(16):
-        f.append((f"Skill rank {i+1}", 0x1A + i, 1, "rank"))
+        f.append((_skill_label(i) + " affinity", 0x1A + i, 1, "rank"))
     return f
 
 TABLES = {
     "stats":      (0x49F0DC, 0x7C, _stat_fields()),
-    "thresholds": (0x4987C0, 0x60, [(f"Threshold {i+1}", i, 1, "num") for i in range(16)]),
-    "skills":     (0x48A970, 0x12, [(f"Skill {i+1}", i, 1, "num") for i in range(18)]),
-    "equipment":  (0x493112, 0x18, [("Equip slot 1 (?)", 0, 1, "item"),
-                                    ("Equip slot 2 (?)", 1, 1, "item"),
-                                    ("Equip slot 3 (?)", 2, 1, "item"),
-                                    ("Equip slot 4 (?)", 3, 1, "item")]),
-    "runes":      (0x4E87F0, 0x54, [("Rune slot 1 (?)", 0, 1, "rune"),
-                                    ("Rune slot 2 (?)", 1, 1, "rune"),
-                                    ("Rune u16 (?)",    2, 2, "num"),
-                                    ("Rune slot 3 (?)", 4, 1, "rune"),
-                                    ("Rune flag (?)",   5, 1, "num")]),
+    "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "num") for i in range(16)]),
+    "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
+    "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
+    "runes":      (0x4E87F0, 0x54, [("Rune slot 1 (id)", 0, 1, "rune"),
+                                    ("Rune slot 2 (id)", 1, 1, "rune"),
+                                    ("Rune value (u16)", 2, 2, "num"),
+                                    ("Rune slot 3 (id)", 4, 1, "rune"),
+                                    ("Rune flag",        5, 1, "num")]),
 }
 
 # Character name table (separate index order from the NNN id list).
