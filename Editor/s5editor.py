@@ -134,6 +134,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 </header>
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
+ <button data-tab=spell onclick=showTab('spell')>Spells</button>
  <button data-tab=price onclick=showTab('price')>Prices</button>
  <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
  <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
@@ -149,7 +150,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <main>
  <section class="panel on" id=p-char>
   <h2>Character Editor</h2>
-  <p class=sub>Starting stats, growth/skill ranks, equipment, runes and thresholds — verified ISO tables.</p>
+  <p class=sub>Starting stats, growth/skill ranks, equipment and magic thresholds — verified ISO tables.</p>
   <div class=row id=charrow style=display:none>
    <span class=note>Character</span>
    <select id=csel onchange=loadChar()></select>
@@ -160,6 +161,21 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   </div>
   <div id=sections></div>
   <p class=note id=charhint>Open your ISO above to begin.</p>
+ </section>
+
+ <section class=panel id=p-spell>
+  <h2>Spell Editor</h2>
+  <p class=sub>Edit a spell's Element, Power and Target (single / row / column / cluster / all) — verified vs the original editor's legend.</p>
+  <div class=row id=spellrow style=display:none>
+   <span class=note>Spell</span>
+   <select id=ssel onchange=loadSpell()></select>
+   <input id=sfilter size=14 placeholder="filter name / id…" oninput=filterSpells()>
+   <button onclick=saveSpell()>Save changes</button>
+   <button class=ghost onclick=revertSpell()>Revert</button>
+   <span id=ssave class=note></span>
+  </div>
+  <div id=spellsections></div>
+  <p class=note id=spellhint>Open your ISO above to begin.</p>
  </section>
 
  <section class=panel id=p-price>
@@ -219,7 +235,8 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
-let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},ranks:[]};
+let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},ranks:[],elements:{},targets:{}};
+let SPELLS=[], SCUR=null, SORIG={};
 let _busy=0;
 function ctrl(r,key){const v=r.value;
  const ch='onchange="this.classList.toggle(\'chg\',this.value!=ORIG[this.dataset.k])"';
@@ -227,7 +244,8 @@ function ctrl(r,key){const v=r.value;
   if(v<0||v>=R.length)o+=`<option value=${v} selected>${v} · (raw)</option>`;
   for(let i=0;i<R.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${i} · ${R[i]}</option>`;
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
- if(r.kind=='item'||r.kind=='rune'){const it=(r.kind=='rune'?MAPS.runes:MAPS.items)||{};
+ if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'){
+  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets}[r.kind])||{};
   const nm=id=>{const e=it[id];return e?(e.name||e):('#'+id)};
   let o=`<option value=${v} selected>${v} · ${nm(v)}</option>`;
   Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${nm(id)}</option>`});
@@ -256,7 +274,10 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
  if(s.ok){document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
   document.getElementById('charrow').style.display='';
-  document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();}
+  document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();
+  if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
+  fillSpells();document.getElementById('spellrow').style.display='';
+  document.getElementById('spellhint').textContent='';loadSpell();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
@@ -292,6 +313,36 @@ async function saveChar(){if(!needIso())return;const edits=[];
  if(!edits.length){toast('No changes to save');return}
  const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadChar()}}
+
+// ---- Spell editor ----
+function pillFor(r){return r.kind=='element'?'element':r.kind=='target'?'target':r.width+'B';}
+function fillSpells(){const sel=document.getElementById('ssel'),f=(document.getElementById('sfilter').value||'').toLowerCase();
+ sel.innerHTML=SPELLS.map((n,i)=>({i,n})).filter(x=>!f||x.n.toLowerCase().includes(f)||(''+x.i).includes(f))
+  .map(x=>`<option value="${x.i}">${x.i} — ${x.n}</option>`).join('');}
+function filterSpells(){fillSpells();loadSpell();}
+async function loadSpell(){const sel=document.getElementById('ssel');if(!sel.value)return;
+ SCUR=parseInt(sel.value);const s=await j('/api/spell',{iso:iso(),id:SCUR});
+ const box=document.getElementById('spellsections');
+ if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ SORIG={};const g=document.createElement('div');g.className='grid';
+ s.fields.forEach(r=>{const key='spell|'+r.label;SORIG[key]=r.value;
+  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${pillFor(r)}</span></label>`+
+   `<div class=in>${ctrl(r,key)}`+
+   `<button class="ghost mini" title=restore onclick=restoreSpellField(this) data-k="${key}">↺</button></div></div>`;});
+ const raw=`<div class=sec><h3 class=closed onclick=toggleSec(this)>raw bytes · spell @0x${(s.rawOff||0).toString(16)}</h3>`+
+  `<div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.raw}</pre></div></div>`;
+ box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
+ sec.innerHTML='<h3 onclick=toggleSec(this)>spell stats</h3>';sec.appendChild(g);
+ box.appendChild(sec);box.insertAdjacentHTML('beforeend',raw);
+ document.getElementById('ssave').textContent='';}
+function restoreSpellField(btn){const i=document.querySelector('#spellsections [data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=SORIG[btn.dataset.k];i.classList.remove('chg')}}
+function revertSpell(){document.querySelectorAll('#spellsections [data-k]').forEach(i=>{i.value=SORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+async function saveSpell(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#spellsections [data-k]').forEach(i=>{if(i.value!=SORIG[i.dataset.k]){const[,f]=i.dataset.k.split('|');edits.push({field:f,value:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setspell',{iso:iso(),id:SCUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadSpell()}}
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
  if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
@@ -396,6 +447,26 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_field(g, e["table"], int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/spells":
+                try: names = json.load(open(os.path.join(HERE, "s5_spell_names.json")))
+                except Exception: names = []
+                return self._send(200, json.dumps({"spells": names}))
+            if self.path == "/api/spell":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                sid = int(d["id"])
+                with P.Iso(iso) as g:
+                    fields = P.read_spell(g, sid)
+                    raw = g.rd(P.spell_addr(sid), F.SPELL_STRIDE).hex(" ")
+                return self._send(200, json.dumps({"fields": fields, "rawOff": P.spell_addr(sid), "raw": raw}))
+            if self.path == "/api/setspell":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    for e in d.get("edits", []):
+                        P.write_spell_field(g, int(d["id"]), e["field"], int(e["value"]))
+                return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/prices":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -425,7 +496,9 @@ class H(http.server.BaseHTTPRequestHandler):
                              for i, e in enumerate(_rn)}
                 except Exception: runes = {}
                 return self._send(200, json.dumps({"items": items, "runes": runes,
-                    "ranks": F.RANK_NAMES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP}))
+                    "ranks": F.RANK_NAMES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
+                    "elements": {str(k): v for k, v in F.ELEMENT_NAMES.items()},
+                    "targets": {str(k): v for k, v in F.TARGET_NAMES.items()}}))
             if self.path == "/api/reference":
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))

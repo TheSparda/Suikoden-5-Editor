@@ -52,11 +52,31 @@ TABLES = {
     "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "slider") for i in range(16)]),
     "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
     "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
-    # value(@2,u16) + flag(@5,u8) are hidden: their meaning is unverified.
-    "runes":      (0x4E87F0, 0x54, [("Rune slot 1 (id)", 0, 1, "rune"),
-                                    ("Rune slot 2 (id)", 1, 1, "rune"),
-                                    ("Rune slot 3 (id)", 4, 1, "rune")]),
+    # NOTE: 0x4E87F0/0x54 is the SPELL DEFINITION table (element/power/target),
+    # indexed by SPELL id — NOT per-character runes. It was previously (wrongly)
+    # rendered here indexed by character id. Removed; see SPELLS below + the Spells tab.
 }
+
+# ---- Spell definition table (VERIFIED against ~25 known spells) --------------
+# Base 0x4E87F0, stride 0x54, indexed by spell id (0..105, order = spell-name pool).
+#   +0 u8  Element   (clusters perfectly by element)
+#   +1 u8  (unverified; ascending within element — hidden)
+#   +2 u16 Power     (ascending damage; 9999 = full heal)
+#   +4 u8  Target    (matches the exe legend: 02/04/0A/0C/14/24/44)
+#   +5 u8  (unverified; mostly 0 — hidden)
+SPELL_BASE, SPELL_STRIDE, SPELL_COUNT = 0x4E87F0, 0x54, 106
+# Element value -> name. NB: 3/4 are Wind/Water per the ISO data (the community
+# exe's own legend had them swapped); all others matched.
+ELEMENT_NAMES = {0: "Sun / Special", 1: "Fire", 2: "Lightning", 3: "Wind",
+                 4: "Water", 5: "Earth", 6: "Star", 7: "Sound", 8: "Holy",
+                 9: "Dark", 0xA: "Slash", 0xB: "Thrust", 0xC: "Punch", 0xD: "Shoot"}
+# Target value -> name (from the community exe's documented legend, data-verified).
+TARGET_NAMES = {1: "Transform", 2: "Single (ally)", 3: "Self", 4: "Single (enemy)",
+                0xA: "All (ally)", 0xC: "All (enemy)", 0x14: "Column", 0x24: "Row",
+                0x44: "Cluster"}
+SPELL_FIELDS = [("Element", 0, 1, "element"),
+                ("Power / heal (u16)", 2, 2, "num"),
+                ("Target", 4, 1, "target")]
 
 # Character name table (separate index order from the NNN id list).
 NAME_TABLE_BASE = 0x691600
