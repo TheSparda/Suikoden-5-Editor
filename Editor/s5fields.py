@@ -49,7 +49,11 @@ def _stat_fields():
 
 TABLES = {
     "stats":      (0x49F0DC, 0x7C, _stat_fields()),
-    "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "slider") for i in range(16)]),
+    # 0x4987C0/0x60 is per-character WEAPON GROWTH (attack power at sharpen levels
+    # 1-16), edited by the community exe's list2 ("Weapon level N Attack Power" /
+    # "Found your weapon stats"). Verified: 376 varied ascending records, base+stride
+    # match the exe handler. (Previously mislabeled here as "Magic thresholds".)
+    "weapon growth": (0x4987C0, 0x60, [(f"Sharpen Lv{i+1} attack", i, 1, "num") for i in range(16)]),
     "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
     "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
     # NOTE: 0x4E87F0/0x54 is the SPELL DEFINITION table (element/power/target),
@@ -125,7 +129,7 @@ RANK_HELP = "skill rank byte: 0..7 (higher = better; 07 ~ SS)"
 # Per-section help, drawn from the original community editor's own labels/messages.
 SECTION_HELP = {
     "stats":      "Edit character stats here. These are starting values — ISO edits apply to a NEW GAME.",
-    "thresholds": "Magic Points thresholds: when a character's Magic stat rises above a threshold, they gain another spell slot.",
+    "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the original editor's Weapon Growth tab.",
     "skills":     "Per-skill affinity / aptitude. Rank 01=E, 02=D, 03=C, 04=B, 05=A, 06=S, 07=SS (higher learns faster / caps higher).",
     "items":      "Items the character is carrying when you start a new game.",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",

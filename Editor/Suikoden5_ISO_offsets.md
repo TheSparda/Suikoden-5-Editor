@@ -25,7 +25,7 @@ field. Namespace `Suikoden_V_PS2_ROM_Editor`; logic in `Form1`.
 - +0x00 u32 **buy price**, +0x04 u32 **sell price** (sell == buy/2).
 - Verified: record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500 (Shield Rune).
 - Editable via s5patch prices/set-price + editor Prices panel.
-| Skill thresholds | `0x4987C0` | `0x60` (96) | 16 u8 | ascending magic/skill level thresholds (per class; Kyle==Miakis, Georg==Belcoot) |
+| Weapon growth | `0x4987C0` | `0x60` (96) | 16 u8 | per-character weapon attack power at sharpen levels 1-16 (ascending). VERIFIED = the exe's list2 "Weapon Growth" ("Weapon level N Attack Power"). 376 varied records. (Was mislabeled "Skill thresholds".) |
 | Skills    | `0x48A970` | `0x12` (18) | 18 u8 | skill values/ranks (0..25 seen; late joiners all 0) |
 | Equipment | `0x493112` | `0x18` (24) | 4 u8  | 4 equip slot item-ids (helm/armor/gloves/boots — order tentative) |
 | Runes     | `0x4E87F0` | `0x54` (84) | u8,u8,u16,u8,u8 | rune slot ids + flags (layout tentative) |
