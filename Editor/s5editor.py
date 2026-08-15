@@ -216,8 +216,17 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
-let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[];
+let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},ranks:[]};
 let _busy=0;
+function ctrl(r,key){const v=r.value;
+ const ch='onchange="this.classList.toggle(\'chg\',this.value!=ORIG[this.dataset.k])"';
+ if(r.kind=='rank'&&v>=0&&v<MAPS.ranks.length){let o='';for(let i=0;i<MAPS.ranks.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${i} · ${MAPS.ranks[i]}</option>`;
+  return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ if(r.kind=='item'){const it=MAPS.items;let o=`<option value=${v} selected>${v} · ${(it[v]&&it[v].name)||'#'+v}</option>`;
+  Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${it[id].name}</option>`});
+  return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ const max=r.width==1?255:65535;
+ return `<input type=number min=0 max=${max} value=${v} data-k="${key}" oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])">`;}
 function spin(on){_busy+=on?1:-1;document.getElementById('spin').classList.toggle('on',_busy>0)}
 function toast(msg,kind){const t=document.createElement('div');t.className='tst '+(kind||'');t.textContent=msg;
  document.getElementById('toast').appendChild(t);setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.remove(),300)},3200)}
@@ -250,10 +259,9 @@ async function loadChar(){const sel=document.getElementById('csel');if(!sel.valu
  for(const [tbl,rows] of Object.entries(s.tables)){
   const div=document.createElement('div');div.className='sec';
   const g=document.createElement('div');g.className='grid';
-  rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;const max=r.width==1?255:65535;
-   g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.width}B</span></label>`+
-    `<div class=in><input type=number min=0 max=${max} value=${r.value} data-k="${key}" `+
-    `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])">`+
+  rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;
+   g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='rank'?'rank':r.kind=='item'?'item':r.width+'B'}</span></label>`+
+    `<div class=in>${ctrl(r,key)}`+
     `<button class="ghost mini" title=restore onclick=restoreField(this) data-k="${key}">↺</button></div></div>`;});
   div.innerHTML=`<h3 onclick=toggleSec(this)>${tbl}</h3>`;div.appendChild(g);secs.appendChild(div);}
  if(s.rawStats){const rd=document.createElement('div');rd.className='sec';
@@ -263,11 +271,11 @@ async function loadChar(){const sel=document.getElementById('csel');if(!sel.valu
  document.getElementById('csave').textContent='';}
 function toggleSec(h){h.classList.toggle('closed');const b=h.nextElementSibling;
  b.style.display=b.style.display=='none'?(b.className=='grid'?'grid':'block'):'none';}
-function restoreField(btn){const i=document.querySelector('#sections input[data-k="'+btn.dataset.k+'"]');
+function restoreField(btn){const i=document.querySelector('#sections [data-k="'+btn.dataset.k+'"]');
  if(i){i.value=ORIG[btn.dataset.k];i.classList.remove('chg')}}
-function revertChar(){document.querySelectorAll('#sections input[data-k]').forEach(i=>{i.value=ORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+function revertChar(){document.querySelectorAll('#sections [data-k]').forEach(i=>{i.value=ORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
 async function saveChar(){if(!needIso())return;const edits=[];
- document.querySelectorAll('#sections input[data-k]').forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const[t,f]=i.dataset.k.split('|');edits.push({table:t,field:f,value:parseInt(i.value)})}});
+ document.querySelectorAll('#sections [data-k]').forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const[t,f]=i.dataset.k.split('|');edits.push({table:t,field:f,value:parseInt(i.value)})}});
  if(!edits.length){toast('No changes to save');return}
  const s=await j('/api/setchar',{iso:iso(),id:CUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadChar()}}
@@ -277,8 +285,9 @@ async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{
 function priceShow(){const min=parseInt(document.getElementById('pricefilter').value||'0')||0;
  const rows=PRICES.filter(p=>p.buy>=min);
  document.getElementById('pricenote').textContent=rows.length+' items';
- let h='<table><thead><tr><th>#</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
- rows.slice(0,400).forEach(p=>{h+=`<tr><td class=note>${p.index}</td>`+
+ let h='<table><thead><tr><th>#</th><th>Item</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
+ rows.slice(0,400).forEach(p=>{const it=MAPS.items[p.index];h+=`<tr><td class=note>${p.index}</td>`+
+  `<td>${it?it.name:'<span class=note>—</span>'}${it&&it.desc?' <span class=note>· '+it.desc+'</span>':''}</td>`+
   `<td><input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setPrice(this)></td>`+
   `<td><input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setPrice(this)></td></tr>`});
  document.getElementById('prices').innerHTML=h+'</tbody></table>';}
@@ -330,8 +339,8 @@ async function saveWrite(i){const sv=window._saves[i];
 async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
  document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii)}
 
-(function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
- refInit();
+(async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
+ MAPS=await j('/api/maps',{}); refInit();
  const st=%STATE%;if(st.iso){document.getElementById('iso').value=st.iso;verify();}})();
 </script></body></html>
 """
@@ -394,6 +403,10 @@ class H(http.server.BaseHTTPRequestHandler):
                 else:
                     n = P.hardmode_apply(iso, float(d.get("factor", 0.5)))
                 return self._send(200, json.dumps({"ok": True, "n": n}))
+            if self.path == "/api/maps":
+                try: items = json.load(open(os.path.join(HERE, "s5_item_names.json")))
+                except Exception: items = {}
+                return self._send(200, json.dumps({"items": items, "ranks": F.RANK_NAMES}))
             if self.path == "/api/reference":
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
