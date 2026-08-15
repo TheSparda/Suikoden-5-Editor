@@ -55,7 +55,21 @@ TABLES = {
     # match the exe handler. (Previously mislabeled here as "Magic thresholds".)
     "weapon growth": (0x4987C0, 0x60, [(f"Sharpen Lv{i+1} attack", i, 1, "num") for i in range(16)]),
     "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
-    "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
+    # 4 armor slots equipped at new-game start (the exe's "Starting Equipment" tab:
+    # Head/Body/Arm/Feet). Values are armor ids; clean armor names aren't id-aligned
+    # so shown numerically.
+    "starting equipment": (0x493112, 0x18, [("Head", 0, 1, "num"), ("Body", 1, 1, "num"),
+                                            ("Arm", 2, 1, "num"), ("Feet", 3, 1, "num")]),
+    # The exe's "Magic/Potch" tab: per-character magic-point thresholds + starting Potch,
+    # stored at 0x2c..0x54 in the unit record (same offsets the enemy editor reads as
+    # item drops). Starting Potch (+0x54) is well-supported; thresholds are clean for
+    # spellcasters (e.g. Kyle 56/72/88/104/120) and may be unused on non-casters.
+    "magic / potch": (0x49F0DC, 0x7C, [("Magic threshold 1", 0x2c, 2, "num"),
+                                       ("Magic threshold 2", 0x34, 2, "num"),
+                                       ("Magic threshold 3", 0x3c, 2, "num"),
+                                       ("Magic threshold 4", 0x44, 2, "num"),
+                                       ("Magic threshold 5", 0x4c, 2, "num"),
+                                       ("Starting Potch",    0x54, 2, "num")]),
     # NOTE: 0x4E87F0/0x54 is the SPELL DEFINITION table (element/power/target),
     # indexed by SPELL id — NOT per-character runes. It was previously (wrongly)
     # rendered here indexed by character id. Removed; see SPELLS below + the Spells tab.
@@ -131,7 +145,8 @@ SECTION_HELP = {
     "stats":      "Edit character stats here. These are starting values — ISO edits apply to a NEW GAME.",
     "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the original editor's Weapon Growth tab.",
     "skills":     "Per-skill affinity / aptitude. Rank 01=E, 02=D, 03=C, 04=B, 05=A, 06=S, 07=SS (higher learns faster / caps higher).",
-    "items":      "Items the character is carrying when you start a new game.",
+    "starting equipment": "Armor equipped at new-game start — Head / Body / Arm / Feet (armor ids).",
+    "magic / potch": "Magic-point thresholds (gain a spell slot as Magic rises) + starting Potch. Thresholds are meaningful for spellcasters; Starting Potch (+0x54) applies to all.",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
 }
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
