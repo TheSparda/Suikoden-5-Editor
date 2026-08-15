@@ -78,6 +78,21 @@ SPELL_FIELDS = [("Element", 0, 1, "element"),
                 ("Power / heal (u16)", 2, 2, "num"),
                 ("Target", 4, 1, "target")]
 
+# ---- Rune -> spell GRANT table (VERIFIED vs the rune guide, 24/24) -----------
+# Base 0x4E6DA2, stride 0x46, 24 records. A rune teaches the CONTIGUOUS spell
+# range [start .. start+count-1] (spell ids index the spell table above).
+#   +0 u8 start spell id, +2 u8 count, +3 u8 flag(=1), +4.. Shift-JIS name.
+RUNE_GRANT_BASE, RUNE_GRANT_STRIDE, RUNE_GRANT_COUNT = 0x4E6DA2, 0x46, 24
+RUNE_GRANT_NAMES = [
+    "Fire Rune", "Rage Rune", "Lightning Rune", "Thunder Rune", "Water Rune",
+    "Flowing Rune", "Wind Rune", "Cyclone Rune", "Earth Rune", "Mother Earth Rune",
+    "Star Rune", "Blinking Rune", "Sound Rune (DoReMi)", "Beast Rune", "Shield Rune",
+    "Pale Gate Rune", "Resurrection Rune", "Rune 17 (spells 59-62)",
+    "Rage Sword Rune", "Thunder Sword Rune", "Flowing Sword Rune",
+    "Cyclone Sword Rune", "Mother Earth Sword Rune", "Rune of Condemnation",
+]
+RUNE_GRANT_FIELDS = [("Start spell", 0, 1, "spellid"), ("Spell count", 2, 1, "num")]
+
 # Character name table (separate index order from the NNN id list).
 NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8

@@ -99,3 +99,19 @@ validated on real cards. S5 save specifics:
 
 The Cheat Engine RAM struct (`s5_char_struct.json`) is a guide for the per-character
 save layout once located.
+
+## Rune → spell GRANT table  (VERIFIED vs the rune guide — 24/24 records)
+- Base **0x4E6DA2**, stride **0x46** (70), **24 records**. Sits just before the spell table.
+- Record: `+0 u8 start spell id`, `+1 u8 (0/pad)`, `+2 u8 count`, `+3 u8 flag(=1)`, `+4.. Shift-JIS rune name`.
+- A rune grants the CONTIGUOUS spell range **[start .. start+count-1]** (spell ids index the
+  0x4E87F0 spell table / s5_spell_names.json). Overlapping ranges are real: Fire=start8 cnt4
+  (Flaming Arrows..Explosion), Rage=start9 cnt4 (Dancing Flames..Final Flame).
+- Def-table order (0..23): Fire, Rage, Lightning, Thunder, Water, Flowing, Wind, Cyclone,
+  Earth, Mother Earth, Star, Blinking, Sound(DoReMi), Beast, Shield(cnt3), Pale Gate,
+  Resurrection, rec17(spells 59-62, unnamed EN), Rage Sword(cnt3), Thunder Sword(cnt3),
+  Flowing Sword(cnt3), Cyclone Sword(cnt3), Mother Earth Sword(cnt3), Rune of Condemnation.
+- EDITING: change `start` (repoint to any spell block) and `count` (1..up to pool) → changes
+  which spells a rune teaches. "Custom rune" = repoint an existing record; spells must be a
+  contiguous pool range (the data model has no per-slot spell list).
+- Verified against Guides/'s5 rune guide.rtf' (ground truth) + cross-checked spell targets
+  in the 0x4E87F0 table (Dancing Flames=Cluster 0x44, Blazing Wall=Row 0x24, Explosion=All 0x0C).

@@ -159,6 +159,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
  <button data-tab=spell onclick=showTab('spell')>Spells</button>
+ <button data-tab=rune onclick=showTab('rune')>Runes</button>
  <button data-tab=price onclick=showTab('price')>Prices</button>
  <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
  <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
@@ -202,6 +203,21 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   </div>
   <div id=spellsections></div>
   <p class=note id=spellhint>Open your ISO above to begin.</p>
+ </section>
+
+ <section class=panel id=p-rune>
+  <h2>Rune Editor</h2>
+  <p class=sub>Each rune teaches a contiguous block of spells. Change the <b>Start spell</b> and <b>Spell count</b> to repoint a rune at any spells (custom runes). Verified vs the rune guide.</p>
+  <div class=row id=rrow style=display:none>
+   <span class=note>Rune</span>
+   <select id=rsel onchange=loadRune()></select>
+   <input id=rfilter size=14 placeholder="filter name / id…" oninput=filterRunes()>
+   <button onclick=saveRune()>Save changes</button>
+   <button class=ghost onclick=revertRune()>Revert</button>
+   <span id=rsave class=note></span>
+  </div>
+  <div id=runesections></div>
+  <p class=note id=runehint>Open your ISO above to begin.</p>
  </section>
 
  <section class=panel id=p-price>
@@ -276,6 +292,10 @@ function ctrl(r,key){const v=r.value;
   let o=`<option value=${v} selected>${v} · ${nm(v)}</option>`;
   Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${nm(id)}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ if(r.kind=='spellid'){let o='';const cur=+v;
+  if(cur<0||cur>=SPELLS.length)o+=`<option value=${v} selected>${v} · #${v}</option>`;
+  SPELLS.forEach((n,i)=>o+=`<option value=${i} ${i==cur?'selected':''}>${i} · ${n}</option>`);
+  return `<select data-k="${key}" ${ch}>${o}</select>`;}
  if(r.kind=='slider'){const max=r.width==1?255:65535;
   return `<div class=sld><input type=range min=0 max=${max} value=${v} data-k="${key}" `+
    `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k]);this.nextElementSibling.textContent=this.value"><span class=sldval>${v}</span></div>`;}
@@ -309,7 +329,10 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();
   if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
   fillSpells();document.getElementById('spellrow').style.display='';
-  document.getElementById('spellhint').textContent='';loadSpell();}
+  document.getElementById('spellhint').textContent='';loadSpell();
+  const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
+  fillRunes();document.getElementById('rrow').style.display='';
+  document.getElementById('runehint').textContent='';loadRune();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
@@ -375,6 +398,45 @@ async function saveSpell(){if(!needIso())return;const edits=[];
  if(!edits.length){toast('No changes to save');return}
  const s=await j('/api/setspell',{iso:iso(),id:SCUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadSpell()}}
+
+// ---- Rune editor (grouped by rune → shows its spell set; edit start+count) ----
+let RUNES=[], RCUR=null, RORIG={};
+function fillRunes(){const sel=document.getElementById('rsel'),f=(document.getElementById('rfilter').value||'').toLowerCase();
+ sel.innerHTML=RUNES.filter(r=>!f||r.name.toLowerCase().includes(f)||(''+r.id).includes(f))
+  .map(r=>`<option value="${r.id}">${r.id} — ${r.name}</option>`).join('');}
+function filterRunes(){fillRunes();loadRune();}
+function grantPreview(){const s=document.querySelector('#runesections [data-k="rune|Start spell"]');
+ const c=document.querySelector('#runesections [data-k="rune|Spell count"]');
+ const box=document.getElementById('grantlist');if(!s||!c||!box)return;
+ const start=+s.value,cnt=+c.value;let items=[];
+ for(let k=0;k<cnt;k++){const id=start+k;items.push(`<li>Lv${k+1} · <b>${SPELLS[id]||('#'+id)}</b> <span class=note>(id ${id})</span></li>`);}
+ box.innerHTML=items.join('')||'<li class=note>(no spells)</li>';}
+async function loadRune(){const sel=document.getElementById('rsel');if(!sel.value)return;
+ RCUR=parseInt(sel.value);const s=await j('/api/rune',{iso:iso(),id:RCUR});
+ const box=document.getElementById('runesections');
+ if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ RORIG={};const g=document.createElement('div');g.className='grid';
+ s.fields.forEach(r=>{const key='rune|'+r.label;RORIG[key]=r.value;
+  const oninp=r.kind=='spellid'||r.kind=='num'?' oninput=grantPreview()':'';
+  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='spellid'?'spell':r.width+'B'}</span></label>`+
+   `<div class=in>${ctrl(r,key)}`+
+   `<button class="ghost mini" title=restore onclick=restoreRuneField(this) data-k="${key}">↺</button></div></div>`;});
+ box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
+ sec.innerHTML=`<h3 onclick=toggleSec(this)>${s.name} — grant</h3>`;sec.appendChild(g);box.appendChild(sec);
+ const gv=document.createElement('div');gv.className='sec';
+ gv.innerHTML='<h3 onclick=toggleSec(this)>grants (spell set)</h3><ul id=grantlist style="margin:0;padding:12px 28px"></ul>';
+ box.appendChild(gv);
+ // make selects also refresh the preview
+ box.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('change',grantPreview));
+ grantPreview();document.getElementById('rsave').textContent='';}
+function restoreRuneField(btn){const i=document.querySelector('#runesections [data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=RORIG[btn.dataset.k];i.classList.remove('chg');grantPreview()}}
+function revertRune(){document.querySelectorAll('#runesections [data-k]').forEach(i=>{i.value=RORIG[i.dataset.k];i.classList.remove('chg')});grantPreview();toast('Reverted unsaved changes')}
+async function saveRune(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#runesections [data-k]').forEach(i=>{if(i.value!=RORIG[i.dataset.k]){const[,f]=i.dataset.k.split('|');edits.push({field:f,value:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setrune',{iso:iso(),id:RCUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadRune()}}
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
  if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
@@ -502,6 +564,26 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     for e in d.get("edits", []):
                         P.write_spell_field(g, int(d["id"]), e["field"], int(e["value"]))
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/runes":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: runes = P.read_runes(g)
+                return self._send(200, json.dumps({"runes": runes}))
+            if self.path == "/api/rune":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                rid = int(d["id"])
+                with P.Iso(iso) as g: fields = P.read_rune(g, rid)
+                name = F.RUNE_GRANT_NAMES[rid] if rid < len(F.RUNE_GRANT_NAMES) else f"Rune {rid}"
+                return self._send(200, json.dumps({"fields": fields, "name": name}))
+            if self.path == "/api/setrune":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    for e in d.get("edits", []):
+                        P.write_rune_field(g, int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/prices":
                 if not os.path.exists(iso):
