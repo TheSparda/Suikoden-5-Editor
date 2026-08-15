@@ -41,14 +41,15 @@ def _stat_fields():
     f = [("Level", 0x00, 1, "num"), ("Level cap (?)", 0x01, 1, "num")]
     for i, (lbl, kind) in enumerate(STAT_LABELS):
         f.append((lbl, 0x02 + i*2, 2, kind))
-    # +0x1A..0x29: per-skill affinity ranks, labeled positionally (Stamina, Attack, ...)
+    # +0x1A..0x29: per-skill growth bytes (values 0..~50, NOT the 0..7 E-SS grade —
+    # the actual skill grade lives in the Skills table). Kept numeric + unverified.
     for i in range(16):
-        f.append((_skill_label(i) + " affinity", 0x1A + i, 1, "rank"))
+        f.append((_skill_label(i) + " growth (?)", 0x1A + i, 1, "num"))
     return f
 
 TABLES = {
     "stats":      (0x49F0DC, 0x7C, _stat_fields()),
-    "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "num") for i in range(16)]),
+    "thresholds": (0x4987C0, 0x60, [(f"Magic threshold {i+1}", i, 1, "slider") for i in range(16)]),
     "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
     "items":      (0x493112, 0x18, [(f"Starting item {i+1}", i, 1, "item") for i in range(4)]),
     "runes":      (0x4E87F0, 0x54, [("Rune slot 1 (id)", 0, 1, "rune"),

@@ -96,7 +96,10 @@ button.mini{padding:4px 8px;font-size:13px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;padding:14px}
 .fld label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
 .fld .in{display:flex;gap:5px}.fld input{width:100%}
-input.chg{border-color:var(--chg-bd);background:var(--chg-bg)}
+input.chg,select.chg,input[type=range].chg{border-color:var(--chg-bd);background:var(--chg-bg)}
+.sld{display:flex;align-items:center;gap:10px}
+.sld input[type=range]{flex:1;accent-color:var(--gold)}
+.sld .sldval{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;color:var(--mut);font-size:13px}
 table{border-collapse:collapse;width:100%;font-size:13px}
 th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
 thead th{position:sticky;top:0;background:var(--thead);color:var(--mut);font-size:11px;
@@ -216,15 +219,22 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
-let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},ranks:[]};
+let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},ranks:[]};
 let _busy=0;
 function ctrl(r,key){const v=r.value;
  const ch='onchange="this.classList.toggle(\'chg\',this.value!=ORIG[this.dataset.k])"';
- if(r.kind=='rank'&&v>=0&&v<MAPS.ranks.length){let o='';for(let i=0;i<MAPS.ranks.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${i} · ${MAPS.ranks[i]}</option>`;
+ if(r.kind=='rank'){const R=MAPS.ranks||[];let o='';
+  if(v<0||v>=R.length)o+=`<option value=${v} selected>${v} · (raw)</option>`;
+  for(let i=0;i<R.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${i} · ${R[i]}</option>`;
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
- if(r.kind=='item'){const it=MAPS.items;let o=`<option value=${v} selected>${v} · ${(it[v]&&it[v].name)||'#'+v}</option>`;
-  Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${it[id].name}</option>`});
+ if(r.kind=='item'||r.kind=='rune'){const it=(r.kind=='rune'?MAPS.runes:MAPS.items)||{};
+  const nm=id=>{const e=it[id];return e?(e.name||e):('#'+id)};
+  let o=`<option value=${v} selected>${v} · ${nm(v)}</option>`;
+  Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${nm(id)}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ if(r.kind=='slider'){const max=r.width==1?255:65535;
+  return `<div class=sld><input type=range min=0 max=${max} value=${v} data-k="${key}" `+
+   `oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k]);this.nextElementSibling.textContent=this.value"><span class=sldval>${v}</span></div>`;}
  const max=r.width==1?255:65535;
  return `<input type=number min=0 max=${max} value=${v} data-k="${key}" oninput="this.classList.toggle('chg',this.value!=ORIG[this.dataset.k])">`;}
 function spin(on){_busy+=on?1:-1;document.getElementById('spin').classList.toggle('on',_busy>0)}
@@ -409,8 +419,13 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/maps":
                 try: items = json.load(open(os.path.join(HERE, "s5_item_names.json")))
                 except Exception: items = {}
-                return self._send(200, json.dumps({"items": items, "ranks": F.RANK_NAMES,
-                    "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP}))
+                try:
+                    _rn = json.load(open(os.path.join(HERE, "s5_rune_names.json")))
+                    runes = {str(i): (e.get("name") if isinstance(e, dict) else e)
+                             for i, e in enumerate(_rn)}
+                except Exception: runes = {}
+                return self._send(200, json.dumps({"items": items, "runes": runes,
+                    "ranks": F.RANK_NAMES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP}))
             if self.path == "/api/reference":
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
