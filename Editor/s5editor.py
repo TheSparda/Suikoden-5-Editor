@@ -173,6 +173,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  <div class=navdrop>
   <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
   <div class=navmenu id=othermenu>
+   <button data-tab=enemy onclick=showTab('enemy')>Enemies</button>
    <button data-tab=price onclick=showTab('price')>Prices</button>
    <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
    <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
@@ -217,6 +218,21 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   </div>
   <div id=runesections></div>
   <p class=note id=runehint>Open your ISO above to begin.</p>
+ </section>
+
+ <section class=panel id=p-enemy>
+  <h2>Enemy Editor</h2>
+  <p class=sub>Edit enemy combat stats, item drops (40/20/10/5/1% slots, item hex ids) and starting Potch. Verified via enemy 004 Nariqua. Names are best-effort.</p>
+  <div class=row id=enrow style=display:none>
+   <span class=note>Enemy</span>
+   <select id=ensel onchange=loadEnemy()></select>
+   <input id=enfilter size=14 placeholder="filter name / id…" oninput=filterEnemies()>
+   <button onclick=saveEnemy()>Save changes</button>
+   <button class=ghost onclick=revertEnemy()>Revert</button>
+   <span id=ensave class=note></span>
+  </div>
+  <div id=enemysections></div>
+  <p class=note id=enemyhint>Open your ISO above to begin.</p>
  </section>
 
  <section class=panel id=p-price>
@@ -315,7 +331,7 @@ function reopenLast(){if(LASTISO){document.getElementById('iso').value=LASTISO;v
 function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char');return false}return true}
 function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));
- const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['price','hard','ref','tools'].includes(name));
+ const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['enemy','price','hard','ref','tools'].includes(name));
  const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}
 function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
 document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
@@ -334,7 +350,10 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
   const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
   fillRunes();document.getElementById('rrow').style.display='';
-  document.getElementById('runehint').textContent='';loadRune();}
+  document.getElementById('runehint').textContent='';loadRune();
+  ENEMIES=(await j('/api/enemies',{iso:iso()})).enemies||[];
+  fillEnemies();document.getElementById('enrow').style.display='';
+  document.getElementById('enemyhint').textContent='';loadEnemy();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
@@ -427,6 +446,34 @@ async function saveRune(){if(!needIso())return;
  if(runeEdits.length){const r=await j('/api/setrune',{iso:iso(),id:RCUR,edits:runeEdits});
   if(r.error){toast('Error: '+r.error,'bad');return}}
  toast('Saved '+total+' field(s)','ok');loadRune();}
+
+// ---- Enemy editor ----
+let ENEMIES=[], ENCUR=null, ENORIG={};
+function fillEnemies(){const sel=document.getElementById('ensel'),f=(document.getElementById('enfilter').value||'').toLowerCase();
+ sel.innerHTML=ENEMIES.filter(e=>!f||e.name.toLowerCase().includes(f)||(''+e.id).includes(f))
+  .map(e=>`<option value="${e.id}">${e.id} — ${e.name} (HP ${e.hp})</option>`).join('');}
+function filterEnemies(){fillEnemies();loadEnemy();}
+async function loadEnemy(){const sel=document.getElementById('ensel');if(!sel.value)return;
+ ENCUR=parseInt(sel.value);const s=await j('/api/enemy',{iso:iso(),id:ENCUR});
+ const box=document.getElementById('enemysections');
+ if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ ENORIG={};const g=document.createElement('div');g.className='grid';
+ s.fields.forEach(r=>{const key='en|'+r.label;ENORIG[key]=r.value;
+  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.width}B</span></label>`+
+   `<div class=in>${ctrl(r,key)}`+
+   `<button class="ghost mini" title=restore onclick=restoreEnemyField(this) data-k="${key}">↺</button></div></div>`;});
+ box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
+ sec.innerHTML='<h3 onclick=toggleSec(this)>enemy stats & drops</h3>';sec.appendChild(g);box.appendChild(sec);
+ box.insertAdjacentHTML('beforeend',`<div class=sec><h3 class=closed onclick=toggleSec(this)>raw bytes · unit @0x${(s.rawOff||0).toString(16)}</h3><div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.raw}</pre></div></div>`);
+ document.getElementById('ensave').textContent='';}
+function restoreEnemyField(btn){const i=document.querySelector('#enemysections [data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=ENORIG[btn.dataset.k];i.classList.remove('chg')}}
+function revertEnemy(){document.querySelectorAll('#enemysections [data-k]').forEach(i=>{i.value=ENORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+async function saveEnemy(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#enemysections [data-k]').forEach(i=>{if(i.value!=ENORIG[i.dataset.k]){const[,f]=i.dataset.k.split('|');edits.push({field:f,value:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setenemy',{iso:iso(),id:ENCUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadEnemy()}}
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
  if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
@@ -591,6 +638,29 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     for e in d.get("edits", []):
                         P.write_rune_field(g, int(d["id"]), e["field"], int(e["value"]))
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/enemies":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try: names = json.load(open(os.path.join(HERE, "s5_enemy_names.json")))
+                except Exception: names = {}
+                with P.Iso(iso) as g: enemies = P.read_enemies(g, names)
+                return self._send(200, json.dumps({"enemies": enemies}))
+            if self.path == "/api/enemy":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                eid = int(d["id"])
+                with P.Iso(iso) as g:
+                    fields = P.read_enemy(g, eid)
+                    raw = g.rd(P.enemy_addr(eid), F.ENEMY_STRIDE).hex(" ")
+                return self._send(200, json.dumps({"fields": fields, "rawOff": P.enemy_addr(eid), "raw": raw}))
+            if self.path == "/api/setenemy":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    for e in d.get("edits", []):
+                        P.write_enemy_field(g, int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/prices":
                 if not os.path.exists(iso):
