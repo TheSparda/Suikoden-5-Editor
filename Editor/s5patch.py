@@ -55,7 +55,20 @@ class Iso:
         self.wr(off, int(v).to_bytes(w, "little"))
 
 
-def is_valid(iso): return iso.rd(F.SERIAL_OFF, len(F.SERIAL_STR)) == F.SERIAL_STR
+def region_of(iso):
+    """Return 'ntsc-u' / 'pal' from the serial @0x828BD, or None if unrecognized."""
+    s = iso.rd(F.SERIAL_OFF, 11)
+    for r, ser in F.SERIALS.items():
+        if s == ser: return r
+    return None
+
+def is_valid(iso): return region_of(iso) is not None
+
+def set_region_for(path):
+    """Detect the ISO's region and rebind the field bases; returns the region (or None)."""
+    with Iso(path) as g: r = region_of(g)
+    if r: F.set_region(r)
+    return r
 
 
 # ---- Mod recipe (.s5mod) + xdelta patch export/apply --------------------------
@@ -377,7 +390,10 @@ def read_table(iso, table, cid):
 
 
 def read_character(iso, cid):
-    return {t: read_table(iso, t, cid) for t in F.TABLES}
+    # In PAL, the char sub-section tables (starting equipment/items) aren't offset-mapped
+    # yet — skip them so we never surface wrong data.
+    skip = set(F.GATED_IN_PAL) if F.REGION == "pal" else set()
+    return {t: read_table(iso, t, cid) for t in F.TABLES if t not in skip}
 
 
 def write_field(iso, table, cid, label, value):
@@ -736,8 +752,8 @@ def hardmode_restore(iso_path):
 
 # --------------------------------------------------------------------------- CLI
 def _verify(a):
-    with Iso(a.iso) as g: ok = is_valid(g)
-    print("VALID SLUS-21291" if ok else "NOT recognized"); return 0 if ok else 2
+    with Iso(a.iso) as g: r = region_of(g)
+    print("VALID " + F.REGION_NAMES[r] if r else "NOT recognized"); return 0 if r else 2
 
 def _chars(a):
     for c in F.load_characters(): print(f"  {c['id']:>3}  {c['name']}")
@@ -875,7 +891,11 @@ def main(argv=None):
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
-    a = p.parse_args(argv); return a.fn(a)
+    a = p.parse_args(argv)
+    if getattr(a, "iso", None) and os.path.exists(a.iso):
+        try: set_region_for(a.iso)  # rebind bases to the ISO's region before any read/write
+        except Exception: pass
+    return a.fn(a)
 
 
 if __name__ == "__main__":

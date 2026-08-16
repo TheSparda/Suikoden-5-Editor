@@ -199,10 +199,15 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 .tst.ok{border-left-color:var(--ok)}.tst.bad{border-left-color:var(--bad)}
 @keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1}}
 .pill{display:inline-block;padding:1px 8px;border-radius:20px;background:var(--raise);color:var(--mut);font-size:11px}
+.badge{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;font-weight:700}
+.badge:empty{display:none}
+.badge.ntsc{background:#1f6feb33;color:#6ea8ff}
+.badge.pal{background:#a3711033;color:#e0a83a}
 </style></head>
 <body>
 <header>
  <span class=logo></span><b>Suikoden V</b><span class=note>ISO &amp; Save Editor</span>
+ <span id=regionbadge class=badge></span>
  <span class=sp></span>
  <span class=iso id=isoLabel>no ISO loaded</span>
  <label class=chk title="When on, a .bak copy is made before the first write to each file. Turn off to write without backups."><input type=checkbox id=bakToggle checked onchange=toggleBackups()> <span class=note>.bak backups</span></label>
@@ -210,19 +215,19 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 </header>
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
- <button data-tab=rune onclick=showTab('rune')>Runes &amp; Spells</button>
+ <button data-tab=rune data-palgate onclick=showTab('rune')>Runes &amp; Spells</button>
  <button data-tab=gear onclick=showTab('gear')>Gear</button>
  <button data-tab=mp onclick=showTab('mp')>MP Growth</button>
  <button data-tab=skillfx onclick=showTab('skillfx')>Skill Effects</button>
- <button data-tab=unite onclick=showTab('unite')>Unites</button>
+ <button data-tab=unite data-palgate onclick=showTab('unite')>Unites</button>
  <button data-tab=save onclick=showTab('save')>Save Editor</button>
  <div class=navdrop>
   <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
   <div class=navmenu id=othermenu>
    <button data-tab=enemy onclick=showTab('enemy')>Enemies</button>
    <button data-tab=price onclick=showTab('price')>Prices</button>
-   <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
-   <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
+   <button data-tab=hard data-palgate onclick=showTab('hard')>Hard Mode</button>
+   <button data-tab=ref data-palgate onclick=showTab('ref')>Reference / Text</button>
    <button data-tab=tools onclick=showTab('tools')>Tools</button>
   </div>
  </div>
@@ -303,12 +308,14 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  </section>
 
  <section class=panel id=p-price>
+  <div data-palgate>
   <h2>Item &amp; Equipment Prices</h2>
   <p class=sub>Buy / sell prices (verified vs stat guide; sell = buy ÷ 2). Records in item-id order.</p>
   <div class=row><button onclick=loadPrices()>Load prices</button>
    <input id=pricefilter size=12 placeholder="min buy…" oninput=priceShow()>
    <span id=pricenote class=note></span></div>
   <div class=scroll id=prices></div>
+  </div>
   <h2 style="margin-top:18px">Rune (Orb) Prices</h2>
   <p class=sub>Buy / sell for each rune orb (verified vs the rune guide; sell = buy ÷ 2; event-only orbs have buy 0).</p>
   <div class=row><input id=runepricefilter size=14 placeholder="filter rune…" oninput=runePriceShow()>
@@ -448,6 +455,15 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
+let REGION='ntsc-u';
+function applyRegionGate(){const pal=REGION==='pal';
+ document.querySelectorAll('[data-palgate]').forEach(el=>{el.style.display=pal?'none':'';});
+ const rb=document.getElementById('regionbadge');
+ if(rb){rb.textContent=pal?'PAL':(REGION==='ntsc-u'?'NTSC-U':'');rb.className='badge '+(pal?'pal':'ntsc');}
+ const gn=document.getElementById('palgatenote');if(gn)gn.style.display=pal?'':'none';
+ // if the active tab was just hidden, fall back to Characters
+ const act=document.querySelector('nav button.on');
+ if(pal&&act&&act.hasAttribute('data-palgate'))showTab('char');}
 let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},armor:{head:{},body:{},glove:{},foot:{}},held:{},ranks:[],grades:[],elements:{},targets:{}};
 let SPELLS=[], SCUR=null, SORIG={};
 let _busy=0;
@@ -513,21 +529,23 @@ function toggleTheme(){const l=document.body.classList.toggle('light');
 async function verify(){const s=await j('/api/verify',{iso:iso()});
  const el=document.getElementById('status');const msg=s.msg||s.error||'error';
  el.textContent=(s.ok?'✓ ':'✗ ')+msg;el.className='note '+(s.ok?'ok':'bad');
- if(s.ok){document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
+ if(s.ok){REGION=s.region||'ntsc-u';applyRegionGate();
+  document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
   LASTISO=iso();{const lb=document.getElementById('lastbtn');if(lb){lb.style.display='';lb.title=iso();}}
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
   document.getElementById('charrow').style.display='';
   document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();
-  if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
-  const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
-  fillRunes();document.getElementById('rrow').style.display='';
-  document.getElementById('runehint').textContent='';loadRune();
+  if(REGION!=='pal'){
+   if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
+   const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
+   fillRunes();document.getElementById('rrow').style.display='';
+   document.getElementById('runehint').textContent='';loadRune();}
   ENEMIES=(await j('/api/enemies',{iso:iso()})).enemies||[];
   fillEnemies();document.getElementById('enrow').style.display='';
   document.getElementById('enemyhint').textContent='';loadEnemy();
   document.getElementById('gearrow').style.display='';
   document.getElementById('gearhint').textContent='';loadGear();
-  loadMP();loadSkillfx();loadUnites();}
+  loadMP();loadSkillfx();if(REGION!=='pal')loadUnites();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  const match=c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f);
@@ -703,8 +721,9 @@ async function saveGear(){if(!needIso())return;const edits=[];
  const s=await j('/api/setgear',{iso:iso(),slot:gslot(),id:GCUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadGearItem()}}
 
-async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
- if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');
+async function loadPrices(){if(!needIso())return;
+ if(REGION!=='pal'){const s=await j('/api/prices',{iso:iso()});
+  if(s.error){toast(s.error,'bad');}else{PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');}}
  const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}
  const hp=await j('/api/healprices',{iso:iso()});if(!hp.error){HEALPRICES=hp.prices||[];healPriceShow();}}
 let RUNEPRICES=[], HEALPRICES=[];
@@ -975,13 +994,30 @@ class H(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             d = self._body(); iso = d.get("iso", "")
+            # Region is global in s5fields; re-detect per request so table bases always
+            # match the ISO in hand (handles switching between NTSC-U and PAL ISOs).
+            if iso and os.path.exists(iso):
+                try: P.set_region_for(iso)
+                except Exception: pass
+            # Endpoints whose PAL offsets aren't reverse-engineered yet — refuse in PAL so
+            # we never read/write wrong data. (UI also hides these; this is the backstop.)
+            GATED_PAL = {"/api/runes", "/api/rune", "/api/setrune", "/api/prices", "/api/setprice",
+                         "/api/unites", "/api/setunite", "/api/setstring", "/api/hardmode"}
+            if F.REGION == "pal" and self.path in GATED_PAL:
+                return self._send(200, json.dumps({"error": "Not yet mapped for PAL — this "
+                    "table's PAL offset hasn't been reverse-engineered.", "palGated": True}))
             ISO_PATHS = ("/api/verify", "/api/chars", "/api/char", "/api/setchar", "/api/peek")
             if self.path in ISO_PATHS and not os.path.exists(iso):
                 return self._send(200, json.dumps({"error": "file not found"}))
             if self.path == "/api/verify":
-                with P.Iso(iso) as g: ok = P.is_valid(g)
-                if ok: s = load_state(); s["iso"] = iso; save_state(s)
-                return self._send(200, json.dumps({"ok": ok, "msg": "Valid SLUS-21291" if ok else "not a recognized S5 ISO"}))
+                with P.Iso(iso) as g: region = P.region_of(g)
+                ok = region is not None
+                if ok:
+                    F.set_region(region)
+                    s = load_state(); s["iso"] = iso; s["region"] = region; save_state(s)
+                return self._send(200, json.dumps({"ok": ok, "region": region,
+                    "regionName": F.REGION_NAMES.get(region, ""), "gated": F.GATED_IN_PAL if region == "pal" else [],
+                    "msg": ("Valid " + F.REGION_NAMES.get(region, "")) if ok else "not a recognized S5 ISO"}))
             if self.path == "/api/chars":
                 # Authoritative playable roster in list order
                 # (Hero=0 first). Records are addressed base + id*stride with THIS id.
