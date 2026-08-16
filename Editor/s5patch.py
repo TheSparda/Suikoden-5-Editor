@@ -22,10 +22,22 @@ import s5fields as F
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+# ---- Shareable "mod recipe": every field write is auto-journaled at the Iso layer
+# into <iso>.s5mod.json (a byte-level diff with old+new, so it's reversible + region-
+# checkable). RECORD_MODS toggles it; _SUPPRESS_MOD is set during bulk/overlay writes
+# and recipe-apply so those don't pollute the recipe.
+RECORD_MODS = True
+_SUPPRESS_MOD = False
+
 class Iso:
     def __init__(self, path, writable=False):
-        self.path = path; self.f = open(path, "r+b" if writable else "rb"); self.writable = writable
+        self.path = path; self.f = open(path, "r+b" if writable else "rb")
+        self.writable = writable; self._writes = []
     def close(self):
+        if self.writable and RECORD_MODS and not _SUPPRESS_MOD and self._writes:
+            try: _flush_mods(self.path, self._writes)
+            except Exception: pass
+        self._writes = []
         try: self.f.close()
         except Exception: pass
     def __enter__(self): return self
@@ -33,6 +45,9 @@ class Iso:
     def rd(self, off, n): self.f.seek(off); return self.f.read(n)
     def wr(self, off, b):
         if not self.writable: raise IOError("read-only")
+        if RECORD_MODS and not _SUPPRESS_MOD:
+            old = self.rd(off, len(b))
+            self._writes.append((off, old, bytes(b)))
         self.f.seek(off); self.f.write(b)
     def ru(self, off, w): return int.from_bytes(self.rd(off, w), "little")
     def wu(self, off, w, v):
@@ -41,6 +56,103 @@ class Iso:
 
 
 def is_valid(iso): return iso.rd(F.SERIAL_OFF, len(F.SERIAL_STR)) == F.SERIAL_STR
+
+
+# ---- Mod recipe (.s5mod) + xdelta patch export/apply --------------------------
+def _mod_sidecar(path): return path + ".s5mod.json"
+
+def _flush_mods(path, writes):
+    import json
+    side = _mod_sidecar(path)
+    try:
+        with open(side) as fp: data = json.load(fp)
+    except Exception:
+        data = {"format": "s5mod", "version": 1, "bytes": {}}
+    bm = data.setdefault("bytes", {})
+    for off, old, new in writes:
+        for i in range(len(new)):
+            k = str(off + i)
+            if k not in bm: bm[k] = [old[i], new[i]]
+            else: bm[k][1] = new[i]
+    tmp = side + ".tmp"
+    with open(tmp, "w") as fp: json.dump(data, fp)
+    os.replace(tmp, side)
+
+def mod_status(path):
+    """Byte + coalesced-run count of the recipe accumulated for this ISO."""
+    import json
+    try:
+        with open(_mod_sidecar(path)) as fp: bm = json.load(fp).get("bytes", {})
+    except Exception:
+        return {"bytes": 0, "runs": 0}
+    offs = sorted(int(k) for k in bm)
+    runs = 0; prev = None
+    for o in offs:
+        if prev is None or o != prev + 1: runs += 1
+        prev = o
+    return {"bytes": len(offs), "runs": runs}
+
+def export_mod(path, note=""):
+    """Coalesce the accumulated byte journal into a portable .s5mod dict."""
+    import json
+    with open(_mod_sidecar(path)) as fp: bm = json.load(fp).get("bytes", {})
+    if not bm: raise ValueError("no edits recorded for this ISO yet")
+    items = sorted((int(k), v) for k, v in bm.items())
+    runs = []
+    for off, (old, new) in items:
+        if runs and off == runs[-1]["_end"]:
+            r = runs[-1]; r["old"] += "%02x" % old; r["new"] += "%02x" % new; r["_end"] += 1
+        else:
+            runs.append({"off": off, "old": "%02x" % old, "new": "%02x" % new, "_end": off + 1})
+    for r in runs: r.pop("_end")
+    with Iso(path) as g:
+        serial = g.rd(F.SERIAL_OFF, len(F.SERIAL_STR)).decode("latin1", "replace")
+    return {"format": "s5mod", "version": 1, "serial": serial, "note": note,
+            "patchCount": len(runs), "patches": runs}
+
+def apply_mod(path, mod, make_backup=True):
+    """Replay a .s5mod recipe onto a target ISO (serial-checked, old-byte-warned)."""
+    global _SUPPRESS_MOD
+    if mod.get("format") != "s5mod": raise ValueError("not an s5mod recipe")
+    with Iso(path) as g:
+        cur_serial = g.rd(F.SERIAL_OFF, len(F.SERIAL_STR)).decode("latin1", "replace")
+    want = (mod.get("serial") or "").replace("\x00", "").strip()
+    if want and want != cur_serial.replace("\x00", "").strip():
+        raise ValueError(f"ISO serial {cur_serial.strip()!r} != recipe serial {want!r}")
+    if make_backup: backup(path)
+    applied = mism = 0
+    _SUPPRESS_MOD = True
+    try:
+        with Iso(path, writable=True) as g:
+            for p in mod.get("patches", []):
+                new = bytes.fromhex(p["new"]); off = int(p["off"])
+                if p.get("old") and g.rd(off, len(new)) != bytes.fromhex(p["old"]): mism += 1
+                g.wr(off, new); applied += len(new)
+    finally:
+        _SUPPRESS_MOD = False
+    return {"appliedBytes": applied, "mismatchedRuns": mism, "patchCount": len(mod.get("patches", []))}
+
+def clear_mod(path):
+    try: os.remove(_mod_sidecar(path)); return True
+    except FileNotFoundError: return False
+
+def xdelta_available():
+    import shutil
+    return shutil.which("xdelta3") is not None
+
+def make_xdelta(pristine, edited, out):
+    import subprocess
+    r = subprocess.run(["xdelta3", "-e", "-f", "-s", pristine, edited, out],
+                       capture_output=True, text=True)
+    if r.returncode: raise RuntimeError(r.stderr.strip() or "xdelta3 encode failed")
+    return os.path.getsize(out)
+
+def apply_xdelta(pristine, patch, out):
+    import subprocess
+    r = subprocess.run(["xdelta3", "-d", "-f", "-s", pristine, patch, out],
+                       capture_output=True, text=True)
+    if r.returncode: raise RuntimeError(r.stderr.strip() or "xdelta3 decode failed")
+    return os.path.getsize(out)
 
 
 # ---- ISO9660 directory + compressed-overlay (.ROM) tools ---------------------
@@ -240,11 +352,16 @@ def reinsert_overlay(iso, name, bin_path):
                          f"{budget}. Edit rejected (would overwrite the next file).")
     base = ov["lba"] * _SECT
     padded = container + b"\x00" * (((len(container) + _SECT - 1) // _SECT) * _SECT - len(container))
-    iso.wr(base, padded)
-    # update directory size (both-endian u32) so the loader reads the new length
-    rec_off, _ = _find_ovl_dirrec(iso.path, name)
-    iso.wr(rec_off + 10, len(container).to_bytes(4, "little"))
-    iso.wr(rec_off + 14, len(container).to_bytes(4, "big"))
+    global _SUPPRESS_MOD
+    prev = _SUPPRESS_MOD; _SUPPRESS_MOD = True   # overlay is a whole-sector write; keep it out of the .s5mod recipe
+    try:
+        iso.wr(base, padded)
+        # update directory size (both-endian u32) so the loader reads the new length
+        rec_off, _ = _find_ovl_dirrec(iso.path, name)
+        iso.wr(rec_off + 10, len(container).to_bytes(4, "little"))
+        iso.wr(rec_off + 14, len(container).to_bytes(4, "big"))
+    finally:
+        _SUPPRESS_MOD = prev
     return {"name": name, "decSize": len(edited), "newCompSize": len(comp),
             "container": len(container), "slot": budget, "slack": budget - len(container)}
 

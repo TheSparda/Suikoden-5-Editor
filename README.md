@@ -91,10 +91,17 @@ Reads and writes PS2 saves across formats and regions:
   Enemies, Healing Items, all Gear slots) for lookup, plus the raw boot-ELF strings
   (all languages) which you can edit in place (byte-capped).
 - **Hard Mode** — scale growth rates down by a factor (idempotent; restorable).
-- **Tools** — raw hex peek at any offset; **overlay tools** that extract/decompress the
-  disc's engine overlays (OVL/\*.ROM), re-insert edited ones (LZSS), and an **Overlay
-  Text** editor for the story/dialogue text inside them (endings, letters, lore,
-  newspaper, …).
+- **Tools**
+  - **Share / Patch** — export your edits so others can apply them:
+    - a **mod recipe** (`.s5mod`) that records every field edit (stats, gear, enemies,
+      prices, spells, unites, MP, skill effects…) as a small, region-checked, reversible
+      patch; anyone can apply it to their own *clean* ISO of the same region.
+    - a one-click **xdelta3** patch (the universal PS2 standard) — a binary diff between a
+      pristine ISO and your edited one that captures *everything*, including overlay edits
+      (requires `xdelta3` installed + a clean ISO on hand).
+  - raw hex peek at any offset; **overlay tools** that extract/decompress the disc's engine
+    overlays (OVL/\*.ROM), re-insert edited ones (LZSS), and an **Overlay Text** editor for
+    the story/dialogue text inside them (endings, letters, lore, newspaper, …).
 
 Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
 grouped navigation, and a light/dark theme toggle.

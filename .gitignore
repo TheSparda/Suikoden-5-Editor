@@ -17,6 +17,11 @@ Saves/
 *.bak
 # Hard Mode baseline sidecars
 *.hardmode.json
+# Shareable patches / recipes (contain changed game bytes) + extracted overlays
+*.s5mod
+*.s5mod.json
+*.xdelta
+overlays_extracted/
 
 # Third-party reference binaries and anything derived from them — not distributed
 Prior Editor/
