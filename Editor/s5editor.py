@@ -4,7 +4,7 @@ Suikoden V (USA, SLUS-21291) editor — local web app.
 
 Runs an HTTP server on your machine and opens a browser tab. Nothing is uploaded.
 ISO editing (characters/stats/skills/equipment/runes/prices/Hard Mode/names/text) and
-PS2 save editing (hero/castle name + New Game Plus). See Suikoden5_ISO_offsets.md.
+PS2 save editing (hero/castle name + New Game Plus).
 """
 import http.server, json, os, socketserver, webbrowser, threading
 import s5patch as P
@@ -41,6 +41,31 @@ def pick_iso_dialog():
         root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
         path = filedialog.askopenfilename(title="Select a Suikoden V ISO",
             filetypes=[("PS2 ISO", "*.iso *.bin *.img"), ("All files", "*.*")])
+        root.update(); root.destroy()
+        return {"path": path} if path else {"cancelled": True}
+    except Exception as e:
+        return {"error": f"no native file dialog available: {e}"}
+
+
+def pick_save_dialog():
+    """Native file-open dialog for a PS2 memory-card / save file. Same behavior as
+    pick_iso_dialog. Returns {path} / {cancelled} / {error}."""
+    import sys
+    try:
+        if sys.platform == "darwin":
+            import subprocess
+            script = ('set f to choose file with prompt "Select a PS2 save / memory card"\n'
+                      'POSIX path of f')
+            r = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=300)
+            out = r.stdout.strip()
+            if r.returncode != 0 or not out: return {"cancelled": True}
+            return {"path": out}
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
+        path = filedialog.askopenfilename(title="Select a PS2 save / memory card",
+            filetypes=[("PS2 saves", "*.ps2 *.psu *.psv *.bin *.mcd *.mcr *.max *.cbs *.sps *.xps"),
+                       ("All files", "*.*")])
         root.update(); root.destroy()
         return {"path": path} if path else {"cancelled": True}
     except Exception as e:
@@ -127,6 +152,7 @@ button.mini{padding:4px 8px;font-size:13px}
 .fld label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
 .fld .in{display:flex;gap:5px}.fld input{width:100%}
 input.chg,select.chg,input[type=range].chg{border-color:var(--chg-bd);background:var(--chg-bg)}
+.fld .in>.mini{display:none}.fld .in.chg>.mini{display:inline-flex}
 .sld{display:flex;align-items:center;gap:10px}
 .sld input[type=range]{flex:1;accent-color:var(--gold)}
 .sld .sldval{min-width:38px;text-align:right;font-variant-numeric:tabular-nums;color:var(--mut);font-size:13px}
@@ -142,6 +168,14 @@ thead th{position:sticky;top:0;background:var(--thead);color:var(--mut);font-siz
 pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:1px solid var(--line);margin:0}
 .card-hd{padding:12px 14px;background:var(--panel2);border-bottom:1px solid var(--line);
  font-weight:600;color:var(--gold2);border-radius:11px 11px 0 0}
+/* checkbox field (Save Editor NG+ etc.) */
+.fld .in .chk{display:flex;align-items:center;gap:9px;min-height:38px;text-transform:none;
+ letter-spacing:normal;color:var(--ink);cursor:pointer;font-size:14px}
+.chk input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;accent-color:var(--gold);cursor:pointer;margin:0}
+.card-ft{display:flex;align-items:center;gap:12px;padding:0 14px 14px}
+.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;
+ padding:2px 8px;border-radius:999px;vertical-align:middle;color:#0c1524}
+.badge.b-ntsc{background:#67c07a}.badge.b-pal{background:#4fb0d4}.badge.b-jp{background:#e6b84e}
 /* spinner overlay */
 #spin{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
  background:rgba(6,12,22,.45);backdrop-filter:blur(1.5px)}
@@ -169,7 +203,10 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
  <button data-tab=rune onclick=showTab('rune')>Runes &amp; Spells</button>
- <button data-tab=save onclick=showTab('save')>Saves</button>
+ <button data-tab=gear onclick=showTab('gear')>Gear</button>
+ <button data-tab=mp onclick=showTab('mp')>MP Growth</button>
+ <button data-tab=skillfx onclick=showTab('skillfx')>Skill Effects</button>
+ <button data-tab=save onclick=showTab('save')>Save Editor</button>
  <div class=navdrop>
   <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
   <div class=navmenu id=othermenu>
@@ -220,9 +257,30 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <p class=note id=runehint>Open your ISO above to begin.</p>
  </section>
 
+ <section class=panel id=p-gear>
+  <h2>Gear (Armor) Editor</h2>
+  <p class=sub>Edit armor <b>DEF</b>, <b>buy/sell price</b>, <b>weight Type + SPD penalty</b>, <b>stat bonuses</b>, <b>proc effects</b> (auto-heal / drain / counter / …), and <b>per-element ATK &amp; DEF</b> for all 14 elements. Verified vs the Armor List guide. The summary at the bottom is the game's own description text.</p>
+  <div class=row id=gearrow style=display:none>
+   <span class=note>Slot</span>
+   <select id=gslot onchange=loadGear()>
+    <option value=head>Head</option><option value=body selected>Body</option>
+    <option value=arm>Arm</option><option value=foot>Foot</option>
+    <option value=accessory>Accessory</option>
+   </select>
+   <span class=note>Piece</span>
+   <select id=gsel onchange=loadGearItem()></select>
+   <input id=gfilter size=16 placeholder="filter effect / id…" oninput=filterGear()>
+   <button onclick=saveGear()>Save changes</button>
+   <button class=ghost onclick=revertGear()>Revert</button>
+   <span id=gsave class=note></span>
+  </div>
+  <div id=gearsections></div>
+  <p class=note id=gearhint>Open your ISO above to begin.</p>
+ </section>
+
  <section class=panel id=p-enemy>
   <h2>Enemy Editor</h2>
-  <p class=sub>Edit enemy combat stats, item drops (40/20/10/5/1% slots, item hex ids) and starting Potch. Verified via enemy 004 Nariqua. Names are best-effort.</p>
+  <p class=sub>Edit enemy combat stats and item drops (40/20/10/5/1% slots, item hex ids). Verified via enemy 004 Nariqua. Names are best-effort.</p>
   <div class=row id=enrow style=display:none>
    <span class=note>Enemy</span>
    <select id=ensel onchange=loadEnemy()></select>
@@ -244,6 +302,23 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=scroll id=prices></div>
  </section>
 
+ <section class=panel id=p-mp>
+  <h2>MP Growth</h2>
+  <p class=sub>MP-cost thresholds per magic level (Lv1–Lv4). Each row is one spell level; columns are the MP required as a caster gains more casts of that level. Verified vs the game data. Note: this tunes MP requirements but can't raise the 9/9/7/5 casts-per-level cap. Applies to a NEW GAME.</p>
+  <div class=row id=mprow style=display:none><button onclick=loadMP()>Reload</button>
+   <span id=mpnote class=note></span></div>
+  <div class=scroll id=mpsections></div>
+ </section>
+
+ <section class=panel id=p-skillfx>
+  <h2>Skill Effects</h2>
+  <p class=sub>The magnitude of each skill at every rank (E → SS). Values are the skill's effect (e.g. Attack + is a flat bonus; "% …" skills are percentages, 100 = no change). Global — shared by all units. Verified vs the game data. Applies to a NEW GAME.</p>
+  <div class=row id=skillfxrow style=display:none><button onclick=loadSkillfx()>Reload</button>
+   <input id=skillfxfilter size=16 placeholder="filter skill…" oninput=skillfxShow()>
+   <span id=skillfxnote class=note></span></div>
+  <div class=scroll id=skillfxsections></div>
+ </section>
+
  <section class=panel id=p-hard>
   <h2>Hard Mode</h2>
   <p class=sub>Party-wide starting-stat scaler. Idempotent: scales the original values; Restore is byte-exact.</p>
@@ -258,7 +333,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-ref>
   <h2>Reference &amp; Text Editor</h2>
-  <p class=sub>Item / rune / spell / skill / enemy names from the boot ELF. Edit a name and press Enter to write it back (byte-capped, in place).</p>
+  <p class=sub>Clean English name lists (Characters, Spells, Skills, Runes, Enemies, Healing Items, Gear) for reference — read-only. The "ELF text · editable" categories are the raw boot-ELF strings (all languages): edit one and press Enter to write it back in place (byte-capped).</p>
   <div class=row>
    <select id=refcat onchange=refShow()></select>
    <input id=reffilter size=20 placeholder="search names…" oninput=refShow()>
@@ -268,12 +343,17 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  </section>
 
  <section class=panel id=p-save>
-  <h2>Memory-Card Saves</h2>
-  <p class=sub>Scan PS2 cards for Suikoden V saves. Edit hero / castle name and toggle New Game Plus (enables fast-forward). ECC + .bak handled automatically.</p>
+  <h2>Save Editor</h2>
+  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, and New Game Plus (fast-forward). ECC and a <code>.bak</code> are handled automatically on write.</p>
   <div class=row>
-   <span class=note>Search folder</span>
-   <input id=saveroot size=40 placeholder="(defaults to ./Saves)">
-   <button onclick=scanSaves()>Scan for saves</button>
+   <button onclick=browseSave()>Open save file…</button>
+   <input id=savepath size=40 placeholder="/path/to/save.ps2" onkeydown="if(event.key=='Enter')openSaveFile()">
+   <button class=ghost onclick=openSaveFile()>Open</button>
+  </div>
+  <div class=row>
+   <span class=note>or scan a folder</span>
+   <input id=saveroot size=32 placeholder="(defaults to ./Saves)">
+   <button class=ghost onclick=scanSaves()>Scan for saves</button>
   </div>
   <div id=saves></div>
  </section>
@@ -292,20 +372,25 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
-let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},ranks:[],elements:{},targets:{}};
+let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},armor:{head:{},body:{},glove:{},foot:{}},held:{},ranks:[],grades:[],elements:{},targets:{}};
 let SPELLS=[], SCUR=null, SORIG={};
 let _busy=0;
 function ctrl(r,key){const v=r.value;
  const ch='onchange="this.classList.toggle(\'chg\',this.value!=ORIG[this.dataset.k])"';
- if(r.kind=='rank'){const R=MAPS.ranks||[];let o='';
+ if(r.kind=='rank'||r.kind=='grade'){const R=(r.kind=='grade'?MAPS.grades:MAPS.ranks)||[];let o='';
+  const gp=(i=>'');  // show just the tier letter (both affinity grades and skill ranks)
   if(v<0||v>=R.length)o+=`<option value=${v} selected>${v} · (raw)</option>`;
-  for(let i=0;i<R.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${i} · ${R[i]}</option>`;
+  for(let i=0;i<R.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${gp(i)}${R[i]}</option>`;
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
- if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'){
-  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets}[r.kind])||{};
+ if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
+  const A=MAPS.armor||{};
+  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets,helditem:MAPS.held,
+             armorhead:A.head,armorbody:A.body,armorarm:A.glove,armorfoot:A.foot}[r.kind])||{};
   const nm=id=>{const e=it[id];return e?(e.name||e):('#'+id)};
-  let o=`<option value=${v} selected>${v} · ${nm(v)}</option>`;
-  Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${id} · ${nm(id)}</option>`});
+  const hideId=r.kind=='helditem'||(r.kind.indexOf&&r.kind.indexOf('armor')==0);  // hide raw id for held items + armor slots
+  const pfx=hideId?(id=>''):(id=>id+' · ');
+  let o=`<option value=${v} selected>${pfx(v)}${nm(v)}</option>`;
+  Object.keys(it).forEach(id=>{if(+id!=v)o+=`<option value=${id}>${pfx(id)}${nm(id)}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
  if(r.kind=='spellid'){let o='';const cur=+v;
   if(cur<0||cur>=SPELLS.length)o+=`<option value=${v} selected>${v} · #${v}</option>`;
@@ -353,24 +438,41 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   document.getElementById('runehint').textContent='';loadRune();
   ENEMIES=(await j('/api/enemies',{iso:iso()})).enemies||[];
   fillEnemies();document.getElementById('enrow').style.display='';
-  document.getElementById('enemyhint').textContent='';loadEnemy();}
+  document.getElementById('enemyhint').textContent='';loadEnemy();
+  document.getElementById('gearrow').style.display='';
+  document.getElementById('gearhint').textContent='';loadGear();
+  loadMP();loadSkillfx();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
- sel.innerHTML=CHARS.filter(c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f))
-  .map(c=>`<option value="${c.id}">${c.id} — ${c.name}</option>`).join('');}
+ const match=c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f);
+ const opt=c=>`<option value="${c.id}">${c.id} — ${c.name}</option>`;
+ const real=CHARS.filter(c=>c.hasStats!==false&&match(c));   // hasStats undefined (no ISO) => treated as real
+ const none=CHARS.filter(c=>c.hasStats===false&&match(c));
+ let h=real.map(opt).join('');
+ if(none.length)h+=`<optgroup label="── No editable stats (story / support / boss) ──">`+none.map(opt).join('')+`</optgroup>`;
+ sel.innerHTML=h;}
 function filterChars(){fillChars();loadChar();}
 async function loadChar(){const sel=document.getElementById('csel');if(!sel.value)return;
  CUR=parseInt(sel.value);const s=await j('/api/char',{iso:iso(),id:CUR});
  const secs=document.getElementById('sections');
  if(s.error){secs.innerHTML='<p class=bad>'+s.error+'</p>';return}
  ORIG={};secs.innerHTML='';
+ // Units with an all-zero stats block aren't editable combat units (story/boss, support,
+ // or level-scaled recruit). Hide ALL editable sections (stats, weapon growth, equipment,
+ // items) and show a note — editing their data does nothing in-game.
+ const curc=CHARS.find(c=>c.id===CUR);
+ if(curc&&curc.hasStats===false){
+  secs.innerHTML='<div class=sec><h3>not editable</h3><div class=note style="padding:12px">'+
+   curc.name+' has no editable data — it\'s a story/boss, support, or level-scaled recruit '+
+   '(all zero in the ISO). Its combat data, if any, lives in the Enemy tab.</div></div>';
+  document.getElementById('csave').textContent='';return;}
  for(const [tbl,rows] of Object.entries(s.tables)){
   const div=document.createElement('div');div.className='sec';
   const g=document.createElement('div');g.className='grid';
   const hp=(MAPS.help&&MAPS.help[tbl])?`<div class=note style="grid-column:1/-1;margin:-2px 0 2px">${MAPS.help[tbl]}</div>`:'';
   g.innerHTML=hp;
   rows.forEach(r=>{const key=tbl+'|'+r.label;ORIG[key]=r.value;
-   g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='rank'?'rank':r.kind=='item'?'item':r.width+'B'}</span></label>`+
+   g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='rank'?'rank':r.kind=='grade'?'grade':(r.kind=='item'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0)?'item':r.width+'B'}</span></label>`+
     `<div class=in>${ctrl(r,key)}`+
     `<button class="ghost mini" title=restore onclick=restoreField(this) data-k="${key}">↺</button></div></div>`;});
   div.innerHTML=`<h3 onclick=toggleSec(this)>${tbl}</h3>`;div.appendChild(g);secs.appendChild(div);}
@@ -378,12 +480,19 @@ async function loadChar(){const sel=document.getElementById('csel');if(!sel.valu
   rd.innerHTML=`<h3 class=closed onclick=toggleSec(this)>raw bytes · stats @0x${(s.rawOff||0).toString(16)}</h3>`+
    `<div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.rawStats}</pre></div>`;
   secs.appendChild(rd);}
- document.getElementById('csave').textContent='';}
+ document.getElementById('csave').textContent='';refreshDirty();}
 function toggleSec(h){h.classList.toggle('closed');const b=h.nextElementSibling;
  b.style.display=b.style.display=='none'?(b.className=='grid'?'grid':'block'):'none';}
+// Recompute dirty state everywhere; a field's ↺ button only shows when it differs
+// from its section's saved original. Also fixes rune/enemy highlight (correct map).
+function refreshDirty(){[['#sections',ORIG],['#runesections',RORIG],['#enemysections',ENORIG],['#gearsections',GEARORIG]].forEach(function(p){
+ const MAP=p[1]||{};document.querySelectorAll(p[0]+' input[data-k],'+p[0]+' select[data-k]').forEach(function(i){
+  const inn=i.closest('.in'),d=String(i.value)!=String(MAP[i.dataset.k]);
+  i.classList.toggle('chg',d);if(inn)inn.classList.toggle('chg',d);});});}
+document.addEventListener('input',refreshDirty);document.addEventListener('change',refreshDirty);
 function restoreField(btn){const i=document.querySelector('#sections [data-k="'+btn.dataset.k+'"]');
- if(i){i.value=ORIG[btn.dataset.k];i.classList.remove('chg')}}
-function revertChar(){document.querySelectorAll('#sections [data-k]').forEach(i=>{i.value=ORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+ if(i){i.value=ORIG[btn.dataset.k];}refreshDirty();}
+function revertChar(){document.querySelectorAll('#sections [data-k]').forEach(i=>{i.value=ORIG[i.dataset.k]});refreshDirty();toast('Reverted unsaved changes')}
 async function saveChar(){if(!needIso())return;const edits=[];
  document.querySelectorAll('#sections [data-k]').forEach(i=>{if(i.value!=ORIG[i.dataset.k]){const[t,f]=i.dataset.k.split('|');edits.push({table:t,field:f,value:parseInt(i.value)})}});
  if(!edits.length){toast('No changes to save');return}
@@ -423,7 +532,7 @@ async function loadRune(){const sel=document.getElementById('rsel');if(!sel.valu
   g.innerHTML+='<div style="grid-column:1/-1"><div class=note style="margin:2px 0">This rune will teach:</div><ol id=setpreview class=setlist></ol></div>';
   sec.innerHTML='<h3 class=closed onclick=toggleSec(this)>⚙ Build spell set (change which spells)</h3>';sec.appendChild(g);box.appendChild(sec);
   g.querySelectorAll('[data-k]').forEach(el=>{el.addEventListener('input',runeSetPreview);el.addEventListener('change',runeSetPreview);});}
- runeSetPreview();document.getElementById('rsave').textContent='';}
+ runeSetPreview();refreshDirty();document.getElementById('rsave').textContent='';}
 function runeSetPreview(){const sEl=document.querySelector('#runesections [data-k="grant|Start spell"]');
  const cEl=document.querySelector('#runesections [data-k="grant|Spell count"]');
  const box=document.getElementById('setpreview');if(!sEl||!cEl||!box)return;
@@ -431,8 +540,8 @@ function runeSetPreview(){const sEl=document.querySelector('#runesections [data-
  for(let k=0;k<cnt;k++){const id=start+k;items+=`<li><b>${SPELLS[id]||('#'+id)}</b> <span class=note>(spell ${id})</span></li>`;}
  box.innerHTML=items||'<li class=note>(no spells)</li>';}
 function restoreRuneField(btn){const i=document.querySelector('#runesections [data-k="'+btn.dataset.k+'"]');
- if(i){i.value=RORIG[btn.dataset.k];i.classList.remove('chg')}}
-function revertRune(){document.querySelectorAll('#runesections [data-k]').forEach(i=>{i.value=RORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+ if(i){i.value=RORIG[btn.dataset.k];}refreshDirty();runeSetPreview();}
+function revertRune(){document.querySelectorAll('#runesections [data-k]').forEach(i=>{i.value=RORIG[i.dataset.k]});refreshDirty();runeSetPreview();toast('Reverted unsaved changes')}
 async function saveRune(){if(!needIso())return;
  const runeEdits=[],spellEdits={};
  document.querySelectorAll('#runesections [data-k]').forEach(i=>{if(i.value==RORIG[i.dataset.k])return;
@@ -465,15 +574,48 @@ async function loadEnemy(){const sel=document.getElementById('ensel');if(!sel.va
  box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
  sec.innerHTML='<h3 onclick=toggleSec(this)>enemy stats & drops</h3>';sec.appendChild(g);box.appendChild(sec);
  box.insertAdjacentHTML('beforeend',`<div class=sec><h3 class=closed onclick=toggleSec(this)>raw bytes · unit @0x${(s.rawOff||0).toString(16)}</h3><div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.raw}</pre></div></div>`);
- document.getElementById('ensave').textContent='';}
+ document.getElementById('ensave').textContent='';refreshDirty();}
 function restoreEnemyField(btn){const i=document.querySelector('#enemysections [data-k="'+btn.dataset.k+'"]');
- if(i){i.value=ENORIG[btn.dataset.k];i.classList.remove('chg')}}
-function revertEnemy(){document.querySelectorAll('#enemysections [data-k]').forEach(i=>{i.value=ENORIG[i.dataset.k];i.classList.remove('chg')});toast('Reverted unsaved changes')}
+ if(i){i.value=ENORIG[btn.dataset.k];}refreshDirty();}
+function revertEnemy(){document.querySelectorAll('#enemysections [data-k]').forEach(i=>{i.value=ENORIG[i.dataset.k]});refreshDirty();toast('Reverted unsaved changes')}
 async function saveEnemy(){if(!needIso())return;const edits=[];
  document.querySelectorAll('#enemysections [data-k]').forEach(i=>{if(i.value!=ENORIG[i.dataset.k]){const[,f]=i.dataset.k.split('|');edits.push({field:f,value:parseInt(i.value)})}});
  if(!edits.length){toast('No changes to save');return}
  const s=await j('/api/setenemy',{iso:iso(),id:ENCUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadEnemy()}}
+
+// ---- Gear (Armor) editor ----
+let GEAR=[], GCUR=null, GEARORIG={};
+function gslot(){return document.getElementById('gslot').value;}
+async function loadGear(){if(!iso())return;const s=await j('/api/gear',{iso:iso(),slot:gslot()});
+ GEAR=s.items||[];fillGearSel();loadGearItem();}
+function fillGearSel(){const sel=document.getElementById('gsel'),f=(document.getElementById('gfilter').value||'').toLowerCase();
+ sel.innerHTML=GEAR.filter(e=>!f||(e.name||'').toLowerCase().includes(f)||(e.effect||'').toLowerCase().includes(f)||(''+e.id).includes(f))
+  .map(e=>`<option value="${e.id}">${e.name}</option>`).join('');}
+function filterGear(){fillGearSel();loadGearItem();}
+async function loadGearItem(){const sel=document.getElementById('gsel');if(!sel.value)return;
+ GCUR=parseInt(sel.value);const s=await j('/api/gearitem',{iso:iso(),slot:gslot(),id:GCUR});
+ const box=document.getElementById('gearsections');
+ if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ GEARORIG={};const g=document.createElement('div');g.className='grid';
+ s.fields.forEach(r=>{const key='g|'+r.label;GEARORIG[key]=r.value;
+  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.signed?'±':''}${r.width}B</span></label>`+
+   `<div class=in>${ctrl(r,key)}`+
+   `<button class="ghost mini" title=restore onclick=restoreGearField(this) data-k="${key}">↺</button></div></div>`;});
+ box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
+ const nm=s.nameEn||s.name||'armor stats';
+ sec.innerHTML=`<h3 onclick=toggleSec(this)>${nm}</h3>`;sec.appendChild(g);box.appendChild(sec);
+ const eff=s.summaryEn||'(none)';
+ box.insertAdjacentHTML('beforeend',`<div class=sec><h3>in-game description (read-only)</h3><div class=note style="padding:12px">${eff}<br><br>This is the game's own summary text. The element resists &amp; procs it mentions are editable in the fields above (the text itself won't change).</div></div>`);
+ document.getElementById('gsave').textContent='';refreshDirty();}
+function restoreGearField(btn){const i=document.querySelector('#gearsections [data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=GEARORIG[btn.dataset.k];}refreshDirty();}
+function revertGear(){document.querySelectorAll('#gearsections [data-k]').forEach(i=>{i.value=GEARORIG[i.dataset.k]});refreshDirty();toast('Reverted unsaved changes')}
+async function saveGear(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#gearsections [data-k]').forEach(i=>{if(i.value!=GEARORIG[i.dataset.k]){const[,f]=i.dataset.k.split('|');edits.push({field:f,value:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setgear',{iso:iso(),slot:gslot(),id:GCUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadGearItem()}}
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
  if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
@@ -489,6 +631,35 @@ function priceShow(){const min=parseInt(document.getElementById('pricefilter').v
 async function setPrice(inp){const r=await j('/api/setprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
  inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Price #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
 
+// ---- MP growth: 4 magic-level rows x 9 MP-cost thresholds ----
+let MPFIELDS=[];
+async function loadMP(){if(!iso())return;const s=await j('/api/mp',{iso:iso()});
+ const box=document.getElementById('mpsections');
+ if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
+ MPFIELDS=s.fields||[];document.getElementById('mprow').style.display='';
+ document.getElementById('mpnote').textContent=(s.groups||[]).length+' magic levels';
+ let h='<table><thead><tr><th>Level</th>'+MPFIELDS.map(f=>`<th>${f}</th>`).join('')+'</tr></thead><tbody>';
+ (s.groups||[]).forEach(gr=>{h+=`<tr><td class=note>${gr.label}</td>`+
+  gr.values.map((v,k)=>`<td><input type=number min=0 max=65535 value=${v} data-g=${gr.group} data-i=${k} size=6 onchange=setMP(this)></td>`).join('')+'</tr>'});
+ box.innerHTML=h+'</tbody></table>';}
+async function setMP(inp){const r=await j('/api/setmp',{iso:iso(),group:parseInt(inp.dataset.g),idx:parseInt(inp.dataset.i),value:parseInt(inp.value)});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast(MPFIELDS[inp.dataset.i]+' saved','ok')}
+
+// ---- Skill effects: 165 skills x 7 rank magnitudes (E..SS) ----
+let SKILLFX=[], SKILLFXRANKS=[];
+async function loadSkillfx(){if(!iso())return;const s=await j('/api/skillfx',{iso:iso()});
+ if(s.error){document.getElementById('skillfxsections').innerHTML='<p class=bad>'+s.error+'</p>';return}
+ SKILLFX=s.skills||[];SKILLFXRANKS=s.ranks||[];document.getElementById('skillfxrow').style.display='';skillfxShow();}
+function skillfxShow(){const f=(document.getElementById('skillfxfilter').value||'').toLowerCase();
+ const rows=SKILLFX.filter(s=>!f||s.name.toLowerCase().includes(f)||(''+s.id).includes(f));
+ document.getElementById('skillfxnote').textContent=rows.length+' skills';
+ let h='<table><thead><tr><th>#</th><th>Skill</th>'+SKILLFXRANKS.map(r=>`<th>${r}</th>`).join('')+'</tr></thead><tbody>';
+ rows.forEach(s=>{h+=`<tr><td class=note>${s.id}</td><td>${s.name}</td>`+
+  s.values.map((v,k)=>`<td><input type=number min=0 max=65535 value=${v} data-i=${s.id} data-r=${k} size=6 onchange=setSkillfx(this)></td>`).join('')+'</tr>'});
+ document.getElementById('skillfxsections').innerHTML=h+'</tbody></table>';}
+async function setSkillfx(inp){const r=await j('/api/setskillfx',{iso:iso(),id:parseInt(inp.dataset.i),rank:parseInt(inp.dataset.r),value:parseInt(inp.value)});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Skill #'+inp.dataset.i+' '+SKILLFXRANKS[inp.dataset.r]+' saved','ok')}
+
 async function hardmode(restore){if(!needIso())return;
  const factor=parseFloat(document.getElementById('hmfactor').value);
  if(!restore && !confirm('Scale ALL characters’ starting stats ×'+factor+'?  (.bak made; Restore available)'))return;
@@ -498,13 +669,16 @@ async function hardmode(restore){if(!needIso())return;
  document.getElementById('hmstatus').textContent=m;toast(m,'ok')}
 
 async function refInit(){REF=await j('/api/reference',{});
- document.getElementById('refcat').innerHTML=Object.keys(REF).map(k=>`<option>${k} (${REF[k].length})</option>`).join('');refShow();}
-function refShow(){const cat=(document.getElementById('refcat').value||'').split(' ')[0];
+ document.getElementById('refcat').innerHTML=Object.keys(REF).map(k=>`<option value="${k.replace(/"/g,'&quot;')}">${k} (${REF[k].length})</option>`).join('');refShow();}
+function refShow(){const cat=document.getElementById('refcat').value||'';
  const f=(document.getElementById('reffilter').value||'').toLowerCase();
- const rows=(REF[cat]||[]).filter(e=>!f||e.name.toLowerCase().includes(f)).slice(0,500);
- document.getElementById('refcount').textContent=rows.length+' shown · edit + Enter to write';
- let h='<table><thead><tr><th>Offset</th><th>Name</th></tr></thead><tbody>';
- rows.forEach(e=>{h+=`<tr><td class=note>${e.off}</td><td><input value="${e.name.replace(/"/g,'&quot;')}" data-off="${e.off}" size=26 onkeydown="if(event.key==='Enter')refWrite(this)"></td></tr>`});
+ const rows=(REF[cat]||[]).filter(e=>!f||(e.name||'').toLowerCase().includes(f)).slice(0,500);
+ const editable=rows.length&&rows[0].off!==undefined;
+ document.getElementById('refcount').textContent=rows.length+' shown'+(editable?' · edit + Enter to write':' · read-only English list');
+ let h='<table><thead><tr><th>'+(editable?'Offset':'#')+'</th><th>Name</th></tr></thead><tbody>';
+ rows.forEach(e=>{const nm=(e.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  if(e.off!==undefined){h+=`<tr><td class=note>${e.off}</td><td><input value="${(e.name||'').replace(/"/g,'&quot;')}" data-off="${e.off}" size=26 onkeydown="if(event.key==='Enter')refWrite(this)"></td></tr>`;}
+  else{h+=`<tr><td class=note>${e.i}</td><td>${nm}</td></tr>`;}});
  document.getElementById('refout').innerHTML=h+'</tbody></table>';}
 async function refWrite(inp){if(!needIso())return;
  const r=await j('/api/setstring',{iso:iso(),off:inp.dataset.off,text:inp.value});
@@ -514,15 +688,28 @@ async function scanSaves(){const s=await j('/api/savescan',{root:document.getEle
  const d=document.getElementById('saves');
  if(s.error){d.innerHTML='<p class=bad>'+s.error+'</p>';return}
  if(!s.saves.length){d.innerHTML='<p class=note>No Suikoden V saves found in that folder.</p>';return}
- window._saves=s.saves;
- d.innerHTML=s.saves.map((sv,i)=>{const fl=sv.fields||{};
-  return `<div class=sec><div class=card-hd>${sv.folder} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
-   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${(fl.heroName||'').replace(/"/g,'&quot;')}" maxlength=15></div></div>`+
-   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${(fl.castleName||'').replace(/"/g,'&quot;')}" maxlength=15></div></div>`+
-   `<div class=fld><label>New Game Plus (fast-forward)</label><div class=in><label class=note style=padding-top:7px><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''}> enabled</label></div></div>`+
-   `<div class=fld><label>&nbsp;</label><button onclick=saveWrite(${i})>Write to card</button></div>`+
-   `</div></div>`}).join('');
- toast('Found '+s.saves.length+' save(s)','ok')}
+ renderSaves(s.saves);toast('Found '+s.saves.length+' save(s)','ok')}
+async function browseSave(){const r=await j('/api/picksave',{});
+ if(r.error){toast(r.error,'bad');return} if(r.cancelled||!r.path)return;
+ document.getElementById('savepath').value=r.path;openSaveFile()}
+async function openSaveFile(){const p=(document.getElementById('savepath').value||'').trim();
+ if(!p){toast('Enter a save path or use Open save file…','bad');return}
+ const s=await j('/api/saveopen',{path:p});const d=document.getElementById('saves');
+ if(s.error){d.innerHTML='<p class=bad>'+s.error+'</p>';toast(s.error,'bad');return}
+ renderSaves(s.saves);toast('Opened '+s.saves.length+' save(s)','ok')}
+function renderSaves(saves){const d=document.getElementById('saves');window._saves=saves;
+ d.innerHTML=saves.map((sv,i)=>{const fl=sv.fields||{};const esc=x=>(x||'').replace(/"/g,'&quot;');
+  const badge=sv.region?`<span class="badge ${sv.region=='PAL'?'b-pal':sv.region=='NTSC-U'?'b-ntsc':'b-jp'}">${sv.region}</span>`:'';
+  const ro=sv.editable===false;
+  const foot=ro
+    ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
+    : `<button onclick=saveWrite(${i})>Write to save</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first.</span>`;
+  return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
+   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the (upcoming) unit editor, not here."></div></div>`+
+   `<div class=fld><label>New Game Plus</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
+   `</div><div class=card-ft>${foot}</div></div>`}).join('');}
 async function saveWrite(i){const sv=window._saves[i];
  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
   castleName:document.getElementById('sv'+i+'_castleName').value,
@@ -566,12 +753,17 @@ class H(http.server.BaseHTTPRequestHandler):
                 if ok: s = load_state(); s["iso"] = iso; save_state(s)
                 return self._send(200, json.dumps({"ok": ok, "msg": "Valid SLUS-21291" if ok else "not a recognized S5 ISO"}))
             if self.path == "/api/chars":
+                # Authoritative playable roster in list order
+                # (Hero=0 first). Records are addressed base + id*stride with THIS id.
+                # Tag hasStats=False when the char-stat block (0x48A970) is all zero — those
+                # units (story/boss, support, level-scaled recruits) have no editable stats;
+                # the frontend groups them at the bottom of the dropdown and hides the stats.
                 chars = F.load_characters()
-                # Hide garbage/dummy unit records (HP==0), e.g. unit 0.
                 if os.path.exists(iso):
+                    base, stride, _ = F.TABLES["stats"]
                     with P.Iso(iso) as g:
-                        chars = [c for c in chars
-                                 if g.ru(P.table_addr("stats", c["id"]) + 2, 2) != 0]
+                        for c in chars:
+                            c["hasStats"] = any(g.rd(base + c["id"] * stride, stride))
                 return self._send(200, json.dumps({"chars": chars}))
             if self.path == "/api/char":
                 cid = int(d["id"])
@@ -645,6 +837,34 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_rune_field(g, int(d["id"]), e["field"], int(e["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/gear":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                slot = d.get("slot", "body")
+                if slot not in F.ARMOR_TABLES:
+                    return self._send(200, json.dumps({"error": "bad slot"}))
+                with P.Iso(iso) as g:
+                    items = P.list_armor(g, slot)
+                return self._send(200, json.dumps({"slot": slot, "items": items}))
+            if self.path == "/api/gearitem":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                slot = d.get("slot", "body")
+                if slot not in F.ARMOR_TABLES:
+                    return self._send(200, json.dumps({"error": "bad slot"}))
+                with P.Iso(iso) as g:
+                    return self._send(200, json.dumps(P.read_armor_item(g, slot, int(d["id"]))))
+            if self.path == "/api/setgear":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                slot = d.get("slot", "body")
+                if slot not in F.ARMOR_TABLES:
+                    return self._send(200, json.dumps({"error": "bad slot"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    for e in d.get("edits", []):
+                        P.write_armor_field(g, slot, int(d["id"]), e["field"], int(e["value"]))
+                return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/enemies":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -680,6 +900,30 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     P.write_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/mp":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: groups = P.read_mp(g)
+                return self._send(200, json.dumps({"groups": groups, "fields": F.MP_FIELD_LABELS}))
+            if self.path == "/api/setmp":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    P.write_mp(g, int(d["group"]), int(d["idx"]), int(d["value"]))
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/skillfx":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: sk = P.read_skillfx(g)
+                return self._send(200, json.dumps({"skills": sk, "ranks": F.SKILLFX_RANKS}))
+            if self.path == "/api/setskillfx":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    P.write_skillfx(g, int(d["id"]), int(d["rank"]), int(d["value"]))
+                return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/hardmode":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -696,16 +940,35 @@ class H(http.server.BaseHTTPRequestHandler):
                     runes = {str(i): (e.get("name") if isinstance(e, dict) else e)
                              for i, e in enumerate(_rn)}
                 except Exception: runes = {}
-                return self._send(200, json.dumps({"items": items, "runes": runes,
-                    "ranks": F.RANK_NAMES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
+                try:
+                    _ar = json.load(open(os.path.join(HERE, "s5_armor_names.json")))
+                    armor = {slot: _ar.get(slot, {}) for slot in ("head", "body", "glove", "foot")}
+                except Exception: armor = {"head": {}, "body": {}, "glove": {}, "foot": {}}
+                try: held = json.load(open(os.path.join(HERE, "s5_held_items.json"))).get("map", {})
+                except Exception: held = {}
+                return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
+                    "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
                     "elements": {str(k): v for k, v in F.ELEMENT_NAMES.items()},
                     "targets": {str(k): v for k, v in F.TARGET_NAMES.items()}}))
             if self.path == "/api/reference":
+                out = {}
+                # Clean, canonical English name lists (index -> name, read-only: no ELF
+                # offset). Shown first so they're the default browse view.
+                try:
+                    en = json.load(open(os.path.join(HERE, "s5_ref_english.json")))
+                    for cat, names in en.items():
+                        out[cat] = [{"i": i, "name": n} for i, n in enumerate(names)]
+                except Exception:
+                    pass
+                # Raw editable ELF strings (all languages, offset-addressed). Relabelled so
+                # it's clear these are the writable in-place strings, not the clean lists.
                 try:
                     ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
+                    for cat, entries in ref.items():
+                        out[f"{cat} (ELF text · editable)"] = entries
                 except Exception:
-                    ref = {}
-                return self._send(200, json.dumps(ref))
+                    pass
+                return self._send(200, json.dumps(out))
             if self.path == "/api/setstring":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -716,16 +979,76 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/savescan":
                 roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
                 if d.get("root"): roots.insert(0, d["root"])
-                saves = []
+                saves = []; seen = set()
+                # 1) memory-card images
                 for card in SV.scan_memcards(roots):
                     if not card["hasS5"]: continue
                     try:
                         for s in SV.read_all_saves(card["path"]):
                             s["card"] = card["name"]; s["cardPath"] = card["path"]; saves.append(s)
                     except Exception: pass
+                # 2) standalone save files (.xps / .sps / .cbs)
+                exts = (".xps", ".sps", ".cbs", ".psu", ".psv", ".max")
+                for r in roots:
+                    if not r or not os.path.isdir(r): continue
+                    for dp, _, files in os.walk(r):
+                        for fn in sorted(files):
+                            if not fn.lower().endswith(exts): continue
+                            full = os.path.join(dp, fn)
+                            if full in seen: continue
+                            seen.add(full)
+                            try:
+                                s = SV.read_individual_save(full)
+                            except Exception:
+                                s = None
+                            if not s: continue
+                            head = open(full, "rb").read(4)
+                            s["card"] = os.path.join(os.path.basename(dp), fn); s["cardPath"] = full; s["individual"] = True
+                            s["editable"] = True
+                            s.setdefault("meta", {"title": ""})
+                            saves.append(s)
+                # dedup by real path + folder (overlapping roots can list a file twice)
+                uniq = []; dseen = set()
+                for s in saves:
+                    key = (os.path.realpath(s.get("cardPath", "")), s.get("folder", ""))
+                    if key in dseen: continue
+                    dseen.add(key); uniq.append(s)
+                return self._send(200, json.dumps({"saves": uniq}))
+            if self.path == "/api/picksave":
+                return self._send(200, json.dumps(pick_save_dialog()))
+            if self.path == "/api/saveopen":
+                path = d.get("path", "")
+                if not path or not os.path.exists(path):
+                    return self._send(200, json.dumps({"error": "file not found: " + path}))
+                saves = []
+                try:
+                    head = open(path, "rb").read(20)
+                    individual = head[:4] == b"CFU\x00" or head[:17] == b"\x0d\x00\x00\x00SharkPortSave"
+                    if individual:
+                        s = SV.read_individual_save(path)
+                        if s:
+                            s["card"] = os.path.basename(path); s["cardPath"] = path
+                            s["individual"] = True
+                            s["editable"] = True
+                            s.setdefault("meta", {"title": ""})
+                            saves = [s]
+                    else:
+                        for s in SV.read_all_saves(path):
+                            s["card"] = os.path.basename(path); s["cardPath"] = path; saves.append(s)
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": "could not read save: " + str(e)}))
+                if not saves:
+                    return self._send(200, json.dumps({"error": "no Suikoden V save found in that file"}))
                 return self._send(200, json.dumps({"saves": saves}))
             if self.path == "/api/savewrite":
-                r = SV.write_save_fields(d["card"], d["folder"], d.get("edits", {}))
+                card = d["card"]
+                try: head = open(card, "rb").read(20)
+                except Exception: head = b""
+                individual = head[:4] == b"CFU\x00" or head[:17] == b"\x0d\x00\x00\x00SharkPortSave"
+                if individual:
+                    r = SV.write_individual_save(card, d.get("edits", {}))
+                else:
+                    r = SV.write_save_fields(card, d["folder"], d.get("edits", {}))
                 return self._send(200, json.dumps(r))
             if self.path == "/api/peek":
                 off = int(str(d.get("off", "0")), 0); ln = max(1, min(256, int(str(d.get("len", "16")), 0)))

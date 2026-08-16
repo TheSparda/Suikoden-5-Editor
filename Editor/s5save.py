@@ -64,12 +64,16 @@ PAYLOAD_IS_FOLDER_NAME = True   # payload filename == folder name (not "gamedata
 # Confirmed 6/6 across saves: every cleared/NG+ save reads 1, every in-progress save 0
 # (isolated by diffing a same-playthrough pre-end vs post-end save pair).
 NG_PLUS_OFF = 0x12
-# VERIFIED gamedata fields (confirmed across multiple saves): hero + castle + NG+.
-# (0x28 was NOT level — it varies 39/58/867/2873/3130 across saves; removed.)
+# VERIFIED gamedata fields (confirmed across multiple saves): hero + castle + NG+ + level.
+# CORRECTION: 0x28 IS the lead character's level (u8). Confirmed 5/5 vs the icon.sys
+# title level across diverse saves: 57,58,99,99,58. (The earlier "not level / 39/58/867.."
+# note was from reading 0x28 too wide on the identical Sparda cards.) 0x369 holds a copy
+# inside the lead character's per-character block.
 S5_FIELDS = {
     "heroName":    (0x00, 16, "str"),
     "castleName":  (0x14, 16, "str"),
     "newGamePlus": (0x12, 1,  "num"),   # 1 = New Game Plus / cleared (enables fast-forward)
+    "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
 }
 
 # ---- Individual save-file decoders (CodeBreaker .cbs, SharkPort/X-Port .sps/.xps).
@@ -112,15 +116,89 @@ def load_individual_save(path):
     if b[:17] == b"\x0d\x00\x00\x00SharkPortSave": return load_sharkport(b)
     return None
 
+def _sharkport_offsets(b):
+    """Like load_sharkport but maps each inner filename -> (abs_offset, bytes),
+    so the gamedata can be patched in place (SharkPort/X-Port store it uncompressed)."""
+    import io
+    f = io.BytesIO(b); f.read(17); f.read(4)
+    for _ in range(3):
+        n = struct.unpack("<L", f.read(4))[0]; f.read(n)
+    f.read(4)
+    hlen, dn, dl, dm, cr, mo = struct.unpack("<H64sL8xH2x8s8s", f.read(98)); f.read(hlen - 98)
+    dl -= 2; fs = {}
+    for _ in range(dl):
+        hlen, name, flen, mode, cr, mo = struct.unpack("<H64sL8xH2x8s8s", f.read(98)); f.read(hlen - 98)
+        off = f.tell(); fs[name.split(b"\x00")[0].decode("latin1")] = (off, f.read(flen))
+    return fs
+
+def _write_cbs(path, b, edits, make_backup=True):
+    """Re-encode a CodeBreaker (.cbs) save with edited gamedata: decompress (RC4+zlib),
+    patch the payload in place, re-compress + re-encrypt, rewrite. Checksum UNVERIFIED."""
+    import zlib
+    hlen = struct.unpack("<L", b[8:12])[0]; dlen = struct.unpack("<L", b[12:16])[0]
+    body = bytearray(zlib.decompressobj().decompress(_rc4(b[hlen:]), dlen))
+    off = None; pos = 0
+    while pos < len(body):
+        h = struct.unpack("<8s8sLHHLL32s", bytes(body[pos:pos + 64])); sz = h[2]
+        if sz == GAMEDATA_SIZE: off = pos + 64; gd = bytes(body[off:off + sz]); break
+        pos += 64 + sz
+    if off is None: return {"error": "gamedata payload not found"}
+    new_gd, changed = apply_gamedata_edits(gd, edits)
+    if changed == 0: return {"ok": True, "changed": 0}
+    body[off:off + len(new_gd)] = new_gd
+    newcomp = _rc4(zlib.compress(bytes(body), 9))
+    newb = bytearray(b[:hlen]) + newcomp
+    struct.pack_into("<L", newb, 16, len(newb))     # flen field = total file size (as-authored)
+    if make_backup and not os.path.exists(path + ".bak"):
+        shutil.copy2(path, path + ".bak")
+    with open(path, "wb") as f: f.write(bytes(newb))
+    return {"ok": True, "changed": changed,
+            "warn": "CBS re-encoded; gamedata checksum unverified — verify it loads in-game"}
+
+def write_individual_save(path, edits, make_backup=True):
+    """Patch S5_FIELDS edits into a standalone save. SharkPort/X-Port (.sps/.xps) is
+    patched in place; CodeBreaker (.cbs) is decompressed/re-compressed. Checksum UNVERIFIED."""
+    b = open(path, "rb").read()
+    if b[:4] == b"CFU\x00":
+        return _write_cbs(path, b, edits, make_backup)
+    if b[:17] != b"\x0d\x00\x00\x00SharkPortSave":
+        return {"error": "unsupported save format"}
+    fs = _sharkport_offsets(b)
+    tgt = next(((off, data) for name, (off, data) in fs.items() if len(data) == GAMEDATA_SIZE), None)
+    if not tgt: return {"error": "gamedata payload not found in save"}
+    off, gd = tgt
+    new_gd, changed = apply_gamedata_edits(gd, edits)
+    if changed == 0: return {"ok": True, "changed": 0}
+    if make_backup and not os.path.exists(path + ".bak"):
+        shutil.copy2(path, path + ".bak")
+    ba = bytearray(b); ba[off:off + len(new_gd)] = new_gd
+    with open(path, "wb") as f: f.write(ba)
+    return {"ok": True, "changed": changed,
+            "warn": "individual-save checksum unverified; verify it loads in-game"}
+
+def region_label(folder):
+    """Map an S5 save folder (e.g. BASLUS-21291.., BESLES-54087..) to a region tag."""
+    f = (folder or "").upper()
+    if "SLUS" in f: return "NTSC-U"
+    if "SLES" in f: return "PAL"
+    if "SLPM" in f or "SLPS" in f or "SCPS" in f or "SLKA" in f: return "NTSC-J/Asia"
+    return "?"
+
 def read_individual_save(path):
-    """Decode a .cbs/.sps/.xps and return {folder, fields, payloadSize} for S5 saves."""
+    """Decode a .cbs/.sps/.xps and return {folder, fields, payloadSize} for S5 saves.
+    An S5 save is recognized by its fixed 74024-byte gamedata payload, so USA
+    (BASLUS-21291), PAL (BESLES-54087) and other regions all work — the gamedata
+    layout is the same game. Returns region in the result for display."""
     fs = load_individual_save(path)
     if not fs: return None
-    gd = next((v for v in fs.values() if len(v) == GAMEDATA_SIZE), None)
-    folder = next((k for k in fs if k.startswith(S5_PREFIX)), path)
-    if not folder.startswith(S5_PREFIX): return None
-    return {"folder": folder, "payloadSize": len(gd) if gd else 0,
-            "fields": decode_gamedata(gd) if gd else {}, "path": path}
+    folder = next((k for k, v in fs.items() if len(v) == GAMEDATA_SIZE), None)
+    if folder is None:
+        # fall back to prefix match if size differs (defensive)
+        folder = next((k for k in fs if k.startswith(S5_PREFIX)), None)
+        if folder is None: return None
+    gd = fs[folder]
+    return {"folder": folder, "payloadSize": len(gd), "region": region_label(folder),
+            "fields": decode_gamedata(gd), "path": path}
 
 def decode_gamedata(gd):
     if not gd or len(gd) < 0x2C: return {}
@@ -349,7 +427,8 @@ def read_all_saves(path):
     return out
 
 def _decode_stub(folder, gd, meta):
-    d = {"folder": folder, "meta": meta, "payloadSize": (len(gd) if gd else 0)}
+    d = {"folder": folder, "meta": meta, "payloadSize": (len(gd) if gd else 0),
+         "region": region_label(folder)}
     if gd:
         d["fields"] = decode_gamedata(gd)   # VERIFIED: heroName, castleName, level
         d["note"] = "editable: heroName, castleName, level. Other fields need more saves."

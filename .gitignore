@@ -18,14 +18,14 @@ Saves/
 # Hard Mode baseline sidecars
 *.hardmode.json
 
-# Third-party binary (Tony H's editor) — not distributed
+# Third-party reference binaries and anything derived from them — not distributed
 Prior Editor/
-# Its decompiled IL/CS — derived from the third-party binary, not distributed
-Editor/Suikoden5Editor_monodis.il
-Editor/*_monodis.il
-Editor/_monodis.err
-# Managed resources extracted from the third-party exe — not distributed
+Editor/*.il
+Editor/*.err
 Editor/_res/
+# Internal reverse-engineering working notes — not distributed
+Editor/Suikoden5_ISO_offsets.md
+Editor/s5_iso_seeks.json
 
 # Local cheat/reference files — not distributed
 Cheats/
@@ -47,3 +47,6 @@ __pycache__/
 Guides/
 *.pdf
 *.rtf
+
+# Local screenshots / scratch
+Screenshots/

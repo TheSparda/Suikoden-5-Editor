@@ -2,8 +2,8 @@
 """
 Suikoden V (USA, SLUS-21291) ISO engine + CLI.
 
-Reverse-engineered from Suikoden5EditorV10.exe (Tony H) via monodis, validated vs a
-real ISO. See s5fields.py / Suikoden5_ISO_offsets.md. Never writes unverified fields.
+Reverse-engineered from the game's own data, validated vs a
+real ISO. See s5fields.py. Never writes unverified fields.
 
 Commands:
   verify   <iso>
@@ -121,6 +121,99 @@ def write_rune_field(iso, rid, label, value):
     raise KeyError(f"no rune field {label!r}")
 
 
+# ---- Armor (gear) tables -----------------------------------------------------
+def armor_addr(slot, i):
+    base, _ = F.ARMOR_TABLES[slot]; return base + i * F.ARMOR_STRIDE
+
+def _armor_summary(iso, base):
+    b = iso.rd(base + F.ARMOR_SUMMARY_OFF, F.ARMOR_SUMMARY_LEN)
+    e = b.find(b"\x00")
+    try: return b[:e if e >= 0 else len(b)].decode("cp932")
+    except Exception: return ""
+
+def _armor_name_jp(iso, base):
+    # The item's own (Japanese) name is embedded at record-0x1C (the prior
+    # record's +0x78 field). Verified: aligns 1:1 with the guide across all slots.
+    b = iso.rd(base - 0x1C, 0x18); e = b.find(b"\x00")
+    try: return b[:e if e >= 0 else len(b)].decode("cp932")
+    except Exception: return ""
+
+try:
+    import json as _json_armor
+    _ARMOR_EN = _json_armor.load(open(os.path.join(HERE, "s5_armor_stat_names.json")))
+except Exception:
+    _ARMOR_EN = {}
+def _armor_name(iso, slot, i, base):
+    # English label only: matched EN name, else the EN-translated effect summary
+    # (never the Japanese internal name). jp is returned for reference but not shown.
+    en = (_ARMOR_EN.get(slot) or {}).get(str(i))
+    jp = _armor_name_jp(iso, base)
+    label = en or F.armor_summary_en(_armor_summary(iso, base))
+    return label, en, jp
+
+def _rd_signed(iso, off, w, signed):
+    v = iso.ru(off, w)
+    if signed and w == 1 and v >= 0x80: v -= 0x100
+    return v
+
+def read_armor_item(iso, slot, i):
+    base = armor_addr(slot, i)
+    summ = _armor_summary(iso, base)
+    name, en, jp = _armor_name(iso, slot, i, base)
+    fields = [{"label": l, "off": o, "width": w, "kind": "num", "signed": s,
+               "value": _rd_signed(iso, base + o, w, s)}
+              for (l, o, w, s) in F.ARMOR_FIELDS]
+    return {"fields": fields, "name": name, "nameEn": en, "nameJp": jp,
+            "summary": summ, "summaryEn": F.armor_summary_en(summ), "off": base}
+
+def list_armor(iso, slot):
+    _, n = F.ARMOR_TABLES[slot]
+    out = []
+    for i in range(n):
+        base = armor_addr(slot, i)
+        name, en, jp = _armor_name(iso, slot, i, base)
+        out.append({"id": i, "def": iso.ru(base + 0x68, 1), "buy": iso.ru(base, 4),
+                    "name": name or f"{F.ARMOR_SLOT_LABEL[slot]} #{i}",
+                    "effect": F.armor_summary_en(_armor_summary(iso, base))})
+    return out
+
+def write_armor_field(iso, slot, i, label, value):
+    for (l, o, w, s) in F.ARMOR_FIELDS:
+        if l == label:
+            if s and w == 1: value &= 0xFF          # two's-complement for signed byte
+            iso.wu(armor_addr(slot, i) + o, w, value); return True
+    raise KeyError(f"no armor field {label!r}")
+
+
+def read_mp(iso):
+    out = []
+    for grp in range(F.MP_GROUPS):
+        base = F.MP_BASE + grp * F.MP_STRIDE
+        out.append({"group": grp, "label": F.MP_GROUP_LABELS[grp],
+                    "values": [iso.ru(base + 2 * k, 2) for k in range(len(F.MP_FIELD_LABELS))]})
+    return out
+
+def write_mp(iso, group, idx, value):
+    if not (0 <= group < F.MP_GROUPS) or not (0 <= idx < len(F.MP_FIELD_LABELS)):
+        raise KeyError("mp index out of range")
+    iso.wu(F.MP_BASE + group * F.MP_STRIDE + 2 * idx, 2, value)
+
+
+def read_skillfx(iso):
+    out = []
+    for sid in range(F.SKILLFX_COUNT):
+        base = F.SKILLFX_BASE + sid * F.SKILLFX_STRIDE
+        out.append({"id": sid,
+                    "name": F.SKILLFX_NAMES[sid] if sid < len(F.SKILLFX_NAMES) else f"Skill {sid}",
+                    "values": [iso.ru(base + 2 * k, 2) for k in range(len(F.SKILLFX_RANKS))]})
+    return out
+
+def write_skillfx(iso, sid, rank_idx, value):
+    if not (0 <= sid < F.SKILLFX_COUNT) or not (0 <= rank_idx < len(F.SKILLFX_RANKS)):
+        raise KeyError("skillfx index out of range")
+    iso.wu(F.SKILLFX_BASE + sid * F.SKILLFX_STRIDE + 2 * rank_idx, 2, value)
+
+
 def enemy_addr(eid): return F.ENEMY_BASE + eid * F.ENEMY_STRIDE
 
 def read_enemy(iso, eid):
@@ -190,7 +283,7 @@ def backup(path):
 # Idempotent via a sidecar baseline (originals stored once), so re-applying a new
 # factor always scales the ORIGINAL values and Restore is exact.
 import json as _json
-_HM_STATS = [f for f in F.TABLES["stats"][2] if f[3] == "num" and f[1] >= 2]  # 12 u16 stats
+_HM_STATS = [f for f in F.TABLES["stats"][2] if f[3] == "num" and f[1] < 9]  # 9 base stats @off 0-8 (u8); excludes the 9 growth fields at 9-17
 
 def _hm_sidecar(iso_path): return iso_path + ".hardmode.json"
 
