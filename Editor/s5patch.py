@@ -604,6 +604,27 @@ def render_portrait_zip(iso_path, name):
             z.writestr("%s_%02d.png" % (base, i), _png(W, H, f))
     return mem.getvalue(), len(faces)
 
+def render_all_portraits_zip(iso_path):
+    """Zip EVERY portrait in DATA.PAK — walks all FACE containers, decodes each, and writes
+    the faces into per-set folders (<SET>/<SET>_NN.png). Files that hold no portraits (e.g.
+    the empty FACE_PC000 stub) are skipped. Returns (zip_bytes, sets, faces)."""
+    import io, zipfile
+    names = [e["name"] for e in datapak_list(iso_path, "FACE")
+             if "FACE" in e["name"] and e["size"] > 64]
+    def rank(n): return 0 if n.startswith("BTL") else 1 if n.startswith("FACE_PC") else 2
+    names.sort(key=lambda n: (rank(n), n))
+    mem = io.BytesIO(); sets = faces = 0
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
+        for nm in names:
+            try:
+                bufs, W, H = _decode_faces(iso_path, nm)
+            except (ValueError, KeyError):
+                continue
+            base = nm.split(".")[0]; sets += 1
+            for i, f in enumerate(bufs):
+                z.writestr("%s/%s_%02d.png" % (base, base, i), _png(W, H, f)); faces += 1
+    return mem.getvalue(), sets, faces
+
 
 def datapak_extract(iso_path, name, out_dir):
     """Extract one internal DATA.PAK file by name (or path). `non`/stored and `szl`/LZSS

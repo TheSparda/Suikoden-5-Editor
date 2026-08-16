@@ -104,7 +104,8 @@ portrait set from a dropdown and view every expression/pose rendered to PNG in t
 the battle face set (`BTL_FACE`, 92 faces at 128×64) and the **high-res per-character
 portraits** (`FACE_PC*`/`FACE_EC*`, 256×256, one file per character with all their
 expressions). Click any face to download it, or grab the whole set as a **ZIP** of individual
-PNGs or a single **sprite sheet**. Below
+PNGs or a single **sprite sheet** — or **Download ALL portraits** at once as one ZIP with a
+folder per set (every FACE file in the game). Below
 that, an **All DATA.PAK files** browser lets you search and extract any of the ~7,700 internal
 files in the game's 2.3 GB CRI ROFS asset volume (uncompressed, LZSS and `bpe`-compressed
 files are all decoded).
