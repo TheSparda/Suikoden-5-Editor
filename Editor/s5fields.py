@@ -1,12 +1,11 @@
 """
 Suikoden V (USA, SLUS-21291) — verified ISO data tables + field schema.
 
-Reverse-engineered from Tony H's Suikoden5EditorV10.exe (via monodis) and validated
-against a real ISO for 6 known characters. See Suikoden5_ISO_offsets.md for how each
-table was confirmed. Bases/strides are VERIFIED; field labels marked "(?)" are
+Reverse-engineered from the game's own data and validated
+against a real ISO for 6 known characters. Bases/strides confirmed empirically. Bases/strides are VERIFIED; field labels marked "(?)" are
 tentative (offset holds real per-character data, but the exact stat name is unconfirmed).
 
-Characters are keyed by the decimal id (NNN) from the exe's name list; the playable
+Characters are keyed by the decimal id (NNN) from the game's name list; the playable
 list is in s5_characters.json. Every per-character table is `base + id*stride`.
 """
 import json, os
@@ -18,12 +17,18 @@ SERIAL_STR = b"SLUS_212.91"
 
 # ---- per-character tables: name -> (base, stride, [(label, off, width, kind), ...])
 # kind: num | rank (0..7 skill grade) | item | rune
-STAT_LABELS = [  # twelve u16 at +0x02..; order VERIFIED vs the L60 Character Database
-    # guide (Hp, Spell Count, Atk, Mag, Pdf, Mdf, Tec, Acc, Eva, Spd, Luk).
-    ("HP", "num"), ("Spell Count", "num"), ("Attack", "num"), ("Magic", "num"),
+STAT_LABELS = [  # twelve u16 at +0x02..; combat-stat order VERIFIED vs the L60 guide.
+    # Two slots are HIDDEN (label None) — real per-char values but unverified purpose:
+    #   +0x04: NOT "Spell Count". Real S5 spell count is a per-magic-level cast list
+    #     (guide shows "9/7/4/2") derived from Magic skill, not a base stat; this field's
+    #     values (~180) don't match it. Runs a bit below Magic; true meaning unknown.
+    #   +0x16 ("Field11"): NOT constant — ranges 30..50000, scales with unit power.
+    #     Since the table is shared with enemies, likely an EXP/Potch reward; unverified.
+    # None entries keep the index so the other offsets stay correct; they're skipped below.
+    ("HP", "num"), (None, None), ("Attack", "num"), ("Magic", "num"),
     ("PDF", "num"), ("MDF", "num"), ("Technique", "num"), ("Accuracy", "num"),
     ("Evasion", "num"), ("Speed", "num"),
-    ("Field11 (~const, unverified)", "num"),   # ~2500 across chars; not a listed stat
+    (None, None),
     ("Luck", "num"),
 ]
 
@@ -36,39 +41,83 @@ def _skill_label(i):
 
 # Skill-rank byte value -> grade (verified 01=E .. 07=SS).
 RANK_NAMES = ["—", "E", "D", "C", "B", "A", "S", "SS"]
+# Elemental affinity grade (value IS the grade): 0=None,1=E,2=D,3=C,4=B,5=A,6=S.
+# VERIFIED vs the Nightmare affinities1.txt + the ISO affinity table. (Distinct scale
+# from RANK_NAMES, which is 1-based with 0="—".)
+AFFINITY_GRADES = ["None", "E", "D", "C", "B", "A", "S"]
 
-def _stat_fields():
-    # +0x01 (u8) hidden: labeled "Level cap" tentatively but it's unverified — not in
-    # the L60 stat guide and its values are varied (13/17/35/45), not a uniform cap.
-    f = [("Level", 0x00, 1, "num")]
-    for i, (lbl, kind) in enumerate(STAT_LABELS):
-        f.append((lbl, 0x02 + i*2, 2, kind))
-    # +0x1A..0x29: per-skill growth bytes (values 0..~50, NOT the 0..7 E-SS grade —
-    # the actual skill grade lives in the Skills table). Kept numeric + unverified.
-    for i in range(16):
-        f.append((_skill_label(i) + " growth (?)", 0x1A + i, 1, "num"))
+# ---- Character stats + growths (VERIFIED vs the game's stat data)
+# Base 0x48A970, stride 0x12 (18 u8), indexed by the character id (list order, Hero=0;
+# addr = 0x48A970 + id*0x12). Confirmed byte-for-byte against the game's stat data:
+#   Dinn(11)@0x48AA36 = HP50/Atk30/Tec5/Mag5/Eva5/PDF1/MDF5/Spd10/Luk5,
+#   Lance(27)@0x48AB56 = HP50/Atk80/Tec5/Mag5/Eva5/PDF50/MDF10/Spd5/Luk5 — exact match.
+# Field order (9 base stats then 9 growths, all u8): HP, Attack, Technique, Magic,
+# Evasion, PDF, MDF, Speed, Luck. Left column = starting stats (edit before new game);
+# right column = per-level growth. (This table was previously mislabeled "skills"; the
+# old 0x49F0DC "stats" table is actually the ENEMIES table — hence its inflated numbers.)
+_CHAR_STATS = ["HP", "Attack", "Technique", "Magic", "Evasion", "PDF", "MDF", "Speed", "Luck"]
+def _char_stat_fields():
+    f = [(lbl, i, 1, "num") for i, lbl in enumerate(_CHAR_STATS)]
+    f += [(lbl + " Growth", 9 + i, 1, "num") for i, lbl in enumerate(_CHAR_STATS)]
     return f
 
 TABLES = {
-    "stats":      (0x49F0DC, 0x7C, _stat_fields()),
+    "stats":      (0x48A970, 0x12, _char_stat_fields()),
+    # ---- Elemental affinities (VERIFIED @0x48B530, stride 14, char-indexed like stats).
+    # Recovered by byte-matching the Nightmare "Affinity" module slice into the ISO, then
+    # verified by content: Prince Sun=A(5), Zerase Fire/Star/Dark=A, Lance Punch=A. Each of
+    # the 14 elements is one grade byte 0=None..6=S (AFFINITY_GRADES). Column order is the
+    # Affinity module's (Wind@3 / Water@4, matching our spell ELEMENT_NAMES, not the
+    # community elements.txt which had them swapped). Placed right after stats in the UI.
+    "affinities": (0x48B530, 14, [(e, i, 1, "grade") for i, e in enumerate(
+        ["Sun", "Fire", "Lightning", "Wind", "Water", "Earth", "Star", "Sound",
+         "Holy", "Dark", "Slash", "Thrust", "Punch", "Shoot"])]),
+    # ---- Equipable-skill CAPS per character (VERIFIED @0x4B2731, stride 49, count 113,
+    # char-indexed). Recovered from the Nightmare "Equipable Skill" module + byte-matched
+    # (block is byte-identical to the extract). Each of the 48 skills is one byte = the
+    # max rank this character can equip it at: 0=None..7=SS (RANK_NAMES). Verified by
+    # content: Prince Attack/Technique/MDef=S; Zerase Magic/Incantation=S + SS support
+    # caps; Lance Attack S / Dragon Special SS. The 49th byte is padding (unused).
+    "equipable skills": (0x4B2731, 49, [(n, i, 1, "rank") for i, n in enumerate(
+        ["Stamina", "Attack", "Defense", "Technique", "Vitality", "Agility", "Magic",
+         "Magic Defense", "Incantation", "Sword of Magic", "Raging Lion", "Fate Control",
+         "Karmic Effect", "Armor of Gods", "Swift Foot", "Triple Harmony", "All-out Strike",
+         "Untold Clarity", "Divine Right", "Zen Sword", "Sacred Oath", "Royal Paradise",
+         "Thief", "Mow Down", "Pierce", "Freeze", "??? (unused)", "Barrage", "Long Throw",
+         "Dragon Special", "Forge", "Combat Teacher", "Chain Magic", "Analyze",
+         "Potch Finder", "Treasure Hunt", "Escape Route", "Healing", "Treatment", "Haggle",
+         "Trade In", "Cook", "Rune Sage", "Bard", "Perfect Pitch", "Appraisal", "Bath",
+         "Tutor"])]),
     # 0x4987C0/0x60 is per-character WEAPON GROWTH (attack power at sharpen levels
-    # 1-16), edited by the community exe's list2 ("Weapon level N Attack Power" /
+    # 1-16), edited by the game's weapon-growth data (
     # "Found your weapon stats"). Verified: 376 varied ascending records, base+stride
-    # match the exe handler. (Previously mislabeled here as "Magic thresholds".)
+    # match the ISO. (Previously mislabeled here as "Magic thresholds".)
     "weapon growth": (0x4987C0, 0x60, [(f"Sharpen Lv{i+1} attack", i, 1, "num") for i in range(16)]),
-    "skills":     (0x48A970, 0x12, [(_skill_label(i), i, 1, "rank") for i in range(18)]),
-    # 4 armor slots equipped at new-game start (the exe's "Starting Equipment" tab:
+    # (Removed the old "skills" table — 0x48A970/0x12 is the character STATS table above.)
+    # 4 armor slots equipped at new-game start (the "Starting Equipment" data:
     # Head/Body/Arm/Feet). Values are armor ids; clean armor names aren't id-aligned
     # so shown numerically.
-    "starting equipment": (0x493112, 0x18, [("Head", 0, 1, "num"), ("Body", 1, 1, "num"),
-                                            ("Arm", 2, 1, "num"), ("Feet", 3, 1, "num")]),
-    # Starting Potch (+0x54). NOTE: the original editor's "Magic Points Thresholds"
-    # fields at 0x2c..0x4c are actually the unit's ITEM-DROP slots (item hex ids) —
-    # 67/73 playable chars hold values >999 there (impossible for a real Magic
-    # threshold, which caps ~999) and they match the enemy drop pattern. So those are
-    # a mislabel in the original editor; drops are edited in the Enemy tab. Only Potch
-    # is kept here for characters.
-    "potch": (0x49F0DC, 0x7C, [("Starting Potch", 0x54, 2, "num")]),
+    # Four VERIFIED armor slots. The stored byte is the GAME ARMOR ID (0 = Nothing),
+    # matching the verified armor id list (s5_armor_names.json):
+    #   +0 Head (33 ids), +1 Body (72), +2 Arm/gloves (38), +3 Foot (31).
+    # Ground truth: Richard = [0x11,0x24,0x11,0x0E] = Knight Headpiece / Knight Full Armor
+    # / Knight Gloves / Knight Boots (a full knight set). (slot2 was briefly "unknown" — it
+    # is the Arm/glove slot; the ELF pool lacked an "Arm -" desc prefix, but the armor id list includes it.)
+    "starting equipment": (0x493112, 0x18, [("Head", 0, 1, "armorhead"), ("Body", 1, 1, "armorbody"),
+                                            ("Arm (gloves)", 2, 1, "armorarm"), ("Feet", 3, 1, "armorfoot")]),
+    # Same 0x493112/0x18 record also holds FOUR starting held-item slots as u32 NAME
+    # POINTERS (into the internal item-name pool): +0x06/+0x0a/+0x0e/+0x12. 0x6DFDE8 = empty.
+    # Editable only within the closed set of pointers the game already uses for held items
+    # (s5_held_items.json) so every written value is a known-valid item reference.
+    # Ground truth: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.
+    "starting items": (0x493112, 0x18, [("Item 1", 0x06, 4, "helditem"), ("Item 2", 0x0a, 4, "helditem"),
+                                        ("Item 3", 0x0e, 4, "helditem"), ("Item 4", 0x12, 4, "helditem")]),
+    # NO "potch" table. The +0x54 u16 was previously shown as "Starting Potch" — that
+    # was WRONG. The game data reads 0x54 as list1_51NUD, the last of six generic
+    # unlabeled "growth" NUDs (list1_31..51 -> record offsets 0x2c,0x34,0x3c,0x44,0x4c,
+    # 0x54, step 8). Its values are byte-identical across whole bands of unrelated units
+    # (chars AND enemies share them by id range) and rise with id — a shared growth/exp
+    # tier value, not money. Meaning unverified -> omitted from the editor.
     # NOTE: 0x4E87F0/0x54 is the SPELL DEFINITION table (element/power/target),
     # indexed by SPELL id — NOT per-character runes. It was previously (wrongly)
     # rendered here indexed by character id. Removed; see SPELLS below + the Spells tab.
@@ -79,7 +128,7 @@ TABLES = {
 #   +0 u8  Element   (clusters perfectly by element)
 #   +1 u8  (unverified; ascending within element — hidden)
 #   +2 u16 Power     (ascending damage; 9999 = full heal)
-#   +4 u8  Target    (matches the exe legend: 02/04/0A/0C/14/24/44)
+#   +4 u8  Target    (matches the documented legend: 02/04/0A/0C/14/24/44)
 #   +5 u8  (unverified; mostly 0 — hidden)
 SPELL_BASE, SPELL_STRIDE, SPELL_COUNT = 0x4E87F0, 0x54, 106
 # Element value -> name. NB: 3/4 are Wind/Water per the ISO data (the community
@@ -87,7 +136,7 @@ SPELL_BASE, SPELL_STRIDE, SPELL_COUNT = 0x4E87F0, 0x54, 106
 ELEMENT_NAMES = {0: "Sun / Special", 1: "Fire", 2: "Lightning", 3: "Wind",
                  4: "Water", 5: "Earth", 6: "Star", 7: "Sound", 8: "Holy",
                  9: "Dark", 0xA: "Slash", 0xB: "Thrust", 0xC: "Punch", 0xD: "Shoot"}
-# Target value -> name (from the community exe's documented legend, data-verified).
+# Target value -> name (from the documented legend, data-verified).
 TARGET_NAMES = {1: "Transform", 2: "Single (ally)", 3: "Self", 4: "Single (enemy)",
                 0xA: "All (ally)", 0xC: "All (enemy)", 0x14: "Column", 0x24: "Row",
                 0x44: "Cluster"}
@@ -124,13 +173,123 @@ NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8
 NAME_MAX_CHARS  = 7
 
-# Item/equipment PRICE table (VERIFIED vs the community rune guide: buy+sell u32,
+# Item/equipment PRICE table (VERIFIED vs the rune guide: buy+sell u32,
 # sell == buy/2; e.g. record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500
 # (Shield Rune)). Records are in item-id order; names live in a parallel pool.
 PRICE_BASE  = 0x49433C
 PRICE_STRIDE = 148          # 0x94
 PRICE_COUNT = 148
 PRICE_FIELDS = [("buy", 0x00, 4), ("sell", 0x04, 4)]
+
+# ---- Armor stat tables (VERIFIED vs the Suikosource Armor List guide) --------
+# Four per-slot tables, stride 0x94, indexed by an internal armor-stat id (NOT the
+# Form3/equip id order). Each record: +0x00 u32 buy, +0x04 u32 sell (=buy/2),
+# +0x08 Shift-JIS stat-summary (the in-game "what it does" line), then a signed
+# stat block: +0x63 HP, +0x64 ATK, +0x66 MAG, +0x67 Evade, +0x68 DEF (u8),
+# +0x69 MDEF. Match vs guide: Head 39/39, Body 93/93, Foot 47/47, Arm 47/52
+# (arm's 5 misses are range-specific ATK, a separate field). Element resists +
+# procs (counter/status/potch/auto-heal/element ±N) are NOT stored numerically in
+# the record (confirmed by full correlation + record diffs) -> shown read-only
+# from the summary, never written. See reference_s5_armor_tables memory.
+ARMOR_STRIDE = 0x94
+ARMOR_SUMMARY_OFF, ARMOR_SUMMARY_LEN = 0x08, 0x58
+ARMOR_TABLES = {                       # slot -> (base, count)
+    "head":      (0x495D88, 32),
+    "body":      (0x48C9A8, 71),
+    "arm":       (0x4942A8, 37),
+    "foot":      (0x4974C8, 30),
+    # Accessories (summary prefix 補助 "support"): same 0x94 record struct.
+    "accessory": (0x4AC6D8, 49),
+}
+ARMOR_SLOT_LABEL = {"head": "Head", "body": "Body", "arm": "Arm", "foot": "Foot",
+                    "accessory": "Accessory"}
+# (label, off, width, signed) — VERIFIED-editable fields. The stat block 0x63..0x6B
+# was pinned byte-for-byte via the single-stat accessory rings (Physical=HP@0x63,
+# Attack@0x64, Technique@0x65, Magic@0x66, Guard=DEF@0x68, Psycho=MDEF@0x69,
+# Speed@0x6A, Luck@0x6B; Evade@0x67 from armor). DEF is unsigned u8; stats are
+# signed s8 (armor can carry Speed penalties). PROC effects each have a dedicated
+# byte too (found via badge diffs): Auto-heal@0x6C, HP-drain@0x6D, Status-resist@0x72,
+# Potch@0x74, Counter@0x75 — all % (unsigned). Writing one adds that effect to the
+# item (the game applies it; the +0x08 summary TEXT is separate and won't update).
+# Element resist/attribute (Fire/Water ±N) is the only effect NOT a clean byte
+# (element records differ only by name/flavor) -> stays read-only from the summary.
+# Element order for the per-element ATK/DEF blocks (matches ELEMENT_NAMES / affinities).
+ARMOR_ELEMENTS = ["Sun", "Fire", "Lightning", "Wind", "Water", "Earth", "Star",
+                  "Sound", "Holy", "Dark", "Slash", "Thrust", "Punch", "Shoot"]
+# Element Atk (our 0x41..0x4E) + Def (0x4F..0x5C) are 14 signed bytes each, VERIFIED:
+# each nonzero byte matches the piece's own summary text exactly (Sun Helm "Sun ATK+1"
+# -> Sun ATK=1; Flame Helmet "Fire DEF+1" -> Fire DEF=1; "+1" with no ATK/DEF word sets
+# both). Recovered via the Nightmare Head Gear module (module offset - 8 = our offset).
+# Type (base-3): armor weight class 1=Light/2=Medium/3=Heavy (accessories use a different
+# set 1=Cape..6=Ring). SPD penalty (base-2): unsigned speed cost, scales with weight class.
+ARMOR_FIELDS = [
+    ("Buy price",  0x00, 4, False),
+    ("Sell price", 0x04, 4, False),
+    ("DEF",        0x68, 1, False),
+    ("Type",       -3,   1, False),
+    ("SPD penalty", -2,  1, False),
+    ("HP",         0x63, 1, True),
+    ("Attack",     0x64, 1, True),
+    ("Technique",  0x65, 1, True),
+    ("Magic",      0x66, 1, True),
+    ("Evasion",    0x67, 1, True),
+    ("MDEF",       0x69, 1, True),
+    ("Speed",      0x6A, 1, True),
+    ("Luck",       0x6B, 1, True),
+    ("Auto-heal %",     0x6C, 1, False),
+    ("HP drain %",      0x6D, 1, False),
+    ("Status resist %", 0x72, 1, False),
+    ("Potch %",         0x74, 1, False),
+    ("Counter %",       0x75, 1, False),
+] + [(f"{e} ATK", 0x41 + i, 1, True) for i, e in enumerate(ARMOR_ELEMENTS)] \
+  + [(f"{e} DEF", 0x4F + i, 1, True) for i, e in enumerate(ARMOR_ELEMENTS)]
+
+# JP stat-summary -> readable EN (display only). Longest tokens first so e.g.
+# "の防御" is consumed before "防", and compound effect words before their parts.
+_ARMOR_TR = [
+    ("バッドステータス阻害", "Status resist "), ("戦闘後のポッチ", "Potch after battle "),
+    ("カウンター発生率", "Counter rate "), ("クリティカル発生率", "Critical rate "),
+    ("ＨＰ自動回復", "Auto-heal"), ("ＨＰドレイン", "HP drain"), ("ＨＰ減少", "HP loss"),
+    ("全能力値", "All stats "),
+    ("突きの防御", "Thrust DEF"), ("の防御", " DEF"), ("の攻撃", " ATK"),
+    ("レンジ", "-range "), ("命中", "Accuracy "), ("技術", "TECH "),
+    ("突き", "Thrust "), ("運", "Luck "), ("発生率", " rate "),
+    ("直防", "DEF"), ("魔防", "MDEF"), ("魔力", "MAG"), ("攻撃力", "ATK"),
+    ("回避", "Evade "), ("ＨＰ", "HP"), ("速", "SPD "),
+    ("太陽", "Sun"), ("火", "Fire"), ("水", "Water"), ("雷", "Lightning"),
+    ("土", "Earth"), ("風", "Wind"), ("闇", "Dark"), ("聖", "Holy"),
+    ("阻害", "resist "), ("と", "&"), ("　", " "), ("胴", ""), ("頭", ""),
+    ("腕", ""), ("脚", ""), ("補助", ""),
+]
+def armor_summary_en(jp):
+    """Translate the ISO stat-summary to a short readable effect label."""
+    import unicodedata, re
+    s = unicodedata.normalize("NFKC", jp or "")
+    for a, b in _ARMOR_TR:
+        s = s.replace(unicodedata.normalize("NFKC", a), b)
+    return re.sub(r"\s+", " ", s).strip()
+
+# ---- MP growth thresholds (VERIFIED @0x4986C0; this is the old "LADDER" table, now
+# identified via the Nightmare MP Growth module + byte-match). 4 groups = magic Levels
+# 1-4; each group is 9 u16 MP-cost thresholds (a 10th u16 = 999 terminator/pad). Content
+# confirmed: Lv1 [0,20,40,75,100,130,165,225,290], Lv4 [180,270,450,520,...]. Editing
+# tunes MP requirements but can't raise the 9/9/7/5 casts-per-level cap.
+MP_BASE, MP_STRIDE, MP_GROUPS = 0x4986C0, 20, 4
+MP_GROUP_LABELS = ["Magic Lv1", "Magic Lv2", "Magic Lv3", "Magic Lv4"]
+MP_FIELD_LABELS = ["1st MP", "2nd MP", "3rd MP", "4th MP", "5th MP (Lv4 cap)",
+                   "6th MP", "7th MP (Lv3 cap)", "8th MP", "9th MP"]
+
+# ---- Skill effect magnitudes (VERIFIED @0x4AEB1C, stride 36, count 165; byte-identical
+# to the Nightmare extract). Per skill: 7 u16 values = the skill's magnitude at rank
+# E/D/C/B/A/S/SS, at offsets 0,2,4,6,8,10,12. Verified content: "Attack +" 5..40,
+# "Stamina (% HP)" 105..130, "Karmic Effect" starts at C. GLOBAL table (indexed by skill
+# id, shared by all units). Names from skills.txt (s5_skilleffect_names.json, 165).
+SKILLFX_BASE, SKILLFX_STRIDE, SKILLFX_COUNT = 0x4AEB1C, 36, 165
+SKILLFX_RANKS = ["E", "D", "C", "B", "A", "S", "SS"]
+def _skillfx_names():
+    try: return json.load(open(os.path.join(HERE, "s5_skilleffect_names.json")))
+    except Exception: return []
+SKILLFX_NAMES = _skillfx_names()
 
 # Fixed cost/threshold ladder (purpose unconfirmed).
 LADDER_OFF = 0x4986C0
@@ -139,14 +298,16 @@ LADDER_EXTRA_OFF = 0x31A6BC
 
 RANK_HELP = "skill rank byte: 0..7 (higher = better; 07 ~ SS)"
 
-# Per-section help, drawn from the original community editor's own labels/messages.
+# Per-section help, drawn from verified in-game labels.
 SECTION_HELP = {
-    "stats":      "Edit character stats here. These are starting values — ISO edits apply to a NEW GAME.",
-    "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the original editor's Weapon Growth tab.",
-    "skills":     "Per-skill affinity / aptitude. Rank 01=E, 02=D, 03=C, 04=B, 05=A, 06=S, 07=SS (higher learns faster / caps higher).",
-    "starting equipment": "Armor equipped at new-game start — Head / Body / Arm / Feet (armor ids).",
-    "potch": "Starting Potch (money) this character brings. (The original editor's 'Magic Points Thresholds' fields turned out to be the unit's item-drop slots — a mislabel — so they're edited in the Enemy tab instead.)",
+    "stats":      "Character starting stats (HP, Attack, Technique, Magic, Evasion, PDF, MDF, Speed, Luck) plus each stat's per-level Growth. Base stats apply to a NEW GAME; growth affects level-ups. Verified byte-for-byte in-game (Dinn/Lance match exactly).",
+    "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the game's weapon-growth data.",
+    "starting equipment": "Armor equipped at new-game start — Head / Body / Arm (gloves) / Feet. All four are dropdowns of the game's armor ids (0 = Nothing). Verified: Richard starts in a full knight set.",
+    "starting items": "Up to four items/accessories a unit starts holding (stored as name pointers). Choices are the closed set of items the game actually assigns; 'Nothing' clears a slot. Verified: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
+    "gear":       "Armor pieces (Head / Body / Arm / Foot). Fully editable, verified vs the Armor List guide: DEF, buy/sell price, weight Type (1=Light/2=Medium/3=Heavy) + SPD penalty, stat bonuses (HP/Attack/Technique/Magic/Evasion/MDEF/Speed/Luck), proc effects (auto-heal/HP-drain/status-resist/potch/counter %), and per-element ATK & DEF for all 14 elements. The read-only summary below is just the game's own description text.",
+    "affinities": "Elemental affinity grades for this character — one per element (None / E / D / C / B / A / S). Higher = better at casting/resisting that element. Verified in-game (Prince = Sun A; Zerase = Fire/Star/Dark A). Applies to a NEW GAME.",
+    "equipable skills": "The MAX rank this character can equip each skill at (None / E / D / C / B / A / S / SS). This is the character's skill cap, not their current level. Verified vs the game data (Prince caps Attack/Technique/MDef at S; Zerase caps Magic/Incantation at S). Applies to a NEW GAME.",
 }
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
 
@@ -154,13 +315,14 @@ GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — us
 # Enemies live in the SAME record table as characters (0x49F0DC/0x7C), indexed by
 # a unit id. Combat stats are the shared u16 stat block (+0x02..); enemy-specific
 # fields VERIFIED via enemy 004 Nariqua (drop 0x1007 "Drain Piece" in the 20% slot):
-#   drops at +0x2c/0x34/0x3c/0x44/0x4c (40/20/10/5/1%), Starting Potch +0x54 (all u16).
+#   drops at +0x2c/0x34/0x3c/0x44/0x4c (40/20/10/5/1%, item hex ids).
+# (+0x54 is NOT a drop/potch — it's the game's list1_51 growth NUD, meaning unverified;
+#  excluded. See the TABLES note above.)
 ENEMY_BASE, ENEMY_STRIDE, ENEMY_MAX = 0x49F0DC, 0x7C, 584
 def _enemy_fields():
-    f = [(lbl, 0x02 + i*2, 2, "num") for i, (lbl, _k) in enumerate(STAT_LABELS)]
+    f = [(lbl, 0x02 + i*2, 2, "num") for i, (lbl, _k) in enumerate(STAT_LABELS) if lbl is not None]
     for pct, off in [("40%", 0x2c), ("20%", 0x34), ("10%", 0x3c), ("5%", 0x44), ("1%", 0x4c)]:
         f.append((f"Drop {pct} (item hex id)", off, 2, "num"))
-    f.append(("Starting Potch", 0x54, 2, "num"))
     return f
 ENEMY_FIELDS = _enemy_fields()
 
