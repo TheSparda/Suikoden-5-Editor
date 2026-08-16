@@ -4,11 +4,11 @@ Suikoden V PS2 memory-card save reader/writer (stdlib only).
 
 The PS2 layer (PS2MFS card walker, per-page ECC, .psu export handling, scanning,
 format sniffing) is ported ~verbatim from the Suikoden III editor — it is entirely
-game-agnostic and works for any PS2 title. What still needs S5-specific RE (marked
-NEEDS-SAVE below): the gamedata field offsets (stats/party/gold/names/recruit), the
-gamedata checksum algorithm, and the New Game Plus flag. Those require at least one
-real S5 memory-card save (ideally one pre- and one post-New-Game-Plus) to confirm,
-per the "never write unverified fields" rule.
+game-agnostic and works for any PS2 title. The gamedata has NO software checksum
+(confirmed by reversing the ELF save I/O + save-select validator — see below), so
+verified-field writes are safe. What still needs S5-specific RE (marked NEEDS-SAVE
+below): the remaining gamedata field offsets (stats/party/gold/recruit), which need a
+real save with a known in-game value, per the "never write unverified fields" rule.
 
 USA Suikoden V save folders are prefixed BASLUS-21291.
 """
@@ -44,16 +44,14 @@ def ecc_page(page512):
     out = b"".join(ecc_chunk(page512[i*128:(i+1)*128]) for i in range(4))
     return out + b"\x00\x00\x00\x00"
 
-# --- gamedata checksum framework.
-# UNVERIFIED for S5. S3's was "sum of all u32 LE words == 0 (mod 2^32)". The S5
-# algorithm must be cracked by diffing real saves (playtime-ordered) to find the word
-# that zeroes the sum, before any gamedata write is allowed. Provided so the machinery
-# is ready; guarded by CHECKSUM_VERIFIED.
-CHECKSUM_VERIFIED = False
-def gamedata_checksum_sumzero(data, word_off=0):
-    words = struct.unpack_from("<%dI" % ((len(data)//4) - 1), data,
-                               (word_off+1)*4 if word_off == 0 else 0)
-    return (-sum(words)) & 0xFFFFFFFF
+# --- gamedata checksum: RESOLVED by ELF RE (SLUS-21291) — there is NO software checksum
+# over the 74024-byte save body. The save I/O routine (ELF 0x2dc820) is a plain sceMc
+# read/write of the payload with no accumulation; the save-select validator (0x2dd060 /
+# 0x2df5d0) only checks three fixed header constants — size 74024 (0x12128), 0x3c4, and
+# magic 0x8da2 — none of which live in the editable gamedata fields. Integrity otherwise
+# relies on the memory card's hardware ECC (recomputed on every write path here). So
+# editing verified gamedata fields is safe without recomputing anything.
+CHECKSUM_VERIFIED = True   # confirmed: no body checksum exists (RE'd, not a placeholder)
 
 # --- S5 gamedata facts (VERIFIED against a real save: BASLUS-2129100, LV.39, 19:16).
 # The save payload is a file named exactly like the folder (BASLUS-2129100), 74024 bytes.
@@ -156,11 +154,12 @@ def _write_cbs(path, b, edits, make_backup=True):
         shutil.copy2(path, path + ".bak")
     with open(path, "wb") as f: f.write(bytes(newb))
     return {"ok": True, "changed": changed,
-            "warn": "CBS re-encoded; gamedata checksum unverified — verify it loads in-game"}
+            "warn": "CBS re-encoded (RC4+zlib) and a .bak was kept — S5 has no save-body checksum, so verified-field edits load fine"}
 
 def write_individual_save(path, edits, make_backup=True):
     """Patch S5_FIELDS edits into a standalone save. SharkPort/X-Port (.sps/.xps) is
-    patched in place; CodeBreaker (.cbs) is decompressed/re-compressed. Checksum UNVERIFIED."""
+    patched in place; CodeBreaker (.cbs) is decompressed/re-compressed. S5 has no
+    save-body checksum (RE-confirmed), so verified-field edits need no recompute."""
     b = open(path, "rb").read()
     if b[:4] == b"CFU\x00":
         return _write_cbs(path, b, edits, make_backup)
@@ -177,7 +176,7 @@ def write_individual_save(path, edits, make_backup=True):
     ba = bytearray(b); ba[off:off + len(new_gd)] = new_gd
     with open(path, "wb") as f: f.write(ba)
     return {"ok": True, "changed": changed,
-            "warn": "individual-save checksum unverified; verify it loads in-game"}
+            "warn": "saved (.bak kept) — S5 has no save-body checksum, so verified-field edits load fine"}
 
 def region_label(folder):
     """Map an S5 save folder (e.g. BASLUS-21291.., BESLES-54087..) to a region tag."""
@@ -229,7 +228,8 @@ def apply_gamedata_edits(gd, edits):
 
 def write_save_fields(card_path, folder, edits, make_backup=True):
     """Write S5_FIELDS edits into a save's gamedata on a memory card, refreshing ECC.
-    NOTE: the gamedata checksum (if any) is UNVERIFIED — test on a card COPY first."""
+    S5 has no save-body checksum (RE-confirmed via the ELF), so only the card ECC needs
+    refreshing (done here); a .bak is kept when backups are on."""
     with open(card_path, "rb") as f:
         card = MemCard(f.read())
     tgt = next((s for s in card.find_saves() if s["folder"] == folder), None)
