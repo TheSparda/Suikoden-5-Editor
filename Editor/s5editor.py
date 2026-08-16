@@ -449,7 +449,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=scroll id=overlaytext></div>
  </section>
 </main>
-<footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a></footer>
+<footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.1.0</footer>
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
