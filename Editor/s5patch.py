@@ -81,6 +81,22 @@ def write_price(iso, index, field, value):
     if off is None: raise KeyError(field)
     iso.wu(F.PRICE_BASE + index * F.PRICE_STRIDE + off, w, value)
 
+def read_rune_prices(iso):
+    out = []
+    for i in range(F.RUNEPRICE_COUNT):
+        b = F.RUNEPRICE_BASE + i * F.RUNEPRICE_STRIDE
+        out.append({"index": i,
+                    "name": F.RUNEPRICE_NAMES[i] if i < len(F.RUNEPRICE_NAMES) else f"Rune {i}",
+                    "buy": iso.ru(b, 3), "sell": iso.ru(b + 4, 3)})
+    return out
+
+def write_rune_price(iso, index, field, value):
+    if not (0 <= index < F.RUNEPRICE_COUNT): raise KeyError(f"no rune {index}")
+    off = {"buy": 0, "sell": 4}.get(field)
+    if off is None: raise KeyError(field)
+    iso.wu(F.RUNEPRICE_BASE + index * F.RUNEPRICE_STRIDE + off, 3, value)
+
+
 def spell_addr(sid): return F.SPELL_BASE + sid * F.SPELL_STRIDE
 
 def read_spell(iso, sid):

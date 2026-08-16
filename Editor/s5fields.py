@@ -158,6 +158,17 @@ NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8
 NAME_MAX_CHARS  = 7
 
+# ---- Rune (orb) price table (VERIFIED @0x4E24FC vs the rune guide: Fire Orb
+# 6000/3000, Shield Orb 35000/17500; sell = buy/2; event-only orbs have buy=0).
+# From the Nightmare Rune Price module (NTSC-U), byte-matched into the ISO. 70 records,
+# stride 76; buy @+0 and sell @+4 are 3-byte LE (byte 3/7 always 0). Names = runes.txt
+# order (s5_runeprice_names.json). NOTE: PAL uses stride 80 (separate layout).
+RUNEPRICE_BASE, RUNEPRICE_STRIDE, RUNEPRICE_COUNT = 0x4E24FC, 76, 70
+def _runeprice_names():
+    try: return json.load(open(os.path.join(HERE, "s5_runeprice_names.json")))
+    except Exception: return []
+RUNEPRICE_NAMES = _runeprice_names()
+
 # Item/equipment PRICE table (VERIFIED vs the rune guide: buy+sell u32,
 # sell == buy/2; e.g. record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500
 # (Shield Rune)). Records are in item-id order; names live in a parallel pool.
@@ -223,6 +234,17 @@ ARMOR_FIELDS = [
     ("Luck",       0x6B, 1, True),
     ("Auto-heal %",     0x6C, 1, False),
     ("HP drain %",      0x6D, 1, False),
+    # Range ATK/ACC @0x5D..0x62 + Critical% @0x70 VERIFIED vs the pieces' own summaries
+    # (bangle L-ATK ladder 2/4/6/8, Power Gloves S&M-ATK 3/3, bracer L-ACC 5/8/14/20,
+    # Engraved Gauntlets Critical +5%). These were the 5 "arm misses" in the original
+    # guide match — they were range-specific ATK all along.
+    ("Short-range ATK", 0x5D, 1, False),
+    ("Mid-range ATK",   0x5E, 1, False),
+    ("Long-range ATK",  0x5F, 1, False),
+    ("Short-range ACC", 0x60, 1, False),
+    ("Mid-range ACC",   0x61, 1, False),
+    ("Long-range ACC",  0x62, 1, False),
+    ("Critical %",      0x70, 1, False),
     ("Status resist %", 0x72, 1, False),
     ("Potch %",         0x74, 1, False),
     ("Counter %",       0x75, 1, False),
