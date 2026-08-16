@@ -505,17 +505,20 @@ def _unswizzle_clut256(c):
 
 def _bpe_chunks(data):
     """Split a nested \\x00epb chunk sequence (FACE_PC/EC/ME payloads) and bpe-decompress
-    each chunk. Per chunk: u32@4 = align4(chunk size)-4 (next-chunk skip, NOT dec size),
-    u32@8 = header size (data at +hdr+8), u32@0xC = compressed size; the compressed
-    stream itself starts with a u32 true decompressed size."""
+    each chunk. Per chunk: u32@4 = skip to next chunk (next = off+skip+4), 0 on the last
+    chunk (so a single-chunk file has skip 0); u32@8 = header size (data at +hdr+8), u32@0xC
+    = compressed size; the compressed stream itself starts with a u32 true decompressed size."""
     out = []; off = 0
     while off + 16 <= len(data) and data[off:off+4] == b"\x00epb":
+        skip = int.from_bytes(data[off+4:off+8], "little")
         hdr  = int.from_bytes(data[off+8:off+12], "little")
         comp = int.from_bytes(data[off+12:off+16], "little")
-        if int.from_bytes(data[off+4:off+8], "little") == 0 or comp < 5: break
-        s = data[off + hdr + 8:off + hdr + 8 + comp]
+        doff = off + hdr + 8
+        if comp < 5 or doff + comp > len(data): break
+        s = data[doff:doff + comp]
         out.append(_bpe_decompress(s[4:], int.from_bytes(s[:4], "little")))
-        off = (off + hdr + 8 + comp + 3) & ~3
+        if skip == 0: break            # last (or only) chunk
+        off += skip + 4                # game's own next-chunk pointer (4-byte aligned)
     return out
 
 def _scan_pixel_records(body, swizzled_clut):
