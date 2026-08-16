@@ -439,6 +439,100 @@ def _bpe_decompress(data, dec_size):
     return bytes(out[:dec_size])
 
 
+def _datapak_read(iso_path, name):
+    """Find an internal DATA.PAK file by exact then loose name; return (name, decoded_bytes,
+    codec). non/szl/bpe are decoded; other codecs return the raw container."""
+    f, vol_start, rlba, rsz = _rofs_volume(iso_path)
+    hit = None
+    def find_exact(lba, size):
+        nonlocal hit
+        for e in _rofs_listdir(f, vol_start, lba, size):
+            if hit: return
+            if e["dir"]: find_exact(e["lba"], e["size"])
+            elif e["name"] == name: hit = e
+    def find_loose(lba, size):
+        nonlocal hit
+        for e in _rofs_listdir(f, vol_start, lba, size):
+            if hit: return
+            if e["dir"]: find_loose(e["lba"], e["size"])
+            elif name in e["name"]: hit = e
+    find_exact(rlba, rsz)
+    if not hit: find_loose(rlba, rsz)
+    if not hit: f.close(); raise KeyError(f"{name} not found in DATA.PAK")
+    f.seek(vol_start + hit["lba"] * _SECT); blob = f.read(hit["size"]); f.close()
+    codec = {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
+             b"\x00ffh": "ffh"}.get(blob[8:12], blob[8:12].hex())
+    decSize = int.from_bytes(blob[0x0C:0x10], "little"); compSize = int.from_bytes(blob[0x10:0x14], "little")
+    if codec == "non": data = blob[0x40:0x40 + decSize] if decSize else blob[0x40:]
+    elif codec == "szl": data = _lzss_decompress(blob[0x40:0x40 + compSize], decSize)
+    elif codec == "bpe": data = _bpe_decompress(blob[0x40:0x40 + compSize], decSize)
+    else: data = blob
+    return hit["name"], data, codec
+
+
+# ---- PS2 texture (dxt/txd container) -> PNG portrait decode -------------------
+def _png(width, height, rgba):
+    """Minimal RGBA PNG encoder (stdlib zlib)."""
+    import zlib, struct
+    raw = bytearray()
+    for y in range(height):
+        raw.append(0); raw += rgba[y * width * 4:(y + 1) * width * 4]
+    def chunk(tag, body):
+        c = tag + body
+        return struct.pack(">I", len(body)) + c + struct.pack(">I", zlib.crc32(c) & 0xffffffff)
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)   # 8-bit RGBA
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 9)) + chunk(b"IEND", b""))
+
+def _unswizzle_clut256(c):
+    """PS2 256-entry CLUT (CSM1) de-swizzle: within each 32-color block, swap the two
+    middle 8-color groups. c is 1024 bytes (256 RGBA)."""
+    out = bytearray(1024)
+    for i in range(0, 256, 32):
+        for j in range(8):
+            for k in range(4):
+                out[(i + j) * 4 + k] = c[(i + j) * 4 + k]
+                out[(i + 8 + j) * 4 + k] = c[(i + 16 + j) * 4 + k]
+                out[(i + 16 + j) * 4 + k] = c[(i + 8 + j) * 4 + k]
+                out[(i + 24 + j) * 4 + k] = c[(i + 24 + j) * 4 + k]
+    return out
+
+# Portrait texture geometry (verified vs BTL_FACE): each face = 128x32 8-bit indices
+# (4096 B) + a 256-color RGBA CLUT (1024 B), rendered at 2x vertical -> 128x64.
+_FACE_W, _FACE_H, _FACE_IDX, _FACE_CLUT = 128, 32, 4096, 1024
+
+def render_portraits(iso_path, name):
+    """Decode a FACE/BTL_FACE dxt texture file to a list of PNG portraits (RGBA, 128x64).
+    Raises ValueError if the file isn't a portrait/dxt texture container."""
+    _, data, codec = _datapak_read(iso_path, name)
+    if data[:4] != b"\x00dxt":
+        raise ValueError(f"{name} is not a portrait/dxt texture (tag {data[:4].hex()}, codec {codec})")
+    marks = []; i = 0x40
+    while True:
+        j = data.find(b"\xff\xff\x03\x18", i)
+        if j < 0: break
+        marks.append(j); i = j + 4
+    out = []
+    for k in range(len(marks) - 1):
+        if not (5100 <= marks[k + 1] - marks[k] <= 5200):
+            continue
+        s = data[marks[k] + 20:marks[k + 1]]
+        if len(s) < _FACE_IDX + _FACE_CLUT:
+            continue
+        idx = s[:_FACE_IDX]; clut = _unswizzle_clut256(s[_FACE_IDX:_FACE_IDX + _FACE_CLUT])
+        rgba = bytearray(_FACE_W * (_FACE_H * 2) * 4)
+        for y in range(_FACE_H):
+            for x in range(_FACE_W):
+                ci = idx[y * _FACE_W + x]
+                r, g, b, a = clut[ci*4], clut[ci*4+1], clut[ci*4+2], clut[ci*4+3]
+                a = min(255, a * 2)   # PS2 alpha: 0x80 = opaque
+                for dy in range(2):   # 2x vertical to correct native squish
+                    o = ((y * 2 + dy) * _FACE_W + x) * 4
+                    rgba[o], rgba[o+1], rgba[o+2], rgba[o+3] = r, g, b, a
+        out.append(_png(_FACE_W, _FACE_H * 2, rgba))
+    return out
+
+
 def datapak_extract(iso_path, name, out_dir):
     """Extract one internal DATA.PAK file by name (or path). `non`/stored and `szl`/LZSS
     payloads are decoded; other codecs (bpe/ffh) are written as the raw container blob.
