@@ -342,6 +342,112 @@ def _find_ovl_dirrec(iso_path, name):
         i += ln
     raise KeyError(f"{name} not in OVL dir")
 
+# ---- DATA.PAK (CRI CVM / ROFS) asset filesystem -----------------------------
+# DATA.PAK is a CRI ROFS volume: a CVMH header then an embedded ISO9660 filesystem
+# holding ~7000 internal files (mostly the same "\x00mor" LZSS/`.ROM` containers as
+# OVL/). Portraits live here as FACE_*.ROM. Chunk codecs seen: non (stored), szl
+# (LZSS, decodable), epb ("bpe", not yet decoded), ffh. LBAs inside are relative to the
+# embedded volume start (embedded-PVD offset - 16 sectors).
+def _rofs_volume(iso_path):
+    """Return (open file, vol_start_byte_offset, root_lba, root_size) for DATA.PAK's
+    embedded ISO9660 volume."""
+    f, rlba, rsz = iso_root(iso_path)
+    pak = next((e for e in _iso_listdir(f, rlba, rsz) if e["name"] == "DATA.PAK"), None)
+    if not pak: f.close(); raise KeyError("DATA.PAK not found")
+    pak_base = pak["lba"] * _SECT
+    # find the embedded ISO9660 PVD within the first 64 MB of DATA.PAK
+    f.seek(pak_base); win = f.read(64 * 1024 * 1024)
+    p = win.find(b"\x01CD001\x01")
+    if p < 0: f.close(); raise ValueError("no embedded ISO9660 volume in DATA.PAK")
+    pvd_off = pak_base + p
+    vol_start = pvd_off - 16 * _SECT
+    f.seek(pvd_off); pvd = f.read(_SECT); root = pvd[156:156 + 34]
+    return f, vol_start, int.from_bytes(root[2:6], "little"), int.from_bytes(root[10:14], "little")
+
+def _rofs_listdir(f, vol_start, lba, size):
+    f.seek(vol_start + lba * _SECT); d = f.read(size); out = []; i = 0
+    while i < len(d):
+        ln = d[i]
+        if ln == 0:
+            i = (i // _SECT + 1) * _SECT
+            if i >= len(d): break
+            continue
+        rec = d[i:i + ln]
+        flba = int.from_bytes(rec[2:6], "little"); fsz = int.from_bytes(rec[10:14], "little")
+        nl = rec[32]; nm = rec[33:33 + nl].decode("latin1"); flags = rec[25]
+        base = nm.split(";")[0]
+        if base not in ("\x00", "\x01"):
+            out.append({"name": base, "lba": flba, "size": fsz, "dir": bool(flags & 2)})
+        i += ln
+    return out
+
+def _rofs_codec(f, vol_start, lba):
+    f.seek(vol_start + lba * _SECT); h = f.read(12)
+    tag = h[8:12]
+    return {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
+            b"\x00ffh": "ffh", b"\x00mor": "mor"}.get(tag, tag.hex())
+
+def datapak_list(iso_path, filt="", limit=9000):
+    """Walk DATA.PAK's ROFS and return internal files [{path,name,size,codec,lba}].
+    Optional case-insensitive substring filter on the path."""
+    f, vol_start, rlba, rsz = _rofs_volume(iso_path)
+    out = []; fl = (filt or "").lower()
+    def walk(lba, size, prefix):
+        for e in _rofs_listdir(f, vol_start, lba, size):
+            path = prefix + "/" + e["name"]
+            if e["dir"]:
+                if len(out) < limit: walk(e["lba"], e["size"], path)
+            else:
+                if len(out) >= limit: return
+                if fl and fl not in path.lower(): continue
+                out.append({"path": path, "name": e["name"], "size": e["size"],
+                            "lba": e["lba"], "codec": _rofs_codec(f, vol_start, e["lba"])})
+    walk(rlba, rsz, ""); f.close()
+    out.sort(key=lambda x: x["path"])
+    return out
+
+def datapak_extract(iso_path, name, out_dir):
+    """Extract one internal DATA.PAK file by name (or path). `non`/stored and `szl`/LZSS
+    payloads are decoded; other codecs (bpe/ffh) are written as the raw container blob.
+    Returns {name, codec, size, decoded, out}."""
+    f, vol_start, rlba, rsz = _rofs_volume(iso_path)
+    hit = None
+    def walk(lba, size):
+        nonlocal hit
+        for e in _rofs_listdir(f, vol_start, lba, size):
+            if hit: return
+            if e["dir"]: walk(e["lba"], e["size"])
+            elif e["name"] == name or e["name"].split(".")[0] == name.split(".")[0] and name in e["name"]:
+                hit = e
+    # exact-name pass first, then loose
+    def find_exact(lba, size):
+        nonlocal hit
+        for e in _rofs_listdir(f, vol_start, lba, size):
+            if hit: return
+            if e["dir"]: find_exact(e["lba"], e["size"])
+            elif e["name"] == name: hit = e
+    find_exact(rlba, rsz)
+    if not hit: walk(rlba, rsz)
+    if not hit: f.close(); raise KeyError(f"{name} not found in DATA.PAK")
+    f.seek(vol_start + hit["lba"] * _SECT); blob = f.read(hit["size"]); f.close()
+    codec = {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
+             b"\x00ffh": "ffh"}.get(blob[8:12], blob[8:12].hex())
+    decSize = int.from_bytes(blob[0x0C:0x10], "little")
+    compSize = int.from_bytes(blob[0x10:0x14], "little")
+    decoded = True
+    if codec == "non":
+        data = blob[0x40:0x40 + decSize] if decSize else blob[0x40:]
+    elif codec == "szl":
+        data = _lzss_decompress(blob[0x40:0x40 + compSize], decSize)
+    else:
+        data = blob; decoded = False   # bpe/ffh: dump the raw container (codec not decoded yet)
+    os.makedirs(out_dir, exist_ok=True)
+    ext = ".bin" if decoded else "." + codec + ".rom"
+    out = os.path.join(out_dir, hit["name"].split(".")[0] + ext)
+    with open(out, "wb") as w: w.write(data)
+    return {"name": hit["name"], "codec": codec, "size": len(data), "decoded": decoded, "out": os.path.abspath(out)}
+
+
 def reinsert_overlay(iso, name, bin_path):
     """Re-compress an edited overlay .bin and write it back into the ISO in place.
     The edited bin MUST be the same length as the original decompressed size (edit

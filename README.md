@@ -97,6 +97,11 @@ is independent of which ISO you have open.)
 - **Overlays** — extract/decompress the disc's engine overlays (OVL/\*.ROM), re-insert
   edited ones (LZSS), and an **Overlay Text** editor for the story/dialogue text inside
   them (endings, letters, lore, newspaper, …).
+- **Assets (DATA.PAK)** — browse the game's 2.3 GB CRI ROFS asset volume (~7,700 internal
+  files: backgrounds, UI, effects, character portraits as `FACE_*.ROM`) and extract any of
+  them. Files stored uncompressed or LZSS are decoded; `bpe`-compressed textures are dumped
+  raw for now (a `bpe` decoder + PS2 texture→PNG step for portrait *rendering* is in
+  progress).
 
 Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
 grouped navigation, and a light/dark theme toggle.
