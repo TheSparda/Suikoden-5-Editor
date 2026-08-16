@@ -104,6 +104,49 @@ def _lzss_decompress(data, decsize, N=4096, F_=18):
                 b = ring[(off + k) % N]; out.append(b); ring[r] = b; r = (r + 1) % N
     return bytes(out)
 
+def _lzss_compress(data):
+    """LZSS encoder matching _lzss_decompress (ring N=4096, r0=N-18, len 3..18).
+    The stored offset is an ABSOLUTE ring position: output byte j lives at
+    ring[(N-18+j) % N], so a match on source index j encodes off=(N-18+j)%N.
+    Greedy with a hash chain; dictionary limited to N-F so offsets stay valid."""
+    N, F_, MINM = 4096, 18, 3
+    n = len(data); out = bytearray()
+    heads = {}; chain = [-1] * n
+    def key(p): return (data[p] << 16) | (data[p + 1] << 8) | data[p + 2]
+    def insert(p):
+        if p + MINM <= n:
+            k = key(p); chain[p] = heads.get(k, -1); heads[k] = p
+    flag = 0; nbits = 0; tokens = bytearray(); i = 0
+    while i < n:
+        best_len = 0; best_j = 0
+        if i + MINM <= n:
+            lo = i - (N - F_)
+            if lo < 0: lo = 0
+            j = heads.get(key(i), -1); tries = 0; maxlen = min(F_, n - i)
+            while j >= lo and tries < 256:
+                dist = i - j; l = 0
+                while l < maxlen and data[i + l] == data[i - dist + l]:
+                    l += 1
+                if l > best_len:
+                    best_len = l; best_j = j
+                    if l == maxlen: break
+                j = chain[j]; tries += 1
+        if best_len >= MINM:
+            off = (N - F_ + best_j) % N
+            tokens.append(off & 0xFF)
+            tokens.append(((off >> 4) & 0xF0) | ((best_len - MINM) & 0x0F))
+            nbits += 1
+            end = i + best_len
+            while i < end: insert(i); i += 1
+        else:
+            tokens.append(data[i]); flag |= (1 << nbits); nbits += 1
+            insert(i); i += 1
+        if nbits == 8:
+            out.append(flag); out += tokens; flag = 0; nbits = 0; tokens = bytearray()
+    if nbits: out.append(flag); out += tokens
+    return bytes(out)
+
+
 def extract_overlay(iso_path, name, out_dir):
     """Extract + decompress one OVL/<name> to out_dir/<name>.bin. Returns the path + sizes."""
     ov = next((o for o in list_overlays(iso_path) if o["name"] == name), None)
@@ -120,6 +163,56 @@ def extract_overlay(iso_path, name, out_dir):
     open(outp, "wb").write(data)
     return {"name": name, "path": os.path.abspath(outp), "kind": kind,
             "compSize": ov["size"], "decSize": len(data)}
+
+def _find_ovl_dirrec(iso_path, name):
+    """Return (abs_offset_of_record, record_len) for OVL/<name> in the ISO directory."""
+    f, rlba, rsz = iso_root(iso_path)
+    ovl = next((e for e in _iso_listdir(f, rlba, rsz) if e["name"] == "OVL" and e["dir"]), None)
+    if not ovl: f.close(); raise KeyError("OVL dir not found")
+    f.seek(ovl["lba"] * _SECT); d = f.read(ovl["size"]); f.close()
+    i = 0
+    while i < len(d):
+        ln = d[i]
+        if ln == 0:
+            i = (i // _SECT + 1) * _SECT
+            if i >= len(d): break
+            continue
+        nl = d[i + 32]; nm = d[i + 33:i + 33 + nl].decode("latin1").split(";")[0]
+        if nm == name:
+            return ovl["lba"] * _SECT + i, ln
+        i += ln
+    raise KeyError(f"{name} not in OVL dir")
+
+def reinsert_overlay(iso, name, bin_path):
+    """Re-compress an edited overlay .bin and write it back into the ISO in place.
+    The edited bin MUST be the same length as the original decompressed size (edit
+    values, not layout). Fails if the recompressed container exceeds the file's
+    sector slot. Updates the ISO9660 directory size (LE @+10 + BE @+14)."""
+    ov = next((o for o in list_overlays(iso.path) if o["name"] == name), None)
+    if not ov: raise KeyError(f"no overlay {name!r}")
+    if ov["decSize"] is None: raise ValueError(f"{name} is not a compressed overlay")
+    edited = open(bin_path, "rb").read()
+    if len(edited) != ov["decSize"]:
+        raise ValueError(f"edited bin is {len(edited)} bytes; must equal original "
+                         f"decompressed size {ov['decSize']} (edit values, not size)")
+    header = bytearray(iso.rd(ov["lba"] * _SECT, 0x40))   # preserve original header bytes
+    comp = _lzss_compress(edited)
+    header[0x0C:0x10] = len(edited).to_bytes(4, "little")   # decSize (unchanged)
+    header[0x10:0x14] = len(comp).to_bytes(4, "little")     # compSize
+    container = bytes(header) + comp
+    budget = ((ov["size"] + _SECT - 1) // _SECT) * _SECT     # sector-aligned slot
+    if len(container) > budget:
+        raise ValueError(f"recompressed {name} is {len(container)} bytes; slot is only "
+                         f"{budget}. Edit rejected (would overwrite the next file).")
+    base = ov["lba"] * _SECT
+    padded = container + b"\x00" * (((len(container) + _SECT - 1) // _SECT) * _SECT - len(container))
+    iso.wr(base, padded)
+    # update directory size (both-endian u32) so the loader reads the new length
+    rec_off, _ = _find_ovl_dirrec(iso.path, name)
+    iso.wr(rec_off + 10, len(container).to_bytes(4, "little"))
+    iso.wr(rec_off + 14, len(container).to_bytes(4, "big"))
+    return {"name": name, "decSize": len(edited), "newCompSize": len(comp),
+            "container": len(container), "slot": budget, "slack": budget - len(container)}
 
 
 def table_addr(table, cid):
