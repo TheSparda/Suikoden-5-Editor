@@ -199,6 +199,62 @@ def write_mp(iso, group, idx, value):
     iso.wu(F.MP_BASE + group * F.MP_STRIDE + 2 * idx, 2, value)
 
 
+# ---- Unite attacks (packed variable-length table; see s5fields UNITE_BASE) ----
+def parse_unites(iso):
+    """Walk the packed unite table. Returns [{id, off, jpName, desc, count, idsOff, ids}]."""
+    p = F.UNITE_BASE
+    out = []
+    def read_str(p):
+        s = p
+        while iso.ru(p, 1) != 0: p += 1
+        return iso.rd(s, p - s), p
+    while len(out) < F.UNITE_COUNT and p < F.UNITE_SCAN_END:
+        while iso.ru(p, 1) == 0: p += 1
+        start = p
+        raw, p = read_str(p)
+        try: jp = raw.decode("cp932")
+        except Exception: jp = raw.decode("cp932", "replace")
+        descs = []
+        while True:
+            while iso.ru(p, 1) == 0: p += 1
+            b = iso.ru(p, 1)
+            if 2 <= b <= 6: break
+            raw, p = read_str(p)
+            try: descs.append(raw.decode("cp932"))
+            except Exception: descs.append(raw.decode("cp932", "replace"))
+            if len(descs) > 4: raise ValueError(f"unite parse ran away @0x{p:X}")
+        cnt = iso.ru(p, 1); p += 1
+        ids_off = p
+        ids = [iso.ru(p + k, 1) for k in range(cnt)]
+        p += cnt
+        out.append({"id": len(out), "off": start, "jpName": jp, "desc": " / ".join(descs),
+                    "count": cnt, "idsOff": ids_off, "ids": ids})
+    return out
+
+def read_unites(iso, char_names=None):
+    """Unites with English name/effect + resolved member names."""
+    cn = dict(char_names or {})
+    cn.update(F.UNITE_EXTRA_CHARS)
+    out = []
+    for u in parse_unites(iso):
+        meta = F.UNITE_NAMES[u["id"]] if u["id"] < len(F.UNITE_NAMES) else {}
+        u["name"] = meta.get("name", u["jpName"] or f"Unite {u['id']}")
+        u["effect"] = meta.get("effect", "")
+        u["members"] = [{"id": i, "name": cn.get(i, f"#{i}")} for i in u["ids"]]
+        out.append(u)
+    return out
+
+def write_unite_member(iso, uid, slot, char_id):
+    """Set one participant slot of a unite (same count — records are packed)."""
+    us = parse_unites(iso)
+    if not (0 <= uid < len(us)): raise KeyError(f"no unite {uid}")
+    u = us[uid]
+    if not (0 <= slot < u["count"]): raise KeyError(f"unite {uid} has {u['count']} slots")
+    if not (0 <= int(char_id) <= 255): raise ValueError("bad char id")
+    iso.wu(u["idsOff"] + slot, 1, int(char_id))
+    return True
+
+
 def read_skillfx(iso):
     out = []
     for sid in range(F.SKILLFX_COUNT):

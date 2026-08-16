@@ -17,21 +17,6 @@ SERIAL_STR = b"SLUS_212.91"
 
 # ---- per-character tables: name -> (base, stride, [(label, off, width, kind), ...])
 # kind: num | rank (0..7 skill grade) | item | rune
-STAT_LABELS = [  # twelve u16 at +0x02..; combat-stat order VERIFIED vs the L60 guide.
-    # Two slots are HIDDEN (label None) — real per-char values but unverified purpose:
-    #   +0x04: NOT "Spell Count". Real S5 spell count is a per-magic-level cast list
-    #     (guide shows "9/7/4/2") derived from Magic skill, not a base stat; this field's
-    #     values (~180) don't match it. Runs a bit below Magic; true meaning unknown.
-    #   +0x16 ("Field11"): NOT constant — ranges 30..50000, scales with unit power.
-    #     Since the table is shared with enemies, likely an EXP/Potch reward; unverified.
-    # None entries keep the index so the other offsets stay correct; they're skipped below.
-    ("HP", "num"), (None, None), ("Attack", "num"), ("Magic", "num"),
-    ("PDF", "num"), ("MDF", "num"), ("Technique", "num"), ("Accuracy", "num"),
-    ("Evasion", "num"), ("Speed", "num"),
-    (None, None),
-    ("Luck", "num"),
-]
-
 def _skill_names():
     try: return json.load(open(os.path.join(HERE, "s5_skill_names.json")))
     except Exception: return []
@@ -279,6 +264,23 @@ MP_GROUP_LABELS = ["Magic Lv1", "Magic Lv2", "Magic Lv3", "Magic Lv4"]
 MP_FIELD_LABELS = ["1st MP", "2nd MP", "3rd MP", "4th MP", "5th MP (Lv4 cap)",
                    "6th MP", "7th MP (Lv3 cap)", "8th MP", "9th MP"]
 
+# ---- Unite attacks (VERIFIED @0x4D3420; 49 records, 49/49 match the Unites guide).
+# Located by disassembling the ELF name-lookup dispatcher (lui/addiu forming 0x525B21 ->
+# file 0x4D3421). PACKED VARIABLE-LENGTH records, parsed at runtime:
+#   [Shift-JIS unite name \0] [SJIS effect desc \0 (1-2 lines)] [count u8 (2..6)]
+#   [count x participant char-id u8]  ... next record.
+# Participant ids use the same character-id space as the stats tables (DoReMi quints are
+# 129-133, beyond the roster json). The count byte is NOT editable (records are packed —
+# changing it would shift every later record); participants ARE editable in place.
+# English names/effects (guide-sourced) in s5_unite_names.json, index = record order.
+UNITE_BASE, UNITE_COUNT, UNITE_SCAN_END = 0x4D3420, 49, 0x4D6000
+def _unite_names():
+    try: return json.load(open(os.path.join(HERE, "s5_unite_names.json")))
+    except Exception: return []
+UNITE_NAMES = _unite_names()
+# DoReMi quintuplet ids (not in s5_characters.json roster).
+UNITE_EXTRA_CHARS = {129: "ReMiFa", 130: "MiFaSo", 131: "FaSoLa", 132: "SoLaTi", 133: "LaTiDo"}
+
 # ---- Skill effect magnitudes (VERIFIED @0x4AEB1C, stride 36, count 165; byte-identical
 # to the Nightmare extract). Per skill: 7 u16 values = the skill's magnitude at rank
 # E/D/C/B/A/S/SS, at offsets 0,2,4,6,8,10,12. Verified content: "Attack +" 5..40,
@@ -312,19 +314,38 @@ SECTION_HELP = {
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
 
 # ---- Enemy / unit editor -----------------------------------------------------
-# Enemies live in the SAME record table as characters (0x49F0DC/0x7C), indexed by
-# a unit id. Combat stats are the shared u16 stat block (+0x02..); enemy-specific
-# fields VERIFIED via enemy 004 Nariqua (drop 0x1007 "Drain Piece" in the 20% slot):
-#   drops at +0x2c/0x34/0x3c/0x44/0x4c (40/20/10/5/1%, item hex ids).
-# (+0x54 is NOT a drop/potch — it's the game's list1_51 growth NUD, meaning unverified;
-#  excluded. See the TABLES note above.)
+# Enemies live at 0x49F0DC / stride 0x7C, indexed by a unit id. FULL record layout
+# recovered from the Nightmare Enemy module (its base 0x49F157 = ours + 0x7B, so
+# module offset - 1 = our offset, module enemy i = our id i+1) and VERIFIED on real
+# records: Nariqua (our id 4) Lv45 HP1800 Potch2500 SP135, 20%-drop cat7/item0x10 =
+# Rune Pieces / Drain Piece (our original ground truth); Holly Boy (id 1) Lv10 HP80
+# Potch30 SP10. This CORRECTS the old stat labels (order is HP, ATK, TECH, ACC, MAG,
+# EVA, PDF, MDF, SPD, LUK — the previous Attack/Magic/... order was wrong) and
+# identifies the old hidden +0x16 as the POTCH reward (+0x18 = skill-point reward).
+# Each drop slot is 8 bytes: category u8 + item u8 (+6 unknown); read as one u16 LE
+# the value is category | item<<8 — decoded via s5_drop_items.json (Item Drop Table).
+# +0x28 = 100%-drop flag (0x0F = drops whole loot table every time).
+# Enemy AFFINITIES @+0x1A..: 14 grade bytes, scale 0=E..5=S (ENEMY_AFFINITY_GRADES —
+# distinct from the character scale which starts at 0=None).
 ENEMY_BASE, ENEMY_STRIDE, ENEMY_MAX = 0x49F0DC, 0x7C, 584
+ENEMY_AFFINITY_GRADES = ["E", "D", "C", "B", "A", "S"]
 def _enemy_fields():
-    f = [(lbl, 0x02 + i*2, 2, "num") for i, (lbl, _k) in enumerate(STAT_LABELS) if lbl is not None]
+    f = [("Level", 0x01, 1, "num")]
+    stats = ["HP", "Attack", "Technique", "Accuracy", "Magic",
+             "Evasion", "PDF", "MDF", "Speed", "Luck"]
+    f += [(lbl, 0x02 + i*2, 2, "num") for i, lbl in enumerate(stats)]
+    f += [("Potch reward", 0x16, 2, "num"), ("Skill Pts reward", 0x18, 2, "num")]
+    f += [(f"{e} affinity", 0x1A + i, 1, "egrade") for i, e in enumerate(ARMOR_ELEMENTS)]
+    f.append(("100% drop flag", 0x28, 1, "num"))
     for pct, off in [("40%", 0x2c), ("20%", 0x34), ("10%", 0x3c), ("5%", 0x44), ("1%", 0x4c)]:
-        f.append((f"Drop {pct} (item hex id)", off, 2, "num"))
+        f.append((f"Drop {pct}", off, 2, "drop"))
     return f
 ENEMY_FIELDS = _enemy_fields()
+
+def _drop_items():
+    try: return json.load(open(os.path.join(HERE, "s5_drop_items.json")))
+    except Exception: return {"categories": {}, "items": {}}
+DROP_TABLE = _drop_items()
 
 def load_characters():
     """[{id, name}] playable list; falls back to empty if json missing."""

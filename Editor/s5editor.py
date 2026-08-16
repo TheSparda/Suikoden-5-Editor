@@ -213,6 +213,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  <button data-tab=gear onclick=showTab('gear')>Gear</button>
  <button data-tab=mp onclick=showTab('mp')>MP Growth</button>
  <button data-tab=skillfx onclick=showTab('skillfx')>Skill Effects</button>
+ <button data-tab=unite onclick=showTab('unite')>Unites</button>
  <button data-tab=save onclick=showTab('save')>Save Editor</button>
  <div class=navdrop>
   <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
@@ -287,7 +288,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-enemy>
   <h2>Enemy Editor</h2>
-  <p class=sub>Edit enemy combat stats and item drops (40/20/10/5/1% slots, item hex ids). Verified via enemy 004 Nariqua. Names are best-effort.</p>
+  <p class=sub>Edit enemy <b>Level</b>, combat stats, <b>Potch / Skill-Point rewards</b>, <b>elemental affinities</b> (E–S), and <b>item drops</b> (40/20/10/5/1% slots, picked by item name). Verified vs the game data (Nariqua = Lv45, 1800 HP, drops Drain Piece).</p>
   <div class=row id=enrow style=display:none>
    <span class=note>Enemy</span>
    <select id=ensel onchange=loadEnemy()></select>
@@ -324,6 +325,20 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <input id=skillfxfilter size=16 placeholder="filter skill…" oninput=skillfxShow()>
    <span id=skillfxnote class=note></span></div>
   <div class=scroll id=skillfxsections></div>
+ </section>
+
+ <section class=panel id=p-unite>
+  <h2>Unite Attacks</h2>
+  <p class=sub>Edit which characters perform each unite. Verified against the Unites guide (49/49). The member count is fixed (the table is packed), but every slot is a dropdown of the full roster. Effects shown are the guide's — the game applies the unite's built-in damage/target. Applies to a NEW GAME.</p>
+  <div class=row id=uniterow style=display:none>
+   <span class=note>Unite</span>
+   <select id=usel onchange=loadUnite()></select>
+   <input id=ufilter size=14 placeholder="filter name…" oninput=filterUnites()>
+   <button onclick=saveUnite()>Save changes</button>
+   <button class=ghost onclick=revertUnite()>Revert</button>
+   <span id=unitehint class=note></span>
+  </div>
+  <div id=unitesections></div>
  </section>
 
  <section class=panel id=p-hard>
@@ -384,10 +399,16 @@ let SPELLS=[], SCUR=null, SORIG={};
 let _busy=0;
 function ctrl(r,key){const v=r.value;
  const ch='onchange="this.classList.toggle(\'chg\',this.value!=ORIG[this.dataset.k])"';
- if(r.kind=='rank'||r.kind=='grade'){const R=(r.kind=='grade'?MAPS.grades:MAPS.ranks)||[];let o='';
-  const gp=(i=>'');  // show just the tier letter (both affinity grades and skill ranks)
+ if(r.kind=='rank'||r.kind=='grade'||r.kind=='egrade'){const R=(r.kind=='grade'?MAPS.grades:r.kind=='egrade'?MAPS.egrades:MAPS.ranks)||[];let o='';
+  const gp=(i=>'');  // show just the tier letter (affinity grades and skill ranks)
   if(v<0||v>=R.length)o+=`<option value=${v} selected>${v} · (raw)</option>`;
   for(let i=0;i<R.length;i++)o+=`<option value=${i} ${i==v?'selected':''}>${gp(i)}${R[i]}</option>`;
+  return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ if(r.kind=='drop'){const D=MAPS.dropitems||{};let o='';
+  const cur=+v, nm=D[cur];
+  if(!nm&&cur)o+=`<option value=${cur} selected>0x${cur.toString(16)} · (unknown)</option>`;
+  o+=`<option value=0 ${cur==0?'selected':''}>— none —</option>`;
+  Object.keys(D).forEach(k=>{o+=`<option value=${k} ${k==cur?'selected':''}>${D[k]}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
  if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
   const A=MAPS.armor||{};
@@ -451,7 +472,7 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   document.getElementById('enemyhint').textContent='';loadEnemy();
   document.getElementById('gearrow').style.display='';
   document.getElementById('gearhint').textContent='';loadGear();
-  loadMP();loadSkillfx();}
+  loadMP();loadSkillfx();loadUnites();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  const match=c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f);
@@ -578,7 +599,7 @@ async function loadEnemy(){const sel=document.getElementById('ensel');if(!sel.va
  if(s.error){box.innerHTML='<p class=bad>'+s.error+'</p>';return}
  ENORIG={};const g=document.createElement('div');g.className='grid';
  s.fields.forEach(r=>{const key='en|'+r.label;ENORIG[key]=r.value;
-  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.width}B</span></label>`+
+  g.innerHTML+=`<div class=fld><label>${r.label} <span class=pill>${r.kind=='egrade'?'grade':r.kind=='drop'?'item':r.width+'B'}</span></label>`+
    `<div class=in>${ctrl(r,key)}`+
    `<button class="ghost mini" title=restore onclick=restoreEnemyField(this) data-k="${key}">↺</button></div></div>`;});
  box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
@@ -669,6 +690,41 @@ function skillfxShow(){const f=(document.getElementById('skillfxfilter').value||
  document.getElementById('skillfxsections').innerHTML=h+'</tbody></table>';}
 async function setSkillfx(inp){const r=await j('/api/setskillfx',{iso:iso(),id:parseInt(inp.dataset.i),rank:parseInt(inp.dataset.r),value:parseInt(inp.value)});
  inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Skill #'+inp.dataset.i+' '+SKILLFXRANKS[inp.dataset.r]+' saved','ok')}
+
+// ---- Unites: pick a unite, swap its member slots ----
+let UNITES=[], UCUR=null, UORIG={}, UROSTER=[];
+async function loadUnites(){if(!iso())return;const s=await j('/api/unites',{iso:iso()});
+ if(s.error){document.getElementById('unitesections').innerHTML='<p class=bad>'+s.error+'</p>';return}
+ UNITES=s.unites||[];UROSTER=s.roster||[];
+ document.getElementById('uniterow').style.display='';fillUnites();loadUnite();}
+function fillUnites(){const sel=document.getElementById('usel'),f=(document.getElementById('ufilter').value||'').toLowerCase();
+ sel.innerHTML=UNITES.filter(u=>!f||u.name.toLowerCase().includes(f)||(''+u.id).includes(f))
+  .map(u=>`<option value="${u.id}">${u.id} — ${u.name}</option>`).join('');}
+function filterUnites(){fillUnites();loadUnite();}
+function loadUnite(){const sel=document.getElementById('usel');if(!sel.value)return;
+ UCUR=parseInt(sel.value);const u=UNITES.find(x=>x.id===UCUR);if(!u)return;
+ const box=document.getElementById('unitesections');UORIG={};
+ const opts=v=>UROSTER.map(c=>`<option value=${c.id} ${c.id==v?'selected':''}>${c.name}</option>`).join('');
+ let g='<div class=sec><h3>'+u.name+' <span class=note>· '+u.count+' members</span></h3><div class=grid>';
+ g+=`<div class=note style="grid-column:1/-1;margin:-2px 0 2px">${u.effect||''}</div>`;
+ u.ids.forEach((v,k)=>{const key='u|'+k;UORIG[key]=v;
+  g+=`<div class=fld><label>Member ${k+1} <span class=pill>char</span></label>`+
+   `<div class=in><select data-k="${key}">${opts(v)}</select>`+
+   `<button class="ghost mini" title=restore onclick=restoreUniteField(this) data-k="${key}">↺</button></div></div>`;});
+ box.innerHTML=g+'</div></div>';refreshUniteDirty();}
+function refreshUniteDirty(){document.querySelectorAll('#unitesections select[data-k]').forEach(i=>{
+ const inn=i.closest('.in'),d=String(i.value)!=String(UORIG[i.dataset.k]);
+ i.classList.toggle('chg',d);if(inn)inn.classList.toggle('chg',d);});}
+document.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#unitesections'))refreshUniteDirty();});
+function restoreUniteField(btn){const i=document.querySelector('#unitesections [data-k="'+btn.dataset.k+'"]');
+ if(i){i.value=UORIG[btn.dataset.k];}refreshUniteDirty();}
+function revertUnite(){document.querySelectorAll('#unitesections [data-k]').forEach(i=>{i.value=UORIG[i.dataset.k]});refreshUniteDirty();toast('Reverted unsaved changes')}
+async function saveUnite(){if(!needIso())return;const edits=[];
+ document.querySelectorAll('#unitesections [data-k]').forEach(i=>{if(i.value!=UORIG[i.dataset.k]){const slot=parseInt(i.dataset.k.split('|')[1]);edits.push({slot,charId:parseInt(i.value)})}});
+ if(!edits.length){toast('No changes to save');return}
+ const s=await j('/api/setunite',{iso:iso(),id:UCUR,edits});
+ if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' member(s)','ok');await loadUnites();
+  document.getElementById('usel').value=UCUR;loadUnite();}}
 
 async function hardmode(restore){if(!needIso())return;
  const factor=parseFloat(document.getElementById('hmfactor').value);
@@ -937,6 +993,22 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     P.write_skillfx(g, int(d["id"]), int(d["rank"]), int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/unites":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                cn = {c["id"]: c["name"] for c in F.load_characters()}
+                with P.Iso(iso) as g: us = P.read_unites(g, cn)
+                roster = sorted(({"id": i, "name": n} for i, n in {**cn, **F.UNITE_EXTRA_CHARS}.items()),
+                                key=lambda c: c["name"].lower())
+                return self._send(200, json.dumps({"unites": us, "roster": roster}))
+            if self.path == "/api/setunite":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    for e in d.get("edits", []):
+                        P.write_unite_member(g, int(d["id"]), int(e["slot"]), int(e["charId"]))
+                return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/hardmode":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -960,7 +1032,14 @@ class H(http.server.BaseHTTPRequestHandler):
                 try: held = json.load(open(os.path.join(HERE, "s5_held_items.json"))).get("map", {})
                 except Exception: held = {}
                 return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
-                    "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
+                    "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES,
+                    "egrades": F.ENEMY_AFFINITY_GRADES,
+                    # drop dropdown: u16 value (category | item<<8) -> "Category · Item"
+                    "dropitems": {str((int(k.split(":")[1]) << 8) | int(k.split(":")[0])):
+                                  f"{F.DROP_TABLE['categories'].get(k.split(':')[0], 'Cat ' + k.split(':')[0])} · {v}"
+                                  for k, v in sorted(F.DROP_TABLE["items"].items(),
+                                                     key=lambda kv: (int(kv[0].split(":")[0]), int(kv[0].split(":")[1])))},
+                    "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
                     "elements": {str(k): v for k, v in F.ELEMENT_NAMES.items()},
                     "targets": {str(k): v for k, v in F.TARGET_NAMES.items()}}))
             if self.path == "/api/backups":
