@@ -400,7 +400,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   </div>
   <pre id=out>—</pre>
   <h2 style="margin-top:18px">Overlays (OVL/*.ROM)</h2>
-  <p class=sub>The disc's compressed engine overlays (battle, war, minigames…). Extract decompresses one to a <code>.bin</code> you can open in a disassembler — groundwork for battle-code research (e.g. unite damage). Read-only; writes only the extracted file.</p>
+  <p class=sub>The disc's compressed engine overlays (battle, war, minigames…). <b>Extract</b> decompresses one to <code>overlays_extracted/&lt;name&gt;.bin</code>; edit that file in a hex editor / disassembler (keep it the same length), then <b>Re-insert</b> to recompress and write it back into the ISO. Re-insert is guarded (must fit the file's sector slot) and makes a <code>.bak</code> when backups are on.</p>
   <div class=row><button onclick=loadOverlays()>List overlays</button>
    <button class=ghost onclick=extractAllOverlays()>Extract all</button>
    <span id=ovlnote class=note></span></div>
@@ -834,7 +834,8 @@ async function loadOverlays(){if(!needIso())return;const s=await j('/api/overlay
  let h='<table><thead><tr><th>Name</th><th>Compressed</th><th>Decompressed</th><th></th></tr></thead><tbody>';
  OVERLAYS.forEach(o=>{h+=`<tr><td>${o.name}</td><td class=note>${o.size.toLocaleString()}</td>`+
   `<td class=note>${o.decSize?o.decSize.toLocaleString():'(raw)'}</td>`+
-  `<td><button class="ghost mini" onclick="extractOverlay('${o.name}')">Extract</button></td></tr>`});
+  `<td><button class="ghost mini" onclick="extractOverlay('${o.name}')">Extract</button>`+
+  (o.decSize?`<button class="ghost mini" onclick="reinsertOverlay('${o.name}')">Re-insert</button>`:'')+`</td></tr>`});
  document.getElementById('overlays').innerHTML=h+'</tbody></table>';}
 async function extractOverlay(name){const r=await j('/api/extractoverlay',{iso:iso(),name});
  if(r.error){toast(r.error,'bad');return}toast(name+' → '+r.decSize.toLocaleString()+' bytes ('+r.kind+')','ok');
@@ -843,6 +844,12 @@ async function extractAllOverlays(){if(!needIso())return;if(!OVERLAYS.length)awa
  const r=await j('/api/extractoverlay',{iso:iso(),name:'*'});
  if(r.error){toast(r.error,'bad');return}toast('Extracted '+r.count+' overlays','ok');
  document.getElementById('ovlnote').innerHTML=r.count+' overlays extracted to <code>'+r.dir+'</code>';}
+async function reinsertOverlay(name){if(!needIso())return;
+ if(!confirm('Re-insert '+name+' from overlays_extracted/'+name.replace('.ROM','')+'.bin into the ISO?'))return;
+ const r=await j('/api/reinsertoverlay',{iso:iso(),name});
+ if(r.error){toast(r.error,'bad');document.getElementById('ovlnote').innerHTML='<span class=bad>'+r.error+'</span>';return}
+ toast(name+' re-inserted ('+r.newCompSize.toLocaleString()+' B, '+r.slack+' B slack)','ok');
+ document.getElementById('ovlnote').textContent=name+': recompressed '+r.container.toLocaleString()+' / '+r.slot.toLocaleString()+' B slot';}
 
 (async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
  MAPS=await j('/api/maps',{}); refInit();
@@ -1052,6 +1059,21 @@ class H(http.server.BaseHTTPRequestHandler):
                         P.extract_overlay(iso, o["name"], out_dir); n += 1
                     return self._send(200, json.dumps({"count": n, "dir": os.path.abspath(out_dir)}))
                 return self._send(200, json.dumps(P.extract_overlay(iso, nm, out_dir)))
+            if self.path == "/api/reinsertoverlay":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                nm = d.get("name", "")
+                bin_path = os.path.join(os.path.dirname(os.path.abspath(iso)),
+                                        "overlays_extracted", nm.replace(".ROM", "") + ".bin")
+                if not os.path.exists(bin_path):
+                    return self._send(200, json.dumps({"error": f"extract {nm} first (no {os.path.basename(bin_path)})"}))
+                try:
+                    P.backup(iso)
+                    with P.Iso(iso, writable=True) as g:
+                        res = P.reinsert_overlay(g, nm, bin_path)
+                    return self._send(200, json.dumps(res))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/healprices":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
