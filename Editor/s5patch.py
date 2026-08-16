@@ -164,6 +164,40 @@ def extract_overlay(iso_path, name, out_dir):
     return {"name": name, "path": os.path.abspath(outp), "kind": kind,
             "compSize": ov["size"], "decSize": len(data)}
 
+def _str_slot(d, off):
+    """Return the writable byte slot at off = printable run + following NULs."""
+    n = len(d); j = off
+    while j < n and 0x20 <= d[j] < 0x7F: j += 1
+    k = j
+    while k < n and d[k] == 0: k += 1
+    return j, k - off   # run_end, cap (run + trailing nulls)
+
+def overlay_strings(bin_path, minlen=4, limit=5000):
+    """List editable ASCII strings in a decompressed overlay .bin (in-place slots)."""
+    d = open(bin_path, "rb").read(); out = []; i = 0; n = len(d)
+    while i < n and len(out) < limit:
+        if 0x20 <= d[i] < 0x7F:
+            run_end, cap = _str_slot(d, i)
+            if run_end - i >= minlen and run_end < n and d[run_end] == 0:
+                out.append({"off": i, "text": d[i:run_end].decode("latin1"), "cap": cap})
+                i += cap; continue
+            i = run_end
+        else:
+            i += 1
+    return out
+
+def write_overlay_string(bin_path, off, text):
+    """Byte-capped, in-place edit of one string in the extracted .bin (keeps length)."""
+    d = bytearray(open(bin_path, "rb").read())
+    _, cap = _str_slot(d, off)
+    enc = text.encode("latin1", "replace")
+    if len(enc) + 1 > cap:
+        raise ValueError(f"too long: {len(enc)+1} bytes but slot is only {cap}")
+    d[off:off + cap] = enc + b"\x00" * (cap - len(enc))
+    open(bin_path, "wb").write(d)
+    return {"ok": True, "cap": cap, "wrote": len(enc)}
+
+
 def _find_ovl_dirrec(iso_path, name):
     """Return (abs_offset_of_record, record_len) for OVL/<name> in the ISO directory."""
     f, rlba, rsz = iso_root(iso_path)
