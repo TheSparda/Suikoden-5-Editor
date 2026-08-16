@@ -501,9 +501,9 @@ def _unswizzle_clut256(c):
 # (4096 B) + a 256-color RGBA CLUT (1024 B), rendered at 2x vertical -> 128x64.
 _FACE_W, _FACE_H, _FACE_IDX, _FACE_CLUT = 128, 32, 4096, 1024
 
-def render_portraits(iso_path, name):
-    """Decode a FACE/BTL_FACE dxt texture file to a list of PNG portraits (RGBA, 128x64).
-    Raises ValueError if the file isn't a portrait/dxt texture container."""
+def _decode_faces(iso_path, name):
+    """Decode a FACE/BTL_FACE dxt texture file to a list of RGBA face buffers (128x64).
+    Returns (faces, W, H). Raises ValueError if not a dxt texture container."""
     _, data, codec = _datapak_read(iso_path, name)
     if data[:4] != b"\x00dxt":
         raise ValueError(f"{name} is not a portrait/dxt texture (tag {data[:4].hex()}, codec {codec})")
@@ -512,7 +512,8 @@ def render_portraits(iso_path, name):
         j = data.find(b"\xff\xff\x03\x18", i)
         if j < 0: break
         marks.append(j); i = j + 4
-    out = []
+    W, H = _FACE_W, _FACE_H * 2
+    faces = []
     for k in range(len(marks) - 1):
         if not (5100 <= marks[k + 1] - marks[k] <= 5200):
             continue
@@ -520,17 +521,35 @@ def render_portraits(iso_path, name):
         if len(s) < _FACE_IDX + _FACE_CLUT:
             continue
         idx = s[:_FACE_IDX]; clut = _unswizzle_clut256(s[_FACE_IDX:_FACE_IDX + _FACE_CLUT])
-        rgba = bytearray(_FACE_W * (_FACE_H * 2) * 4)
+        rgba = bytearray(W * H * 4)
         for y in range(_FACE_H):
             for x in range(_FACE_W):
                 ci = idx[y * _FACE_W + x]
-                r, g, b, a = clut[ci*4], clut[ci*4+1], clut[ci*4+2], clut[ci*4+3]
-                a = min(255, a * 2)   # PS2 alpha: 0x80 = opaque
-                for dy in range(2):   # 2x vertical to correct native squish
-                    o = ((y * 2 + dy) * _FACE_W + x) * 4
+                r, g, b, a = clut[ci*4], clut[ci*4+1], clut[ci*4+2], min(255, clut[ci*4+3] * 2)
+                for dy in range(2):
+                    o = ((y * 2 + dy) * W + x) * 4
                     rgba[o], rgba[o+1], rgba[o+2], rgba[o+3] = r, g, b, a
-        out.append(_png(_FACE_W, _FACE_H * 2, rgba))
-    return out
+        faces.append(rgba)
+    return faces, W, H
+
+def render_portraits(iso_path, name):
+    """List of PNG portraits (RGBA, 128x64) for a FACE/BTL_FACE dxt texture file."""
+    faces, W, H = _decode_faces(iso_path, name)
+    return [_png(W, H, f) for f in faces]
+
+def render_portrait_sheet(iso_path, name, cols=8):
+    """Compose all portraits into a single RGBA sprite-sheet PNG. Returns (png_bytes, count)."""
+    faces, W, H = _decode_faces(iso_path, name)
+    if not faces: raise ValueError(f"no portraits found in {name}")
+    cols = max(1, min(cols, len(faces))); rows = (len(faces) + cols - 1) // cols
+    SW, SH = cols * W, rows * H
+    sheet = bytearray(SW * SH * 4)
+    for fi, f in enumerate(faces):
+        ox, oy = (fi % cols) * W, (fi // cols) * H
+        for y in range(H):
+            dst = ((oy + y) * SW + ox) * 4
+            sheet[dst:dst + W * 4] = f[y * W * 4:(y + 1) * W * 4]
+    return _png(SW, SH, sheet), len(faces)
 
 
 def datapak_extract(iso_path, name, out_dir):
