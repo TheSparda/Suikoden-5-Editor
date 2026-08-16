@@ -1,0 +1,198 @@
+[
+{
+"name": "Sworn Protector (Lyon)",
+"effect": "1.2-1.5x damage to one enemy (grows with story choices)"
+},
+{
+"name": "Sworn Protector (Miakis)",
+"effect": "1.2-1.5x damage to one enemy (grows with story choices)"
+},
+{
+"name": "Royal Power",
+"effect": "0.5-0.7x damage to all enemies (grows with story choices)"
+},
+{
+"name": "Falena's Finest",
+"effect": "0.2-0.4x damage to all enemies (grows with story choices)"
+},
+{
+"name": "Perfect Likeness",
+"effect": "1.2-1.5x damage to one enemy; Roy Unfriendly"
+},
+{
+"name": "Flash of Steel",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Maze of Steel",
+"effect": "0.4x damage to all enemies"
+},
+{
+"name": "Fancy Lad",
+"effect": "1.4x damage to one enemy"
+},
+{
+"name": "Pretty Boy",
+"effect": "0.5x damage to all enemies"
+},
+{
+"name": "Looks Can Kill",
+"effect": "0.5x damage to all enemies; chance of Berserk"
+},
+{
+"name": "Pretty Girl",
+"effect": "0.5x damage to all enemies"
+},
+{
+"name": "Kiss Goodbye",
+"effect": "0.5x damage to all enemies; chance of Sleep"
+},
+{
+"name": "Kiss Goodnight",
+"effect": "0.5x damage to all enemies; chance of Sleep"
+},
+{
+"name": "Secret Crush",
+"effect": "0.5x damage to all enemies; chance of Silence"
+},
+{
+"name": "Endless Blows",
+"effect": "1x damage to a cluster; Goesch Unbalanced"
+},
+{
+"name": "Dad and Daughter",
+"effect": "1x damage to a row; Logg Unbalanced"
+},
+{
+"name": "Family",
+"effect": "0.6x damage to all enemies; Logg Unbalanced"
+},
+{
+"name": "Petty Rivals",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Brotherly Love",
+"effect": "1x damage to a cluster; both Unbalanced"
+},
+{
+"name": "Case Closed",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Maximillian",
+"effect": "1.5x damage to one enemy; Mathias Unbalanced"
+},
+{
+"name": "Island Storm",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "Armes Greeting",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Oops!",
+"effect": "1x damage to a cluster; Genoh Unbalanced"
+},
+{
+"name": "Stampede",
+"effect": "0.7x damage to all enemies; all three Unbalanced"
+},
+{
+"name": "Scarlet Charge",
+"effect": "1.2x damage to a column; Lance Unbalanced"
+},
+{
+"name": "Azure Charge",
+"effect": "0.9x damage to a row; Flail Unbalanced"
+},
+{
+"name": "Violet Charge",
+"effect": "0.8x damage to all enemies; Ax Unbalanced"
+},
+{
+"name": "Friends Forever",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "Beast Tamer",
+"effect": "1.2x damage to a column; Ernst must be in beast form; Ernst Unbalanced"
+},
+{
+"name": "Shining Scalp",
+"effect": "0.5x damage to all enemies; chance of Darkness"
+},
+{
+"name": "Arrow Storm",
+"effect": "0.7x damage to all enemies"
+},
+{
+"name": "Sindar Surge",
+"effect": "0.6x damage to all enemies; Lorelai & Killey Unfriendly"
+},
+{
+"name": "Crowd Favorites",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "Shoot and Smash",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Lockdown",
+"effect": "1.2x damage to one enemy"
+},
+{
+"name": "Beaver Rush",
+"effect": "1.2x damage to one enemy; chance of Instant Death"
+},
+{
+"name": "Tunnelin' Thru",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "DoReMi",
+"effect": "0.5x damage to all enemies"
+},
+{
+"name": "Conceit",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "Fate",
+"effect": "No effect; just for kicks"
+},
+{
+"name": "Fugitive Hunt",
+"effect": "1x damage to one enemy; chance to deal 1.5x"
+},
+{
+"name": "Pride of Magic",
+"effect": "100 basic magic damage to all enemies (scales with MAG)"
+},
+{
+"name": "Dragon Cavalry",
+"effect": "0.6x damage to all enemies; all three Unbalanced"
+},
+{
+"name": "Sword Master",
+"effect": "1x damage to a column"
+},
+{
+"name": "Sword Sage",
+"effect": "1x damage to a column"
+},
+{
+"name": "Speak With Fists",
+"effect": "1.2x damage to one enemy (both must be Berserked)"
+},
+{
+"name": "Teen Rebellion",
+"effect": "1.3x damage to one enemy"
+},
+{
+"name": "Sacred Greenhorn",
+"effect": "1.2x damage to one enemy"
+}
+]
