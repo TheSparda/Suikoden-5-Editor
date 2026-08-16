@@ -108,7 +108,10 @@ PNGs or a single **sprite sheet** — or **Download ALL portraits** at once as o
 folder per set (every FACE file in the game). Below
 that, an **All DATA.PAK files** browser lets you search and extract any of the ~7,700 internal
 files in the game's 2.3 GB CRI ROFS asset volume (uncompressed, LZSS and `bpe`-compressed
-files are all decoded).
+files are all decoded). Decodable rows also get a **Textures** button that renders any packed
+image to PNG at native size — field/map sprites (`SR_CHR*`), effect & particle art (`*_TEX*`:
+fire, explosions, lens flares…), and UI window skins (`TLK_WIN`/`GMF*`) — handling both 8-bit
+palettized and 32-bit direct-colour textures.
 
 Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
 grouped navigation, and a light/dark theme toggle.
