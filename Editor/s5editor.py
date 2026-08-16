@@ -313,6 +313,11 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=row><input id=runepricefilter size=14 placeholder="filter rune…" oninput=runePriceShow()>
    <span id=runepricenote class=note></span></div>
   <div class=scroll id=runeprices></div>
+  <h2 style="margin-top:18px">Healing Item Prices</h2>
+  <p class=sub>Buy / sell for medicines, incenses and foods.</p>
+  <div class=row><input id=healpricefilter size=14 placeholder="filter item…" oninput=healPriceShow()>
+   <span id=healpricenote class=note></span></div>
+  <div class=scroll id=healprices></div>
  </section>
 
  <section class=panel id=p-mp>
@@ -415,9 +420,9 @@ function ctrl(r,key){const v=r.value;
   o+=`<option value=0 ${cur==0?'selected':''}>— none —</option>`;
   Object.keys(D).forEach(k=>{o+=`<option value=${k} ${k==cur?'selected':''}>${D[k]}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
- if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
+ if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='spellstatus'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
   const A=MAPS.armor||{};
-  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets,helditem:MAPS.held,
+  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets,spellstatus:MAPS.spellstatus,helditem:MAPS.held,
              armorhead:A.head,armorbody:A.body,armorarm:A.glove,armorfoot:A.foot}[r.kind])||{};
   const nm=id=>{const e=it[id];return e?(e.name||e):('#'+id)};
   const hideId=r.kind=='helditem'||(r.kind.indexOf&&r.kind.indexOf('armor')==0);  // hide raw id for held items + armor slots
@@ -536,7 +541,7 @@ async function saveChar(){if(!needIso())return;const edits=[];
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadChar()}}
 
 // ---- Runes & Spells: pick a rune, edit its spells inline (no spell dropdown) ----
-function pillFor(r){return r.kind=='element'?'element':r.kind=='target'?'target':r.width+'B';}
+function pillFor(r){return r.kind=='element'?'element':r.kind=='target'?'target':r.kind=='spellstatus'?'status':r.width+'B';}
 let RUNES=[], RCUR=null, RORIG={};
 function fillRunes(){const sel=document.getElementById('rsel'),f=(document.getElementById('rfilter').value||'').toLowerCase();
  sel.innerHTML=RUNES.filter(r=>!f||r.name.toLowerCase().includes(f)||(''+r.id).includes(f))
@@ -655,8 +660,19 @@ async function saveGear(){if(!needIso())return;const edits=[];
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
  if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');
- const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}}
-let RUNEPRICES=[];
+ const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}
+ const hp=await j('/api/healprices',{iso:iso()});if(!hp.error){HEALPRICES=hp.prices||[];healPriceShow();}}
+let RUNEPRICES=[], HEALPRICES=[];
+function healPriceShow(){const f=(document.getElementById('healpricefilter').value||'').toLowerCase();
+ const rows=HEALPRICES.filter(p=>!f||p.name.toLowerCase().includes(f));
+ document.getElementById('healpricenote').textContent=rows.length+' items';
+ let h='<table><thead><tr><th>#</th><th>Item</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
+ rows.forEach(p=>{h+=`<tr><td class=note>${p.index}</td><td>${p.name}</td>`+
+  `<td><input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setHealPrice(this)></td>`+
+  `<td><input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setHealPrice(this)></td></tr>`});
+ document.getElementById('healprices').innerHTML=h+'</tbody></table>';}
+async function setHealPrice(inp){const r=await j('/api/sethealprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Item #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
 function runePriceShow(){const f=(document.getElementById('runepricefilter').value||'').toLowerCase();
  const rows=RUNEPRICES.filter(p=>!f||p.name.toLowerCase().includes(f));
  document.getElementById('runepricenote').textContent=rows.length+' runes';
@@ -998,6 +1014,18 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     P.write_rune_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/healprices":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: pr = P.read_heal_prices(g)
+                return self._send(200, json.dumps({"prices": pr}))
+            if self.path == "/api/sethealprice":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    P.write_heal_price(g, int(d["index"]), d["field"], int(d["value"]))
+                return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/mp":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
@@ -1063,6 +1091,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
                     "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES,
                     "egrades": F.ENEMY_AFFINITY_GRADES,
+                    "spellstatus": {str(k): v for k, v in F.SPELL_STATUS_NAMES.items()},
                     # drop dropdown: u16 value (category | item<<8) -> "Category · Item"
                     "dropitems": {str((int(k.split(":")[1]) << 8) | int(k.split(":")[0])):
                                   f"{F.DROP_TABLE['categories'].get(k.split(':')[0], 'Cat ' + k.split(':')[0])} · {v}"

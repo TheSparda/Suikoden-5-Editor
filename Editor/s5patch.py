@@ -96,6 +96,21 @@ def write_rune_price(iso, index, field, value):
     if off is None: raise KeyError(field)
     iso.wu(F.RUNEPRICE_BASE + index * F.RUNEPRICE_STRIDE + off, 3, value)
 
+def read_heal_prices(iso):
+    out = []
+    for i in range(F.HEALPRICE_COUNT):
+        b = F.HEALPRICE_BASE + i * F.HEALPRICE_STRIDE
+        out.append({"index": i,
+                    "name": F.HEALPRICE_NAMES[i] if i < len(F.HEALPRICE_NAMES) else f"Item {i}",
+                    "buy": iso.ru(b, 3), "sell": iso.ru(b + 4, 3)})
+    return out
+
+def write_heal_price(iso, index, field, value):
+    if not (0 <= index < F.HEALPRICE_COUNT): raise KeyError(f"no healing item {index}")
+    off = {"buy": 0, "sell": 4}.get(field)
+    if off is None: raise KeyError(field)
+    iso.wu(F.HEALPRICE_BASE + index * F.HEALPRICE_STRIDE + off, 3, value)
+
 
 def spell_addr(sid): return F.SPELL_BASE + sid * F.SPELL_STRIDE
 
