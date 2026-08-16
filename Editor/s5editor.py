@@ -959,10 +959,20 @@ async function viewPortraits(name){if(!needIso())return;
  const r=await j('/api/portraits',{iso:iso(),name,save:true});
  if(r.error){document.getElementById('paknote').textContent='';toast(r.error,'bad');return}
  document.getElementById('paknote').innerHTML=r.count+' portraits from '+name+(r.saved?(' · saved PNGs to <code>'+r.saved+'</code>'):'');
+ const bar=document.createElement('div');bar.style.cssText='width:100%;margin-bottom:4px';
+ bar.innerHTML='<button class="ghost mini" onclick="downloadSheet(\''+name+'\')">⬇ Download all as sprite sheet (PNG)</button>';
+ box.appendChild(bar);
  r.faces.forEach((src,i)=>{const a=document.createElement('a');a.href=src;a.download='face_'+String(i).padStart(3,'0')+'.png';
   const im=new Image();im.src=src;im.title='face '+i+' (click to download)';im.style.cssText='height:64px;image-rendering:pixelated;border:1px solid #333';
   a.appendChild(im);box.appendChild(a);});
  toast(r.count+' portraits','ok');}
+async function downloadSheet(name){if(!needIso())return;toast('composing sheet…','ok');
+ const r=await j('/api/portraits',{iso:iso(),name,sheet:true,cols:8});
+ if(r.error){toast(r.error,'bad');return}
+ const a=document.createElement('a');a.href=r.sheet;a.download=name.split('.')[0]+'_sheet.png';
+ document.body.appendChild(a);a.click();a.remove();
+ document.getElementById('paknote').innerHTML=r.count+' faces · sheet saved to <code>'+r.saved+'</code>';
+ toast('sheet downloaded ('+r.count+' faces)','ok');}
 async function extractPak(name){const r=await j('/api/extractpak',{iso:iso(),name});
  if(r.error){toast(r.error,'bad');return}
  toast(name+' → '+r.size.toLocaleString()+' B ('+(r.decoded?r.codec+', decoded':r.codec+', raw')+')','ok');
@@ -1279,6 +1289,18 @@ class H(http.server.BaseHTTPRequestHandler):
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
                 nm = d.get("name", "")
+                if d.get("sheet"):
+                    try:
+                        import base64
+                        png, cnt = P.render_portrait_sheet(iso, nm, cols=int(d.get("cols", 8)))
+                        out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted")
+                        os.makedirs(out_dir, exist_ok=True)
+                        path = os.path.join(out_dir, nm.split(".")[0] + "_sheet.png")
+                        with open(path, "wb") as w: w.write(png)
+                        return self._send(200, json.dumps({"name": nm, "count": cnt, "saved": os.path.abspath(path),
+                            "sheet": "data:image/png;base64," + base64.b64encode(png).decode()}))
+                    except (ValueError, KeyError) as e:
+                        return self._send(200, json.dumps({"error": str(e)}))
                 try:
                     import base64
                     faces = P.render_portraits(iso, nm)
