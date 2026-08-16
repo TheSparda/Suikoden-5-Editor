@@ -219,7 +219,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  <button data-tab=gear onclick=showTab('gear')>Gear</button>
  <button data-tab=mp onclick=showTab('mp')>MP Growth</button>
  <button data-tab=skillfx onclick=showTab('skillfx')>Skill Effects</button>
- <button data-tab=unite data-palgate onclick=showTab('unite')>Unites</button>
+ <button data-tab=unite onclick=showTab('unite')>Unites</button>
  <button data-tab=save onclick=showTab('save')>Save Editor</button>
  <div class=navdrop>
   <button id=otherbtn onclick="event.stopPropagation();toggleOther()">Other ▾</button>
@@ -227,7 +227,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button data-tab=enemy onclick=showTab('enemy')>Enemies</button>
    <button data-tab=price onclick=showTab('price')>Prices</button>
    <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
-   <button data-tab=ref data-palgate onclick=showTab('ref')>Reference / Text</button>
+   <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
    <button data-tab=tools onclick=showTab('tools')>Tools</button>
   </div>
  </div>
@@ -528,6 +528,7 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
  const el=document.getElementById('status');const msg=s.msg||s.error||'error';
  el.textContent=(s.ok?'✓ ':'✗ ')+msg;el.className='note '+(s.ok?'ok':'bad');
  if(s.ok){REGION=s.region||'ntsc-u';applyRegionGate();
+  MAPS.held=(await j('/api/maps',{iso:iso()})).held||MAPS.held;   // region-specific held-item names
   document.getElementById('isoLabel').textContent=iso();toast(msg,'ok');
   LASTISO=iso();{const lb=document.getElementById('lastbtn');if(lb){lb.style.display='';lb.title=iso();}}
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
@@ -542,7 +543,7 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   document.getElementById('enemyhint').textContent='';loadEnemy();
   document.getElementById('gearrow').style.display='';
   document.getElementById('gearhint').textContent='';loadGear();
-  loadMP();loadSkillfx();if(REGION!=='pal')loadUnites();}
+  loadMP();loadSkillfx();loadUnites();}
  else toast(s.msg,'bad');}
 function fillChars(){const sel=document.getElementById('csel'),f=(document.getElementById('cfilter').value||'').toLowerCase();
  const match=c=>!f||c.name.toLowerCase().includes(f)||(''+c.id).includes(f);
@@ -997,7 +998,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 except Exception: pass
             # Endpoints whose PAL offsets aren't reverse-engineered yet — refuse in PAL so
             # we never read/write wrong data. (UI also hides these; this is the backstop.)
-            GATED_PAL = {"/api/unites", "/api/setunite", "/api/setstring"}
+            GATED_PAL = {"/api/setstring"}
             if F.REGION == "pal" and self.path in GATED_PAL:
                 return self._send(200, json.dumps({"error": "Not yet mapped for PAL — this "
                     "table's PAL offset hasn't been reverse-engineered.", "palGated": True}))
@@ -1294,7 +1295,8 @@ class H(http.server.BaseHTTPRequestHandler):
                     _ar = json.load(open(os.path.join(HERE, "s5_armor_names.json")))
                     armor = {slot: _ar.get(slot, {}) for slot in ("head", "body", "glove", "foot")}
                 except Exception: armor = {"head": {}, "body": {}, "glove": {}, "foot": {}}
-                try: held = json.load(open(os.path.join(HERE, "s5_held_items.json"))).get("map", {})
+                heldfile = "s5_held_items_pal.json" if F.REGION == "pal" else "s5_held_items.json"
+                try: held = json.load(open(os.path.join(HERE, heldfile))).get("map", {})
                 except Exception: held = {}
                 return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
                     "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES,
@@ -1377,14 +1379,17 @@ class H(http.server.BaseHTTPRequestHandler):
                         out[cat] = [{"i": i, "name": n} for i, n in enumerate(names)]
                 except Exception:
                     pass
-                # Raw editable ELF strings (all languages, offset-addressed). Relabelled so
-                # it's clear these are the writable in-place strings, not the clean lists.
-                try:
-                    ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
-                    for cat, entries in ref.items():
-                        out[f"{cat} (ELF text · editable)"] = entries
-                except Exception:
-                    pass
+                # Raw editable ELF strings (offset-addressed). NTSC-U only: the offsets in
+                # s5_reference.json are for SLUS-21291. PAL's 5-language ELF has a different
+                # layout that content-search can't relocate reliably (skills especially), so
+                # in PAL we serve only the read-only English lists above and skip these.
+                if F.REGION != "pal":
+                    try:
+                        ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
+                        for cat, entries in ref.items():
+                            out[f"{cat} (ELF text · editable)"] = entries
+                    except Exception:
+                        pass
                 return self._send(200, json.dumps(out))
             if self.path == "/api/setstring":
                 if not os.path.exists(iso):
