@@ -464,6 +464,10 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button class=ghost onclick=loadFaceList()>Refresh list</button>
    <span id=facenote class=note></span>
   </div>
+  <div class=row>
+   <button class=ghost onclick=downloadAllPortraits()>⬇ Download ALL portraits (ZIP)</button>
+   <span class=note>every FACE set at once, one folder each — takes a minute</span>
+  </div>
   <div id=portraits style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#111;padding:10px;border-radius:8px;margin-top:8px;min-height:40px"></div>
 
   <h2 style="margin-top:20px">All DATA.PAK files</h2>
@@ -1017,6 +1021,15 @@ async function downloadZip(name){if(!needIso()||!name)return;toast('zipping port
  document.body.appendChild(a);a.click();a.remove();
  const note=document.getElementById('facenote');if(note)note.innerHTML=r.count+' faces · zip saved to <code>'+r.saved+'</code>';
  toast('zip downloaded ('+r.count+' PNGs)','ok');}
+async function downloadAllPortraits(){if(!needIso())return;
+ const note=document.getElementById('facenote');if(note)note.textContent='rendering every portrait — this takes a minute…';
+ toast('rendering all portraits…','ok');
+ const r=await j('/api/portraits',{iso:iso(),all:true});
+ if(r.error){if(note)note.textContent='';toast(r.error,'bad');return}
+ const a=document.createElement('a');a.href=r.zip;a.download='suikoden5_all_portraits.zip';
+ document.body.appendChild(a);a.click();a.remove();
+ if(note)note.innerHTML=r.count+' faces from '+r.sets+' sets · zip saved to <code>'+r.saved+'</code>';
+ toast('all portraits: '+r.count+' PNGs from '+r.sets+' sets','ok');}
 async function downloadSheet(name){if(!needIso()||!name)return;toast('composing sheet…','ok');
  const r=await j('/api/portraits',{iso:iso(),name,sheet:true,cols:8});
  if(r.error){toast(r.error,'bad');return}
@@ -1350,6 +1363,18 @@ class H(http.server.BaseHTTPRequestHandler):
                         with open(path, "wb") as w: w.write(png)
                         return self._send(200, json.dumps({"name": nm, "count": cnt, "saved": os.path.abspath(path),
                             "sheet": "data:image/png;base64," + base64.b64encode(png).decode()}))
+                    except (ValueError, KeyError) as e:
+                        return self._send(200, json.dumps({"error": str(e)}))
+                if d.get("all"):
+                    try:
+                        import base64
+                        blob, sets, cnt = P.render_all_portraits_zip(iso)
+                        out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted")
+                        os.makedirs(out_dir, exist_ok=True)
+                        path = os.path.join(out_dir, "all_portraits.zip")
+                        with open(path, "wb") as w: w.write(blob)
+                        return self._send(200, json.dumps({"sets": sets, "count": cnt, "saved": os.path.abspath(path),
+                            "zip": "data:application/zip;base64," + base64.b64encode(blob).decode()}))
                     except (ValueError, KeyError) as e:
                         return self._send(200, json.dumps({"error": str(e)}))
                 if d.get("zip"):
