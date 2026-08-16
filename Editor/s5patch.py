@@ -593,6 +593,17 @@ def render_portrait_sheet(iso_path, name, cols=8):
             sheet[dst:dst + W * 4] = f[y * W * 4:(y + 1) * W * 4]
     return _png(SW, SH, sheet), len(faces)
 
+def render_portrait_zip(iso_path, name):
+    """Zip every portrait of a FACE file as individual PNGs. Returns (zip_bytes, count)."""
+    import io, zipfile
+    faces, W, H = _decode_faces(iso_path, name)
+    base = name.split(".")[0]
+    mem = io.BytesIO()
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
+        for i, f in enumerate(faces):
+            z.writestr("%s_%02d.png" % (base, i), _png(W, H, f))
+    return mem.getvalue(), len(faces)
+
 
 def datapak_extract(iso_path, name, out_dir):
     """Extract one internal DATA.PAK file by name (or path). `non`/stored and `szl`/LZSS
