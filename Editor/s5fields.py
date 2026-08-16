@@ -401,9 +401,9 @@ REGION = "ntsc-u"
 SERIALS = {"ntsc-u": b"SLUS_212.91", "pal": b"SLES_540.87"}
 REGION_NAMES = {"ntsc-u": "NTSC-U (SLUS-21291)", "pal": "PAL (SLES-54087)"}
 
-# TABLES keys skipped in PAL read_character (their PAL offsets aren't mapped). Only
-# "starting items" (region-specific held-item name pointers) remains after Phase 2.
-GATED_IN_PAL = ["starting items"]
+# TABLES keys skipped in PAL read_character (their PAL offsets aren't mapped). Empty
+# after Phase 3 — held-item pointers are mapped via s5_held_items_pal.json.
+GATED_IN_PAL = []
 
 # PAL bases (SLES_540.87) — see reference_s5_pal_map. NTSC bases are captured live below.
 _PAL = {
@@ -414,16 +414,22 @@ _PAL = {
     "armor_foot": 0x49C6B0, "armor_accessory": 0x4B2070,
     # Phase 2 (byte-match verified): rune->spell grant, shop item prices, starting-equipment armor.
     "runegrant": 0x4FAF02, "price": 0x49952C, "starting equipment": 0x498302,
+    # Phase 3: starting held-items share the starting-equipment record base.
+    "starting items": 0x498302,
+    # Phase 3: unite table (packed; byte-identical layout, Δ+0x59B0). scan-end keeps the
+    # same window span as NTSC (0x4D6000-0x4D3420 = 0x2BE0).
+    "unite": 0x4D8DD0, "unite_end": 0x4D8DD0 + 0x2BE0,
 }
 
 def _snapshot_bases():
     return {
         "stats": TABLES["stats"][0], "affinities": TABLES["affinities"][0],
         "equipable skills": TABLES["equipable skills"][0], "weapon growth": TABLES["weapon growth"][0],
-        "starting equipment": TABLES["starting equipment"][0],
+        "starting equipment": TABLES["starting equipment"][0], "starting items": TABLES["starting items"][0],
         "spell": SPELL_BASE, "runeprice": RUNEPRICE_BASE, "runeprice_stride": RUNEPRICE_STRIDE,
         "healprice": HEALPRICE_BASE, "mp": MP_BASE, "skillfx": SKILLFX_BASE, "enemy": ENEMY_BASE,
         "runegrant": RUNE_GRANT_BASE, "price": PRICE_BASE,
+        "unite": UNITE_BASE, "unite_end": UNITE_SCAN_END,
         "armor_head": ARMOR_TABLES["head"][0], "armor_body": ARMOR_TABLES["body"][0],
         "armor_arm": ARMOR_TABLES["arm"][0], "armor_foot": ARMOR_TABLES["foot"][0],
         "armor_accessory": ARMOR_TABLES["accessory"][0],
@@ -435,11 +441,13 @@ def set_region(region):
     """Rebind all region-variable table bases in place. No-op if unknown."""
     global REGION, SPELL_BASE, RUNEPRICE_BASE, RUNEPRICE_STRIDE, HEALPRICE_BASE
     global MP_BASE, SKILLFX_BASE, ENEMY_BASE, RUNE_GRANT_BASE, PRICE_BASE
+    global UNITE_BASE, UNITE_SCAN_END
     b = {"ntsc-u": _NTSC, "pal": _PAL}.get(region)
     if not b:
         return REGION
     REGION = region
-    for key in ("stats", "affinities", "equipable skills", "weapon growth", "starting equipment"):
+    for key in ("stats", "affinities", "equipable skills", "weapon growth",
+                "starting equipment", "starting items"):
         base, stride, fields = TABLES[key]
         TABLES[key] = (b[key], stride, fields)
     for slot in ("head", "body", "arm", "foot", "accessory"):
@@ -450,4 +458,5 @@ def set_region(region):
     HEALPRICE_BASE = b["healprice"]
     MP_BASE = b["mp"]; SKILLFX_BASE = b["skillfx"]; ENEMY_BASE = b["enemy"]
     RUNE_GRANT_BASE = b["runegrant"]; PRICE_BASE = b["price"]
+    UNITE_BASE = b["unite"]; UNITE_SCAN_END = b["unite_end"]
     return REGION
