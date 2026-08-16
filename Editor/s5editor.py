@@ -447,6 +447,14 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span id=otxtnote class=note></span>
   </div>
   <div class=scroll id=overlaytext></div>
+  <h2 style="margin-top:18px">Assets (DATA.PAK)</h2>
+  <p class=sub><code>DATA.PAK</code> is the game's 2.3 GB CRI ROFS asset volume — ~7,700 internal files (backgrounds, UI, effects, and character <b>portraits</b> as <code>FACE_*.ROM</code>). <b>List</b> browses them; <b>Extract</b> pulls one out to <code>datapak_extracted/</code>. Files stored uncompressed (<code>non</code>) or LZSS (<code>szl</code>) are decoded to <code>.bin</code>; the <code>bpe</code>-compressed ones (most textures/portraits) are dumped as raw <code>.rom</code> for now — a <code>bpe</code> decoder + PS2 texture→PNG step is in progress.</p>
+  <div class=row>
+   <button onclick=loadDatapak()>List DATA.PAK files</button>
+   <input id=pakfilter size=18 placeholder="filter path (e.g. FACE)" onkeydown="if(event.key==='Enter')loadDatapak()">
+   <span id=paknote class=note></span>
+  </div>
+  <div class=scroll id=datapak></div>
  </section>
 </main>
 <footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.1.0</footer>
@@ -931,6 +939,22 @@ async function reinsertOverlay(name){if(!needIso())return;
  if(r.error){toast(r.error,'bad');document.getElementById('ovlnote').innerHTML='<span class=bad>'+r.error+'</span>';return}
  toast(name+' re-inserted ('+r.newCompSize.toLocaleString()+' B, '+r.slack+' B slack)','ok');
  document.getElementById('ovlnote').textContent=name+': recompressed '+r.container.toLocaleString()+' / '+r.slot.toLocaleString()+' B slot';}
+let PAKFILES=[];
+async function loadDatapak(){if(!needIso())return;
+ const filt=document.getElementById('pakfilter').value.trim();
+ document.getElementById('paknote').textContent='reading DATA.PAK…';
+ const r=await j('/api/datapak',{iso:iso(),filter:filt});
+ if(r.error){document.getElementById('paknote').textContent='';toast(r.error,'bad');return}
+ PAKFILES=r.files||[];
+ document.getElementById('paknote').textContent=PAKFILES.length+(filt?(' matching "'+filt+'"'):' files');
+ let h='<table><thead><tr><th>Path</th><th>Size</th><th>Codec</th><th></th></tr></thead><tbody>';
+ PAKFILES.slice(0,800).forEach(e=>{h+=`<tr><td class=note>${e.path}</td><td class=note>${e.size.toLocaleString()}</td>`+
+  `<td>${e.codec}</td><td><button class="ghost mini" onclick="extractPak('${e.name}')">Extract</button></td></tr>`});
+ document.getElementById('datapak').innerHTML=h+'</tbody></table>'+(PAKFILES.length>800?'<p class=note>showing first 800 — filter to narrow</p>':'');}
+async function extractPak(name){const r=await j('/api/extractpak',{iso:iso(),name});
+ if(r.error){toast(r.error,'bad');return}
+ toast(name+' → '+r.size.toLocaleString()+' B ('+(r.decoded?r.codec+', decoded':r.codec+', raw')+')','ok');
+ document.getElementById('paknote').innerHTML='Extracted <code>'+r.out+'</code>'+(r.decoded?'':' (still '+r.codec+'-compressed — texture decode WIP)');}
 async function modStatus(){if(!needIso())return;const r=await j('/api/modstatus',{iso:iso()});
  if(r.error){toast(r.error,'bad');return}
  document.getElementById('modstat').textContent=r.runs?(r.runs+' edit'+(r.runs>1?'s':'')+' recorded · '+r.bytes+' bytes'):'no edits recorded yet';}
@@ -1221,6 +1245,22 @@ class H(http.server.BaseHTTPRequestHandler):
                     with P.Iso(iso, writable=True) as g:
                         res = P.reinsert_overlay(g, nm, bin_path)
                     return self._send(200, json.dumps(res))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/datapak":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    files = P.datapak_list(iso, filt=d.get("filter", ""))
+                    return self._send(200, json.dumps({"files": files, "total": len(files)}))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/extractpak":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted")
+                try:
+                    return self._send(200, json.dumps(P.datapak_extract(iso, d.get("name", ""), out_dir)))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/healprices":
