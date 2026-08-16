@@ -308,6 +308,11 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <input id=pricefilter size=12 placeholder="min buy…" oninput=priceShow()>
    <span id=pricenote class=note></span></div>
   <div class=scroll id=prices></div>
+  <h2 style="margin-top:18px">Rune (Orb) Prices</h2>
+  <p class=sub>Buy / sell for each rune orb (verified vs the rune guide; sell = buy ÷ 2; event-only orbs have buy 0).</p>
+  <div class=row><input id=runepricefilter size=14 placeholder="filter rune…" oninput=runePriceShow()>
+   <span id=runepricenote class=note></span></div>
+  <div class=scroll id=runeprices></div>
  </section>
 
  <section class=panel id=p-mp>
@@ -649,7 +654,19 @@ async function saveGear(){if(!needIso())return;const edits=[];
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadGearItem()}}
 
 async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
- if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok')}
+ if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');
+ const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}}
+let RUNEPRICES=[];
+function runePriceShow(){const f=(document.getElementById('runepricefilter').value||'').toLowerCase();
+ const rows=RUNEPRICES.filter(p=>!f||p.name.toLowerCase().includes(f));
+ document.getElementById('runepricenote').textContent=rows.length+' runes';
+ let h='<table><thead><tr><th>#</th><th>Rune</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
+ rows.forEach(p=>{h+=`<tr><td class=note>${p.index}</td><td>${p.name}</td>`+
+  `<td><input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setRunePrice(this)></td>`+
+  `<td><input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setRunePrice(this)></td></tr>`});
+ document.getElementById('runeprices').innerHTML=h+'</tbody></table>';}
+async function setRunePrice(inp){const r=await j('/api/setruneprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Rune #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
 function priceShow(){const min=parseInt(document.getElementById('pricefilter').value||'0')||0;
  const rows=PRICES.filter(p=>p.buy>=min);
  document.getElementById('pricenote').textContent=rows.length+' items';
@@ -968,6 +985,18 @@ class H(http.server.BaseHTTPRequestHandler):
                 P.backup(iso)
                 with P.Iso(iso, writable=True) as g:
                     P.write_price(g, int(d["index"]), d["field"], int(d["value"]))
+                return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/runeprices":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g: pr = P.read_rune_prices(g)
+                return self._send(200, json.dumps({"prices": pr}))
+            if self.path == "/api/setruneprice":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                P.backup(iso)
+                with P.Iso(iso, writable=True) as g:
+                    P.write_rune_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/mp":
                 if not os.path.exists(iso):
