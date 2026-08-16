@@ -14,6 +14,9 @@ USA Suikoden V save folders are prefixed BASLUS-21291.
 """
 import struct, os, glob, shutil
 
+# When False, no .bak copies are made before writes (toggle in the UI / persisted state).
+BACKUPS = True
+
 MAGIC = b"Sony PS2 Memory Card Format"
 S5_PREFIX = "BASLUS-21291"     # USA Suikoden V save-folder prefix on the memcard
 
@@ -149,7 +152,7 @@ def _write_cbs(path, b, edits, make_backup=True):
     newcomp = _rc4(zlib.compress(bytes(body), 9))
     newb = bytearray(b[:hlen]) + newcomp
     struct.pack_into("<L", newb, 16, len(newb))     # flen field = total file size (as-authored)
-    if make_backup and not os.path.exists(path + ".bak"):
+    if make_backup and BACKUPS and not os.path.exists(path + ".bak"):
         shutil.copy2(path, path + ".bak")
     with open(path, "wb") as f: f.write(bytes(newb))
     return {"ok": True, "changed": changed,
@@ -169,7 +172,7 @@ def write_individual_save(path, edits, make_backup=True):
     off, gd = tgt
     new_gd, changed = apply_gamedata_edits(gd, edits)
     if changed == 0: return {"ok": True, "changed": 0}
-    if make_backup and not os.path.exists(path + ".bak"):
+    if make_backup and BACKUPS and not os.path.exists(path + ".bak"):
         shutil.copy2(path, path + ".bak")
     ba = bytearray(b); ba[off:off + len(new_gd)] = new_gd
     with open(path, "wb") as f: f.write(ba)
@@ -235,7 +238,7 @@ def write_save_fields(card_path, folder, edits, make_backup=True):
     if not gd: return {"error": "gamedata payload not found"}
     new_gd, changed = apply_gamedata_edits(gd, edits)
     if changed == 0: return {"ok": True, "changed": 0}
-    if make_backup and not os.path.exists(card_path + ".bak"):
+    if make_backup and BACKUPS and not os.path.exists(card_path + ".bak"):
         shutil.copy2(card_path, card_path + ".bak")
     card.write_file(tgt["cluster"], tgt["length"], folder, new_gd)
     with open(card_path, "wb") as f:

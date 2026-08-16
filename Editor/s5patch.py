@@ -274,7 +274,11 @@ def set_name(iso, index, name):
            name.encode("ascii").ljust(F.NAME_ENTRY_SIZE, b"\x00"))
 
 
+# When False, no .bak copies are made before writes (toggle in the UI / persisted state).
+BACKUPS = True
+
 def backup(path):
+    if not BACKUPS: return None
     bak = path + ".bak"
     if not os.path.exists(bak): shutil.copy2(path, bak)
     return bak

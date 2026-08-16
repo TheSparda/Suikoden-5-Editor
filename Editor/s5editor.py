@@ -22,6 +22,12 @@ def save_state(s):
     try: json.dump(s, open(STATE, "w"))
     except Exception: pass
 
+def _apply_backup_pref():
+    """Set the .bak toggle from persisted state (default ON) so writes honor it."""
+    on = bool(load_state().get("backups", True))
+    P.BACKUPS = on; SV.BACKUPS = on
+_apply_backup_pref()
+
 def pick_iso_dialog():
     """Open a native OS file-open dialog on the server machine (it runs locally, so
     the dialog appears on the user's own desktop). macOS uses AppleScript; other
@@ -198,6 +204,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  <span class=logo></span><b>Suikoden V</b><span class=note>ISO &amp; Save Editor</span>
  <span class=sp></span>
  <span class=iso id=isoLabel>no ISO loaded</span>
+ <label class=chk title="When on, a .bak copy is made before the first write to each file. Turn off to write without backups."><input type=checkbox id=bakToggle checked onchange=toggleBackups()> <span class=note>.bak backups</span></label>
  <button class="ghost mini" onclick=toggleTheme()>◐ Theme</button>
 </header>
 <nav id=nav>
@@ -421,6 +428,9 @@ function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.clas
 function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
 document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
  if(d&&!d.contains(e.target)){const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}});
+async function toggleBackups(){const on=document.getElementById('bakToggle').checked;
+ const r=await j('/api/backups',{on});
+ toast(on?'Backups ON — a .bak is made before writes':'Backups OFF — writes make no .bak', on?'ok':'bad');}
 function toggleTheme(){const l=document.body.classList.toggle('light');
  try{localStorage.s5theme=l?'light':'dark'}catch(e){}}
 
@@ -703,7 +713,7 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
   const ro=sv.editable===false;
   const foot=ro
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
-    : `<button onclick=saveWrite(${i})>Write to save</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first.</span>`;
+    : `<button onclick=saveWrite(${i})>Write to save</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
    `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
@@ -714,7 +724,8 @@ async function saveWrite(i){const sv=window._saves[i];
  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
   castleName:document.getElementById('sv'+i+'_castleName').value,
   newGamePlus:document.getElementById('sv'+i+'_ngp').checked?1:0};
- if(!confirm('Write to '+sv.card+'?  A .bak is made.'))return;
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm('Write to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
  if(r.error)toast('Error: '+r.error,'bad');else toast('Wrote '+r.changed+' field(s) to card','ok')}
 
@@ -723,7 +734,9 @@ async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getEle
 
 (async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
  MAPS=await j('/api/maps',{}); refInit();
- const st=%STATE%;if(st.iso){LASTISO=st.iso;
+ const st=%STATE%;
+ try{document.getElementById('bakToggle').checked=st.backups!==false;}catch(e){}
+ if(st.iso){LASTISO=st.iso;
   const lb=document.getElementById('lastbtn');lb.style.display='';lb.title=st.iso;
   document.getElementById('iso').value=st.iso;verify();}})();
 </script></body></html>
@@ -950,6 +963,11 @@ class H(http.server.BaseHTTPRequestHandler):
                     "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES, "help": F.SECTION_HELP, "globalHelp": F.GLOBAL_HELP,
                     "elements": {str(k): v for k, v in F.ELEMENT_NAMES.items()},
                     "targets": {str(k): v for k, v in F.TARGET_NAMES.items()}}))
+            if self.path == "/api/backups":
+                on = bool(d.get("on", True))
+                P.BACKUPS = on; SV.BACKUPS = on
+                st = load_state(); st["backups"] = on; save_state(st)
+                return self._send(200, json.dumps({"ok": True, "backups": on}))
             if self.path == "/api/reference":
                 out = {}
                 # Clean, canonical English name lists (index -> name, read-only: no ELF
