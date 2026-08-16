@@ -455,6 +455,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span id=paknote class=note></span>
   </div>
   <div class=scroll id=datapak></div>
+  <div id=portraits style="display:flex;flex-wrap:wrap;gap:6px;background:#111;padding:8px;border-radius:8px;margin-top:8px"></div>
  </section>
 </main>
 <footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.1.0</footer>
@@ -948,9 +949,20 @@ async function loadDatapak(){if(!needIso())return;
  PAKFILES=r.files||[];
  document.getElementById('paknote').textContent=PAKFILES.length+(filt?(' matching "'+filt+'"'):' files');
  let h='<table><thead><tr><th>Path</th><th>Size</th><th>Codec</th><th></th></tr></thead><tbody>';
- PAKFILES.slice(0,800).forEach(e=>{h+=`<tr><td class=note>${e.path}</td><td class=note>${e.size.toLocaleString()}</td>`+
-  `<td>${e.codec}</td><td><button class="ghost mini" onclick="extractPak('${e.name}')">Extract</button></td></tr>`});
+ PAKFILES.slice(0,800).forEach(e=>{const isface=/FACE/.test(e.name);h+=`<tr><td class=note>${e.path}</td><td class=note>${e.size.toLocaleString()}</td>`+
+  `<td>${e.codec}</td><td><button class="ghost mini" onclick="extractPak('${e.name}')">Extract</button>`+
+  (isface?`<button class="ghost mini" onclick="viewPortraits('${e.name}')">Portraits</button>`:'')+`</td></tr>`});
  document.getElementById('datapak').innerHTML=h+'</tbody></table>'+(PAKFILES.length>800?'<p class=note>showing first 800 — filter to narrow</p>':'');}
+async function viewPortraits(name){if(!needIso())return;
+ document.getElementById('paknote').textContent='decoding '+name+' portraits…';
+ const box=document.getElementById('portraits');box.innerHTML='';
+ const r=await j('/api/portraits',{iso:iso(),name,save:true});
+ if(r.error){document.getElementById('paknote').textContent='';toast(r.error,'bad');return}
+ document.getElementById('paknote').innerHTML=r.count+' portraits from '+name+(r.saved?(' · saved PNGs to <code>'+r.saved+'</code>'):'');
+ r.faces.forEach((src,i)=>{const a=document.createElement('a');a.href=src;a.download='face_'+String(i).padStart(3,'0')+'.png';
+  const im=new Image();im.src=src;im.title='face '+i+' (click to download)';im.style.cssText='height:64px;image-rendering:pixelated;border:1px solid #333';
+  a.appendChild(im);box.appendChild(a);});
+ toast(r.count+' portraits','ok');}
 async function extractPak(name){const r=await j('/api/extractpak',{iso:iso(),name});
  if(r.error){toast(r.error,'bad');return}
  toast(name+' → '+r.size.toLocaleString()+' B ('+(r.decoded?r.codec+', decoded':r.codec+', raw')+')','ok');
@@ -1261,6 +1273,26 @@ class H(http.server.BaseHTTPRequestHandler):
                 out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted")
                 try:
                     return self._send(200, json.dumps(P.datapak_extract(iso, d.get("name", ""), out_dir)))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/portraits":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                nm = d.get("name", "")
+                try:
+                    import base64
+                    faces = P.render_portraits(iso, nm)
+                    save = d.get("save")
+                    saved = None
+                    if save:
+                        out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted",
+                                               nm.split(".")[0] + "_portraits")
+                        os.makedirs(out_dir, exist_ok=True)
+                        for i, png in enumerate(faces):
+                            with open(os.path.join(out_dir, "face_%03d.png" % i), "wb") as w: w.write(png)
+                        saved = os.path.abspath(out_dir)
+                    return self._send(200, json.dumps({"name": nm, "count": len(faces), "saved": saved,
+                        "faces": ["data:image/png;base64," + base64.b64encode(p).decode() for p in faces]}))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/healprices":
