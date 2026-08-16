@@ -133,6 +133,7 @@ nav button.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:
 #isobar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 18px;background:var(--bg2);
  border-bottom:1px solid var(--line)}
 main{padding:18px;max-width:1080px;margin:0 auto}
+footer{max-width:1080px;margin:6px auto 24px;padding:14px 18px 0;border-top:1px solid var(--line,#2a2a33);color:var(--mut);font-size:12px;text-align:center}
 .panel{display:none}.panel.on{display:block;animation:fade .18s ease}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
 h2{font-family:var(--title);color:var(--gold2);font-size:19px;margin:2px 0 4px}
@@ -392,6 +393,32 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-tools>
   <h2>Tools</h2>
+  <h2 style="margin-top:4px">Share / Patch — export &amp; apply your edits</h2>
+  <p class=sub><b>Mod recipe (.s5mod)</b> records every field edit you make (stats, gear, enemies, prices, spells, unites, MP, skill effects…) as a small, region-checked patch others can apply to their own <i>clean</i> ISO of the same region. It's reversible and human-readable. (Overlay text / re-inserts are whole-sector rewrites and aren't captured in a recipe — share those via xdelta below.)</p>
+  <div class=row>
+   <span id=modstat class=note>—</span>
+   <button onclick=modStatus()>Refresh</button>
+   <button onclick=exportMod()>Export recipe (.s5mod)</button>
+   <button class=ghost onclick=clearMod()>Clear recipe</button>
+  </div>
+  <div class=row>
+   <span class=note>Apply recipe</span>
+   <input id=modpath size=42 placeholder="/path/to/mod.s5mod">
+   <button onclick=importMod()>Apply to current ISO</button>
+  </div>
+  <p class=sub style="margin-top:14px"><b>xdelta3 patch (.xdelta)</b> — the universal PS2 patch standard. A binary diff between a pristine ISO and your edited one; captures <i>everything</i> (including overlay edits). Needs <code>xdelta3</code> installed and a clean copy of the ISO on hand.</p>
+  <div class=row>
+   <span class=note>Pristine ISO</span><input id=xpristine size=42 placeholder="/path/to/clean.iso">
+  </div>
+  <div class=row>
+   <button onclick=xdeltaCreate()>Create .xdelta (pristine → current)</button>
+  </div>
+  <div class=row>
+   <span class=note>Apply patch</span><input id=xpatch size=32 placeholder="/path/to/patch.xdelta">
+   <button class=ghost onclick=xdeltaApply()>pristine + patch → new ISO</button>
+  </div>
+  <pre id=patchout>—</pre>
+  <h2 style="margin-top:18px">Raw hex</h2>
   <p class=sub>Raw hex read at any absolute ISO offset (research).</p>
   <div class=row>
    <span class=note>Offset</span><input id=roff size=12 value=0x828BD>
@@ -417,6 +444,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=scroll id=overlaytext></div>
  </section>
 </main>
+<footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a></footer>
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
@@ -471,7 +499,8 @@ function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char')
 function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));
  const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['enemy','price','hard','ref','tools'].includes(name));
- const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}
+ const om=document.getElementById('othermenu');if(om)om.classList.remove('open');
+ if(name=='tools'&&iso())modStatus();}
 function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
 document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
  if(d&&!d.contains(e.target)){const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}});
@@ -886,6 +915,39 @@ async function reinsertOverlay(name){if(!needIso())return;
  if(r.error){toast(r.error,'bad');document.getElementById('ovlnote').innerHTML='<span class=bad>'+r.error+'</span>';return}
  toast(name+' re-inserted ('+r.newCompSize.toLocaleString()+' B, '+r.slack+' B slack)','ok');
  document.getElementById('ovlnote').textContent=name+': recompressed '+r.container.toLocaleString()+' / '+r.slot.toLocaleString()+' B slot';}
+async function modStatus(){if(!needIso())return;const r=await j('/api/modstatus',{iso:iso()});
+ if(r.error){toast(r.error,'bad');return}
+ document.getElementById('modstat').textContent=r.runs?(r.runs+' edit'+(r.runs>1?'s':'')+' recorded · '+r.bytes+' bytes'):'no edits recorded yet';}
+async function exportMod(){if(!needIso())return;const r=await j('/api/exportmod',{iso:iso()});
+ if(r.error){toast(r.error,'bad');document.getElementById('patchout').textContent=r.error;return}
+ toast('Recipe: '+r.patchCount+' patches','ok');
+ document.getElementById('patchout').textContent='Wrote recipe ('+r.patchCount+' patches, '+r.serial+')\n'+r.path;}
+async function clearMod(){if(!needIso())return;
+ if(!confirm('Clear the recorded edit recipe for this ISO? (Does not undo the edits already written to the ISO.)'))return;
+ const r=await j('/api/clearmod',{iso:iso()});if(r.error){toast(r.error,'bad');return}
+ toast(r.removed?'Recipe cleared':'No recipe to clear','ok');modStatus();}
+async function importMod(){if(!needIso())return;const modPath=document.getElementById('modpath').value.trim();
+ if(!modPath){toast('Enter a .s5mod path','bad');return}
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm('Apply recipe to the CURRENT ISO? It writes changes in place'+(bakOn?' (a .bak is made)':' (backups OFF)')+'.'))return;
+ const r=await j('/api/importmod',{iso:iso(),modPath});
+ if(r.error){toast(r.error,'bad');document.getElementById('patchout').textContent=r.error;return}
+ toast('Applied '+r.appliedBytes+' bytes','ok');
+ document.getElementById('patchout').textContent='Applied recipe: '+r.patchCount+' patches, '+r.appliedBytes+' bytes'+
+  (r.mismatchedRuns?('\nWARNING: '+r.mismatchedRuns+' run(s) did not match the expected original bytes — the target ISO may differ from the recipe author\'s.'):' (all original bytes matched)');modStatus();}
+async function xdeltaCreate(){if(!needIso())return;const pristine=document.getElementById('xpristine').value.trim();
+ if(!pristine){toast('Enter the pristine ISO path','bad');return}
+ const r=await j('/api/xdelta',{iso:iso(),mode:'create',pristine});
+ if(r.error){toast(r.error,'bad');document.getElementById('patchout').textContent=r.error;return}
+ toast('.xdelta created ('+r.size.toLocaleString()+' B)','ok');
+ document.getElementById('patchout').textContent='Created patch ('+r.size.toLocaleString()+' bytes)\n'+r.path;}
+async function xdeltaApply(){const pristine=document.getElementById('xpristine').value.trim();
+ const patch=document.getElementById('xpatch').value.trim();
+ if(!pristine||!patch){toast('Enter pristine ISO + patch path','bad');return}
+ const r=await j('/api/xdelta',{iso:iso(),mode:'apply',pristine,patch});
+ if(r.error){toast(r.error,'bad');document.getElementById('patchout').textContent=r.error;return}
+ toast('Patched ISO written ('+r.size.toLocaleString()+' B)','ok');
+ document.getElementById('patchout').textContent='Wrote patched ISO ('+r.size.toLocaleString()+' bytes)\n'+r.path;}
 
 (async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
  MAPS=await j('/api/maps',{}); refInit();
@@ -1220,6 +1282,60 @@ class H(http.server.BaseHTTPRequestHandler):
                 P.BACKUPS = on; SV.BACKUPS = on
                 st = load_state(); st["backups"] = on; save_state(st)
                 return self._send(200, json.dumps({"ok": True, "backups": on}))
+            if self.path == "/api/modstatus":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                return self._send(200, json.dumps(P.mod_status(iso)))
+            if self.path == "/api/exportmod":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    mod = P.export_mod(iso, note=str(d.get("note", "")))
+                except ValueError as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+                base = os.path.splitext(os.path.basename(iso))[0]
+                out = d.get("out") or os.path.join(os.path.dirname(os.path.abspath(iso)), base + ".s5mod")
+                with open(out, "w") as fp: json.dump(mod, fp, indent=1)
+                return self._send(200, json.dumps({"ok": True, "path": os.path.abspath(out),
+                                                    "patchCount": mod["patchCount"], "serial": mod["serial"].strip()}))
+            if self.path == "/api/importmod":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                mp = d.get("modPath", "")
+                if not os.path.exists(mp):
+                    return self._send(200, json.dumps({"error": f"recipe not found: {mp}"}))
+                try:
+                    with open(mp) as fp: mod = json.load(fp)
+                    res = P.apply_mod(iso, mod, make_backup=P.BACKUPS)
+                except (ValueError, KeyError, json.JSONDecodeError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+                return self._send(200, json.dumps({"ok": True, **res}))
+            if self.path == "/api/clearmod":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                return self._send(200, json.dumps({"ok": True, "removed": P.clear_mod(iso)}))
+            if self.path == "/api/xdelta":
+                if not P.xdelta_available():
+                    return self._send(200, json.dumps({"error": "xdelta3 not installed. macOS: brew install xdelta  •  Debian/Ubuntu: sudo apt install xdelta3"}))
+                mode = d.get("mode", "create"); pristine = d.get("pristine", "")
+                if not os.path.exists(pristine):
+                    return self._send(200, json.dumps({"error": f"pristine ISO not found: {pristine}"}))
+                try:
+                    if mode == "create":
+                        if not os.path.exists(iso):
+                            return self._send(200, json.dumps({"error": "open your edited ISO first"}))
+                        out = d.get("out") or os.path.splitext(iso)[0] + ".xdelta"
+                        sz = P.make_xdelta(pristine, iso, out)
+                        return self._send(200, json.dumps({"ok": True, "path": os.path.abspath(out), "size": sz}))
+                    else:  # apply: pristine + patch -> out ISO
+                        patch = d.get("patch", "")
+                        if not os.path.exists(patch):
+                            return self._send(200, json.dumps({"error": f"patch not found: {patch}"}))
+                        out = d.get("out") or os.path.splitext(pristine)[0] + " (patched).iso"
+                        sz = P.apply_xdelta(pristine, patch, out)
+                        return self._send(200, json.dumps({"ok": True, "path": os.path.abspath(out), "size": sz}))
+                except RuntimeError as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/reference":
                 out = {}
                 # Clean, canonical English name lists (index -> name, read-only: no ELF
