@@ -127,7 +127,14 @@ TARGET_NAMES = {1: "Transform", 2: "Single (ally)", 3: "Self", 4: "Single (enemy
                 0x44: "Cluster"}
 SPELL_FIELDS = [("Element", 0, 1, "element"),
                 ("Power / heal (u16)", 2, 2, "num"),
-                ("Target", 4, 1, "target")]
+                ("Target", 4, 1, "target"),
+                # +5 Status byte VERIFIED across all 106 spells: 0x02 = exactly the three
+                # revive spells (Light of Day / Mother Ocean / Yell); 0x20 = the 31
+                # status/buff appliers (Wind of Sleep, Silent Lake, Clay Guardian, ...).
+                # 0x01 appears on 4 spells (First Ray, Thunder Runner, Furious Blow,
+                # Comet) and is undocumented.
+                ("Status", 5, 1, "spellstatus")]
+SPELL_STATUS_NAMES = {0: "None", 1: "Unknown (0x01)", 2: "Revive", 0x20: "Add status"}
 
 # ---- Rune -> spell GRANT table (VERIFIED vs the rune guide, 24/24) -----------
 # Base 0x4E6DA2, stride 0x46, 24 records. A rune teaches the CONTIGUOUS spell
@@ -168,6 +175,15 @@ def _runeprice_names():
     try: return json.load(open(os.path.join(HERE, "s5_runeprice_names.json")))
     except Exception: return []
 RUNEPRICE_NAMES = _runeprice_names()
+
+# ---- Healing-item price table (@0x4CCFD0, from the Nightmare Healing Item Price
+# module, byte-matched into the ISO). 41 records, stride 88; buy @+0 / sell @+4,
+# 3-byte LE. Names = healing items.txt order (s5_healprice_names.json).
+HEALPRICE_BASE, HEALPRICE_STRIDE, HEALPRICE_COUNT = 0x4CCFD0, 88, 41
+def _healprice_names():
+    try: return json.load(open(os.path.join(HERE, "s5_healprice_names.json")))
+    except Exception: return []
+HEALPRICE_NAMES = _healprice_names()
 
 # Item/equipment PRICE table (VERIFIED vs the rune guide: buy+sell u32,
 # sell == buy/2; e.g. record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500
