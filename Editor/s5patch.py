@@ -43,6 +43,85 @@ class Iso:
 def is_valid(iso): return iso.rd(F.SERIAL_OFF, len(F.SERIAL_STR)) == F.SERIAL_STR
 
 
+# ---- ISO9660 directory + compressed-overlay (.ROM) tools ---------------------
+# The disc's OVL/ folder holds LZSS-compressed engine overlays (BATLE.ROM, WAR.ROM,
+# FISHING.ROM, ...). Container: byte-reversed ASCII tags. "\x00mor"=rom hdr
+# (u32 tag, u32 hdrSize), then "\x00szl"=lzs chunk (u32 decSize, u32 compSize),
+# payload at fileStart+0x40. Compression is classic LZSS (4096-byte window, zero-init,
+# r=N-18, flag bit 1=literal else [lo | (hi&0xF0)<<4 offset, (hi&0x0F)+3 length]).
+_SECT = 2048
+def _iso_listdir(f, lba, size):
+    f.seek(lba * _SECT); d = f.read(size); out = []; i = 0
+    while i < len(d):
+        ln = d[i]
+        if ln == 0:
+            i = (i // _SECT + 1) * _SECT
+            if i >= len(d): break
+            continue
+        rec = d[i:i + ln]
+        flba = int.from_bytes(rec[2:6], "little"); fsz = int.from_bytes(rec[10:14], "little")
+        nl = rec[32]; name = rec[33:33 + nl].decode("latin1"); flags = rec[25]
+        out.append({"name": name.split(";")[0], "lba": flba, "size": fsz, "dir": bool(flags & 2)})
+        i += ln
+    return out
+
+def iso_root(iso_path):
+    f = open(iso_path, "rb")
+    f.seek(16 * _SECT); pvd = f.read(_SECT)
+    root = pvd[156:156 + 34]
+    return f, int.from_bytes(root[2:6], "little"), int.from_bytes(root[10:14], "little")
+
+def list_overlays(iso_path):
+    """List OVL/*.ROM engine overlays with compressed + decompressed sizes."""
+    f, rlba, rsz = iso_root(iso_path)
+    for e in _iso_listdir(f, rlba, rsz):
+        if e["name"] == "OVL" and e["dir"]:
+            out = []
+            for o in _iso_listdir(f, e["lba"], e["size"]):
+                if not o["name"].endswith(".ROM"): continue
+                f.seek(o["lba"] * _SECT); head = f.read(0x14)
+                dec = None
+                if head[0:4] == b"\x00mor" and head[8:12] == b"\x00szl":
+                    dec = int.from_bytes(head[0x0C:0x10], "little")
+                o.update({"decSize": dec})
+                out.append(o)
+            f.close(); return out
+    f.close(); return []
+
+def _lzss_decompress(data, decsize, N=4096, F_=18):
+    out = bytearray(); ring = bytearray(N); r = N - F_
+    i = 0; flags = 0; fcnt = 0; n = len(data)
+    while len(out) < decsize and i < n:
+        if fcnt == 0: flags = data[i]; i += 1; fcnt = 8
+        bit = flags & 1; flags >>= 1; fcnt -= 1
+        if bit:
+            b = data[i]; i += 1; out.append(b); ring[r] = b; r = (r + 1) % N
+        else:
+            if i + 1 >= n: break
+            lo = data[i]; hi = data[i + 1]; i += 2
+            off = lo | ((hi & 0xF0) << 4); ln = (hi & 0x0F) + 3
+            for k in range(ln):
+                b = ring[(off + k) % N]; out.append(b); ring[r] = b; r = (r + 1) % N
+    return bytes(out)
+
+def extract_overlay(iso_path, name, out_dir):
+    """Extract + decompress one OVL/<name> to out_dir/<name>.bin. Returns the path + sizes."""
+    ov = next((o for o in list_overlays(iso_path) if o["name"] == name), None)
+    if not ov: raise KeyError(f"no overlay {name!r}")
+    f = open(iso_path, "rb"); f.seek(ov["lba"] * _SECT); raw = f.read(ov["size"]); f.close()
+    if raw[0:4] == b"\x00mor" and raw[8:12] == b"\x00szl":
+        dec = int.from_bytes(raw[0x0C:0x10], "little")
+        data = _lzss_decompress(raw[0x40:], dec)
+        kind = "lzss"
+    else:
+        data = raw; kind = "raw"
+    os.makedirs(out_dir, exist_ok=True)
+    outp = os.path.join(out_dir, name.replace(".ROM", "") + ".bin")
+    open(outp, "wb").write(data)
+    return {"name": name, "path": os.path.abspath(outp), "kind": kind,
+            "compSize": ov["size"], "decSize": len(data)}
+
+
 def table_addr(table, cid):
     base, stride, _ = F.TABLES[table]; return base + cid * stride
 
