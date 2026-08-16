@@ -399,6 +399,12 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button class=ghost onclick=peek()>Read</button>
   </div>
   <pre id=out>—</pre>
+  <h2 style="margin-top:18px">Overlays (OVL/*.ROM)</h2>
+  <p class=sub>The disc's compressed engine overlays (battle, war, minigames…). Extract decompresses one to a <code>.bin</code> you can open in a disassembler — groundwork for battle-code research (e.g. unite damage). Read-only; writes only the extracted file.</p>
+  <div class=row><button onclick=loadOverlays()>List overlays</button>
+   <button class=ghost onclick=extractAllOverlays()>Extract all</button>
+   <span id=ovlnote class=note></span></div>
+  <div class=scroll id=overlays></div>
  </section>
 </main>
 <div id=spin><div class=sun></div></div>
@@ -821,6 +827,23 @@ async function saveWrite(i){const sv=window._saves[i];
 async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
  document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii)}
 
+let OVERLAYS=[];
+async function loadOverlays(){if(!needIso())return;const s=await j('/api/overlays',{iso:iso()});
+ if(s.error){toast(s.error,'bad');return}OVERLAYS=s.overlays||[];
+ document.getElementById('ovlnote').textContent=OVERLAYS.length+' overlays';
+ let h='<table><thead><tr><th>Name</th><th>Compressed</th><th>Decompressed</th><th></th></tr></thead><tbody>';
+ OVERLAYS.forEach(o=>{h+=`<tr><td>${o.name}</td><td class=note>${o.size.toLocaleString()}</td>`+
+  `<td class=note>${o.decSize?o.decSize.toLocaleString():'(raw)'}</td>`+
+  `<td><button class="ghost mini" onclick="extractOverlay('${o.name}')">Extract</button></td></tr>`});
+ document.getElementById('overlays').innerHTML=h+'</tbody></table>';}
+async function extractOverlay(name){const r=await j('/api/extractoverlay',{iso:iso(),name});
+ if(r.error){toast(r.error,'bad');return}toast(name+' → '+r.decSize.toLocaleString()+' bytes ('+r.kind+')','ok');
+ document.getElementById('ovlnote').innerHTML='Extracted to <code>'+r.path.replace(/[^/]+$/,'')+'</code>';}
+async function extractAllOverlays(){if(!needIso())return;if(!OVERLAYS.length)await loadOverlays();
+ const r=await j('/api/extractoverlay',{iso:iso(),name:'*'});
+ if(r.error){toast(r.error,'bad');return}toast('Extracted '+r.count+' overlays','ok');
+ document.getElementById('ovlnote').innerHTML=r.count+' overlays extracted to <code>'+r.dir+'</code>';}
+
 (async function(){try{if(localStorage.s5theme=='light')document.body.classList.add('light')}catch(e){}
  MAPS=await j('/api/maps',{}); refInit();
  const st=%STATE%;
@@ -1014,6 +1037,21 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     P.write_rune_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/overlays":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                return self._send(200, json.dumps({"overlays": P.list_overlays(iso)}))
+            if self.path == "/api/extractoverlay":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "overlays_extracted")
+                nm = d.get("name", "")
+                if nm == "*":
+                    n = 0
+                    for o in P.list_overlays(iso):
+                        P.extract_overlay(iso, o["name"], out_dir); n += 1
+                    return self._send(200, json.dumps({"count": n, "dir": os.path.abspath(out_dir)}))
+                return self._send(200, json.dumps(P.extract_overlay(iso, nm, out_dir)))
             if self.path == "/api/healprices":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
