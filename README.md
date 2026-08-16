@@ -6,13 +6,13 @@ local web app in your browser — nothing is uploaded, and the server only touch
 file you point it at. It ships with **no game ROM/ISO**; supply your own
 legally-obtained ISO and/or save files.
 
-**Regions:** NTSC-U (`SLUS-21291`) is fully supported. **PAL (`SLES-54087`)** is
-auto-detected from the ISO serial and supported for all tables whose PAL offsets are
-verified (stats, affinities, equipable skills, gear, weapon growth, MP growth, skill
-effects, enemies, spells, rune & healing prices). A few tables whose PAL offsets aren't
-mapped yet (rune→spell grant, shop item prices, character starting-equipment, Unites,
-the ELF Reference/Text tab, Hard Mode) are hidden in PAL mode until reverse-engineered.
-A **PAL** / **NTSC-U** badge in the header shows the detected region.
+**Regions:** NTSC-U (`SLUS-21291`) and **PAL (`SLES-54087`)** are both supported and
+auto-detected from the ISO serial (a **PAL** / **NTSC-U** badge in the header shows
+which). Nearly every editor works on PAL — stats, affinities, equipable skills, gear,
+weapon growth, MP growth, skill effects, enemies, spells, rune→spell grant, all prices,
+starting equipment, and Hard Mode. A few features whose PAL offsets aren't mapped yet
+(starting *held items*, Unites, and the ELF Reference/Text tab) are hidden in PAL mode
+until reverse-engineered.
 
 Every editable field was reverse-engineered and then **verified** against public stat
 guides; fields that could not be confirmed are shown read-only or omitted rather than

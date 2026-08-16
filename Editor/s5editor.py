@@ -215,7 +215,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 </header>
 <nav id=nav>
  <button data-tab=char class=on onclick=showTab('char')>Characters</button>
- <button data-tab=rune data-palgate onclick=showTab('rune')>Runes &amp; Spells</button>
+ <button data-tab=rune onclick=showTab('rune')>Runes &amp; Spells</button>
  <button data-tab=gear onclick=showTab('gear')>Gear</button>
  <button data-tab=mp onclick=showTab('mp')>MP Growth</button>
  <button data-tab=skillfx onclick=showTab('skillfx')>Skill Effects</button>
@@ -226,7 +226,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=navmenu id=othermenu>
    <button data-tab=enemy onclick=showTab('enemy')>Enemies</button>
    <button data-tab=price onclick=showTab('price')>Prices</button>
-   <button data-tab=hard data-palgate onclick=showTab('hard')>Hard Mode</button>
+   <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
    <button data-tab=ref data-palgate onclick=showTab('ref')>Reference / Text</button>
    <button data-tab=tools onclick=showTab('tools')>Tools</button>
   </div>
@@ -308,14 +308,12 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  </section>
 
  <section class=panel id=p-price>
-  <div data-palgate>
   <h2>Item &amp; Equipment Prices</h2>
   <p class=sub>Buy / sell prices (verified vs stat guide; sell = buy ÷ 2). Records in item-id order.</p>
   <div class=row><button onclick=loadPrices()>Load prices</button>
    <input id=pricefilter size=12 placeholder="min buy…" oninput=priceShow()>
    <span id=pricenote class=note></span></div>
   <div class=scroll id=prices></div>
-  </div>
   <h2 style="margin-top:18px">Rune (Orb) Prices</h2>
   <p class=sub>Buy / sell for each rune orb (verified vs the rune guide; sell = buy ÷ 2; event-only orbs have buy 0).</p>
   <div class=row><input id=runepricefilter size=14 placeholder="filter rune…" oninput=runePriceShow()>
@@ -535,11 +533,10 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   CHARS=(await j('/api/chars',{iso:iso()})).chars;fillChars();
   document.getElementById('charrow').style.display='';
   document.getElementById('charhint').textContent=MAPS.globalHelp||'';loadChar();
-  if(REGION!=='pal'){
-   if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
-   const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
-   fillRunes();document.getElementById('rrow').style.display='';
-   document.getElementById('runehint').textContent='';loadRune();}
+  if(!SPELLS.length)SPELLS=(await j('/api/spells',{})).spells||[];
+  const rr=await j('/api/runes',{iso:iso()});RUNES=rr.runes||[];
+  fillRunes();document.getElementById('rrow').style.display='';
+  document.getElementById('runehint').textContent='';loadRune();
   ENEMIES=(await j('/api/enemies',{iso:iso()})).enemies||[];
   fillEnemies();document.getElementById('enrow').style.display='';
   document.getElementById('enemyhint').textContent='';loadEnemy();
@@ -721,9 +718,8 @@ async function saveGear(){if(!needIso())return;const edits=[];
  const s=await j('/api/setgear',{iso:iso(),slot:gslot(),id:GCUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadGearItem()}}
 
-async function loadPrices(){if(!needIso())return;
- if(REGION!=='pal'){const s=await j('/api/prices',{iso:iso()});
-  if(s.error){toast(s.error,'bad');}else{PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');}}
+async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
+ if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');
  const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}
  const hp=await j('/api/healprices',{iso:iso()});if(!hp.error){HEALPRICES=hp.prices||[];healPriceShow();}}
 let RUNEPRICES=[], HEALPRICES=[];
@@ -1001,8 +997,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 except Exception: pass
             # Endpoints whose PAL offsets aren't reverse-engineered yet — refuse in PAL so
             # we never read/write wrong data. (UI also hides these; this is the backstop.)
-            GATED_PAL = {"/api/runes", "/api/rune", "/api/setrune", "/api/prices", "/api/setprice",
-                         "/api/unites", "/api/setunite", "/api/setstring", "/api/hardmode"}
+            GATED_PAL = {"/api/unites", "/api/setunite", "/api/setstring"}
             if F.REGION == "pal" and self.path in GATED_PAL:
                 return self._send(200, json.dumps({"error": "Not yet mapped for PAL — this "
                     "table's PAL offset hasn't been reverse-engineered.", "palGated": True}))
