@@ -406,6 +406,39 @@ def datapak_list(iso_path, filt="", limit=9000):
     out.sort(key=lambda x: x["path"])
     return out
 
+def _bpe_decompress(data, dec_size):
+    """Konami 'epb' codec — a Byte-Pair-Encoding (Gage-family) variant. Reverse-engineered
+    from the PS2 EE decompressor at ELF vaddr 0x220690 and validated byte-exact against a
+    full instruction emulation of it. Per block: identity-init left[256]; read a count-byte
+    pair table (count>127 => skip count-127 identity codes then 1 pair; else count+1 pairs;
+    a code with left[c]==c has no right byte); read a big-endian 16-bit symbol count; expand
+    each symbol via a stack (terminal when left[s]==s, else push right[s] then left[s])."""
+    out = bytearray(); pos = 0; n = len(data)
+    def g():
+        nonlocal pos
+        b = data[pos] if pos < n else 0; pos += 1; return b
+    while len(out) < dec_size and pos < n:
+        left = list(range(256)); right = [0] * 256; c = 0
+        while c < 256:
+            cnt = g()
+            if cnt > 127:
+                c += cnt - 127; cnt = 0
+            if c >= 256: break
+            i = 0
+            while i <= cnt and c < 256:
+                left[c] = g()
+                if left[c] != c: right[c] = g()
+                i += 1; c += 1
+        size = (g() << 8) | g()
+        for _ in range(size):
+            st = [g()]
+            while st:
+                s = st.pop()
+                if left[s] == s: out.append(s)
+                else: st.append(right[s]); st.append(left[s])
+    return bytes(out[:dec_size])
+
+
 def datapak_extract(iso_path, name, out_dir):
     """Extract one internal DATA.PAK file by name (or path). `non`/stored and `szl`/LZSS
     payloads are decoded; other codecs (bpe/ffh) are written as the raw container blob.
@@ -439,8 +472,10 @@ def datapak_extract(iso_path, name, out_dir):
         data = blob[0x40:0x40 + decSize] if decSize else blob[0x40:]
     elif codec == "szl":
         data = _lzss_decompress(blob[0x40:0x40 + compSize], decSize)
+    elif codec == "bpe":
+        data = _bpe_decompress(blob[0x40:0x40 + compSize], decSize)
     else:
-        data = blob; decoded = False   # bpe/ffh: dump the raw container (codec not decoded yet)
+        data = blob; decoded = False   # ffh: dump the raw container (codec not decoded yet)
     os.makedirs(out_dir, exist_ok=True)
     ext = ".bin" if decoded else "." + codec + ".rom"
     out = os.path.join(out_dir, hit["name"].split(".")[0] + ext)
