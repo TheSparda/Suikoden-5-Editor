@@ -459,6 +459,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span class=note>Portrait set</span>
    <select id=faceSel style="min-width:220px"></select>
    <button onclick="viewPortraits(document.getElementById('faceSel').value)">Show portraits</button>
+   <button class=ghost onclick="downloadZip(document.getElementById('faceSel').value)">⬇ ZIP (all PNGs)</button>
    <button class=ghost onclick="downloadSheet(document.getElementById('faceSel').value)">⬇ Sprite sheet</button>
    <button class=ghost onclick=loadFaceList()>Refresh list</button>
    <span id=facenote class=note></span>
@@ -995,8 +996,9 @@ async function viewPortraits(name){if(!needIso()||!name)return;
  if(note)note.innerHTML=r.count+' portraits from <b>'+name+'</b>'+(r.saved?(' · saved to <code>'+r.saved+'</code>'):'');
  // hi-res 256px portraits look better smoothed and larger; small battle faces stay pixel-crisp
  const big=r.faces.length&&(r.w||0)>=200;
- const bar=document.createElement('div');bar.style.cssText='width:100%;margin-bottom:6px';
- bar.innerHTML='<button class="ghost mini" onclick="downloadSheet(\''+name+'\')">⬇ Download all as sprite sheet</button>';
+ const bar=document.createElement('div');bar.style.cssText='width:100%;margin-bottom:6px;display:flex;gap:6px';
+ bar.innerHTML='<button class="ghost mini" onclick="downloadZip(\''+name+'\')">⬇ Download all as ZIP</button>'
+  +'<button class="ghost mini" onclick="downloadSheet(\''+name+'\')">⬇ Download as sprite sheet</button>';
  box.appendChild(bar);
  r.faces.forEach((src,i)=>{const cell=document.createElement('div');
   cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px';
@@ -1008,7 +1010,14 @@ async function viewPortraits(name){if(!needIso()||!name)return;
   const cap=document.createElement('span');cap.className='note';cap.style.fontSize='10px';cap.textContent='#'+i;
   cell.appendChild(cap);box.appendChild(cell);});
  toast(r.count+' portraits','ok');}
-async function downloadSheet(name){if(!needIso())return;toast('composing sheet…','ok');
+async function downloadZip(name){if(!needIso()||!name)return;toast('zipping portraits…','ok');
+ const r=await j('/api/portraits',{iso:iso(),name,zip:true});
+ if(r.error){toast(r.error,'bad');return}
+ const a=document.createElement('a');a.href=r.zip;a.download=name.split('.')[0]+'_portraits.zip';
+ document.body.appendChild(a);a.click();a.remove();
+ const note=document.getElementById('facenote');if(note)note.innerHTML=r.count+' faces · zip saved to <code>'+r.saved+'</code>';
+ toast('zip downloaded ('+r.count+' PNGs)','ok');}
+async function downloadSheet(name){if(!needIso()||!name)return;toast('composing sheet…','ok');
  const r=await j('/api/portraits',{iso:iso(),name,sheet:true,cols:8});
  if(r.error){toast(r.error,'bad');return}
  const a=document.createElement('a');a.href=r.sheet;a.download=name.split('.')[0]+'_sheet.png';
@@ -1341,6 +1350,18 @@ class H(http.server.BaseHTTPRequestHandler):
                         with open(path, "wb") as w: w.write(png)
                         return self._send(200, json.dumps({"name": nm, "count": cnt, "saved": os.path.abspath(path),
                             "sheet": "data:image/png;base64," + base64.b64encode(png).decode()}))
+                    except (ValueError, KeyError) as e:
+                        return self._send(200, json.dumps({"error": str(e)}))
+                if d.get("zip"):
+                    try:
+                        import base64
+                        blob, cnt = P.render_portrait_zip(iso, nm)
+                        out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted")
+                        os.makedirs(out_dir, exist_ok=True)
+                        path = os.path.join(out_dir, nm.split(".")[0] + "_portraits.zip")
+                        with open(path, "wb") as w: w.write(blob)
+                        return self._send(200, json.dumps({"name": nm, "count": cnt, "saved": os.path.abspath(path),
+                            "zip": "data:application/zip;base64," + base64.b64encode(blob).decode()}))
                     except (ValueError, KeyError) as e:
                         return self._send(200, json.dumps({"error": str(e)}))
                 try:
