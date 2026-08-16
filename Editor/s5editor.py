@@ -405,6 +405,16 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button class=ghost onclick=extractAllOverlays()>Extract all</button>
    <span id=ovlnote class=note></span></div>
   <div class=scroll id=overlays></div>
+  <h2 style="margin-top:18px">Overlay Text</h2>
+  <p class=sub>Edit the story / dialogue text inside an overlay (endings, letters, lore, newspaper, minigame lines) — text the boot-ELF editor can't reach. Load an overlay, edit strings in place (byte-capped, press Enter), then <b>Write overlay to ISO</b> to recompress + save. A <code>.bak</code> is made when backups are on.</p>
+  <div class=row>
+   <select id=otxtsel></select>
+   <button onclick=loadOverlayText()>Load text</button>
+   <input id=otxtfilter size=16 placeholder="search text…" oninput=overlayTextShow()>
+   <button onclick=writeOverlayText()>Write overlay to ISO</button>
+   <span id=otxtnote class=note></span>
+  </div>
+  <div class=scroll id=overlaytext></div>
  </section>
 </main>
 <div id=spin><div class=sun></div></div>
@@ -836,7 +846,8 @@ async function loadOverlays(){if(!needIso())return;const s=await j('/api/overlay
   `<td class=note>${o.decSize?o.decSize.toLocaleString():'(raw)'}</td>`+
   `<td><button class="ghost mini" onclick="extractOverlay('${o.name}')">Extract</button>`+
   (o.decSize?`<button class="ghost mini" onclick="reinsertOverlay('${o.name}')">Re-insert</button>`:'')+`</td></tr>`});
- document.getElementById('overlays').innerHTML=h+'</tbody></table>';}
+ document.getElementById('overlays').innerHTML=h+'</tbody></table>';
+ const ts=document.getElementById('otxtsel');if(ts)ts.innerHTML=OVERLAYS.filter(o=>o.decSize).map(o=>`<option>${o.name}</option>`).join('');}
 async function extractOverlay(name){const r=await j('/api/extractoverlay',{iso:iso(),name});
  if(r.error){toast(r.error,'bad');return}toast(name+' → '+r.decSize.toLocaleString()+' bytes ('+r.kind+')','ok');
  document.getElementById('ovlnote').innerHTML='Extracted to <code>'+r.path.replace(/[^/]+$/,'')+'</code>';}
@@ -844,6 +855,31 @@ async function extractAllOverlays(){if(!needIso())return;if(!OVERLAYS.length)awa
  const r=await j('/api/extractoverlay',{iso:iso(),name:'*'});
  if(r.error){toast(r.error,'bad');return}toast('Extracted '+r.count+' overlays','ok');
  document.getElementById('ovlnote').innerHTML=r.count+' overlays extracted to <code>'+r.dir+'</code>';}
+let OTXT=[], OTXTNAME='';
+async function loadOverlays_fillTextSel(){const sel=document.getElementById('otxtsel');
+ if(sel && OVERLAYS.length && !sel.options.length)sel.innerHTML=OVERLAYS.filter(o=>o.decSize).map(o=>`<option>${o.name}</option>`).join('');}
+async function loadOverlayText(){if(!needIso())return;const sel=document.getElementById('otxtsel');
+ if(!sel.options.length){await loadOverlays();loadOverlays_fillTextSel();}
+ OTXTNAME=sel.value||(OVERLAYS.find(o=>o.decSize)||{}).name;
+ const s=await j('/api/overlaytext',{iso:iso(),name:OTXTNAME});
+ if(s.error){toast(s.error,'bad');return}OTXT=s.strings||[];overlayTextShow();
+ toast('Loaded '+OTXT.length+' strings from '+OTXTNAME,'ok');}
+function overlayTextShow(){const f=(document.getElementById('otxtfilter').value||'').toLowerCase();
+ const rows=OTXT.filter(e=>!f||e.text.toLowerCase().includes(f)).slice(0,500);
+ document.getElementById('otxtnote').textContent=rows.length+' shown · '+OTXTNAME+' · Enter to stage';
+ let h='<table><thead><tr><th>Offset</th><th>Text</th><th>Max</th></tr></thead><tbody>';
+ rows.forEach(e=>{h+=`<tr><td class=note>0x${e.off.toString(16)}</td>`+
+  `<td><input value="${e.text.replace(/"/g,'&quot;')}" data-off="${e.off}" size=40 maxlength=${e.cap-1} onkeydown="if(event.key==='Enter')setOverlayText(this)"></td>`+
+  `<td class=note>${e.cap-1}</td></tr>`});
+ document.getElementById('overlaytext').innerHTML=h+'</tbody></table>';}
+async function setOverlayText(inp){const r=await j('/api/setoverlaytext',{iso:iso(),name:OTXTNAME,off:parseInt(inp.dataset.off),text:inp.value});
+ inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Staged @0x'+inp.dataset.off.toString(16),'ok')}
+async function writeOverlayText(){if(!needIso()||!OTXTNAME)return;
+ if(!confirm('Recompress '+OTXTNAME+' with your text edits and write it into the ISO?'))return;
+ const r=await j('/api/reinsertoverlay',{iso:iso(),name:OTXTNAME});
+ if(r.error){toast(r.error,'bad');document.getElementById('otxtnote').innerHTML='<span class=bad>'+r.error+'</span>';return}
+ toast(OTXTNAME+' written ('+r.slack+' B slack)','ok');
+ document.getElementById('otxtnote').textContent=OTXTNAME+' written: '+r.container.toLocaleString()+' / '+r.slot.toLocaleString()+' B slot';}
 async function reinsertOverlay(name){if(!needIso())return;
  if(!confirm('Re-insert '+name+' from overlays_extracted/'+name.replace('.ROM','')+'.bin into the ISO?'))return;
  const r=await j('/api/reinsertoverlay',{iso:iso(),name});
@@ -1059,6 +1095,25 @@ class H(http.server.BaseHTTPRequestHandler):
                         P.extract_overlay(iso, o["name"], out_dir); n += 1
                     return self._send(200, json.dumps({"count": n, "dir": os.path.abspath(out_dir)}))
                 return self._send(200, json.dumps(P.extract_overlay(iso, nm, out_dir)))
+            if self.path in ("/api/overlaytext", "/api/setoverlaytext"):
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                nm = d.get("name", "")
+                bin_path = os.path.join(os.path.dirname(os.path.abspath(iso)),
+                                        "overlays_extracted", nm.replace(".ROM", "") + ".bin")
+                try:
+                    if self.path == "/api/overlaytext":
+                        if not os.path.exists(bin_path):
+                            out_dir = os.path.dirname(bin_path)
+                            with P.Iso(iso) as g: P.extract_overlay(iso, nm, out_dir)
+                        return self._send(200, json.dumps({"strings": P.overlay_strings(bin_path)}))
+                    else:
+                        if not os.path.exists(bin_path):
+                            return self._send(200, json.dumps({"error": f"load {nm} text first"}))
+                        return self._send(200, json.dumps(
+                            P.write_overlay_string(bin_path, int(d["off"]), str(d["text"]))))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/reinsertoverlay":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
