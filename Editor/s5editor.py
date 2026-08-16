@@ -471,7 +471,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div id=portraits style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#111;padding:10px;border-radius:8px;margin-top:8px;min-height:40px"></div>
 
   <h2 style="margin-top:20px">All DATA.PAK files</h2>
-  <p class=sub>Browse and extract any internal file (backgrounds, UI, effects, sound banks, models…). Files stored uncompressed (<code>non</code>), LZSS (<code>szl</code>) or <code>bpe</code>-compressed are decoded on extract; others are dumped as the raw container. <code>FACE</code> rows also get a <b>Portraits</b> shortcut.</p>
+  <p class=sub>Browse and extract any internal file (backgrounds, UI, effects, sound banks, models…). Files stored uncompressed (<code>non</code>), LZSS (<code>szl</code>) or <code>bpe</code>-compressed are decoded on extract; others are dumped as the raw container. <code>FACE</code> rows get a <b>Portraits</b> shortcut; other decodable rows get a <b>Textures</b> button that renders any packed image (field sprites <code>SR_CHR*</code>, effects <code>*_TEX*</code>, UI skins <code>TLK_WIN</code>/<code>GMF*</code>) to PNG — 8-bit palettized or 32-bit, at native size.</p>
   <div class=row>
    <button onclick=loadDatapak()>List DATA.PAK files</button>
    <input id=pakfilter size=18 placeholder="filter path (e.g. FACE)" onkeydown="if(event.key==='Enter')loadDatapak()">
@@ -985,9 +985,12 @@ async function loadDatapak(){if(!needIso())return;
  PAKFILES=r.files||[];
  document.getElementById('paknote').textContent=PAKFILES.length+(filt?(' matching "'+filt+'"'):' files');
  let h='<table><thead><tr><th>Path</th><th>Size</th><th>Codec</th><th></th></tr></thead><tbody>';
- PAKFILES.slice(0,800).forEach(e=>{const isface=/FACE/.test(e.name);h+=`<tr><td class=note>${e.path}</td><td class=note>${e.size.toLocaleString()}</td>`+
+ PAKFILES.slice(0,800).forEach(e=>{const isface=/FACE/.test(e.name);
+  const istex=e.size>64&&(e.codec=='bpe'||e.codec=='non'||e.codec=='szl');
+  h+=`<tr><td class=note>${e.path}</td><td class=note>${e.size.toLocaleString()}</td>`+
   `<td>${e.codec}</td><td><button class="ghost mini" onclick="extractPak('${e.name}')">Extract</button>`+
-  (isface?`<button class="ghost mini" onclick="viewPortraits('${e.name}')">Portraits</button>`:'')+`</td></tr>`});
+  (isface?`<button class="ghost mini" onclick="viewPortraits('${e.name}')">Portraits</button>`
+        :(istex?`<button class="ghost mini" onclick="viewTextures('${e.name}')">Textures</button>`:''))+`</td></tr>`});
  document.getElementById('datapak').innerHTML=h+'</tbody></table>'+(PAKFILES.length>800?'<p class=note>showing first 800 — filter to narrow</p>':'');}
 async function viewPortraits(name){if(!needIso()||!name)return;
  const fn=document.getElementById('facenote'), pn=document.getElementById('paknote');
@@ -1037,6 +1040,24 @@ async function downloadSheet(name){if(!needIso()||!name)return;toast('composing 
  document.body.appendChild(a);a.click();a.remove();
  document.getElementById('paknote').innerHTML=r.count+' faces · sheet saved to <code>'+r.saved+'</code>';
  toast('sheet downloaded ('+r.count+' faces)','ok');}
+async function viewTextures(name){if(!needIso()||!name)return;
+ const note=document.getElementById('paknote');const box=document.getElementById('portraits');
+ box.innerHTML='<span class=note>decoding '+name+'…</span>';
+ const r=await j('/api/textures',{iso:iso(),name,save:true});
+ box.innerHTML='';
+ if(r.error){toast(r.error,'bad');note.innerHTML='<span class=bad>'+r.error+'</span>';return}
+ note.innerHTML=r.count+' textures from <b>'+name+'</b>'+(r.saved?(' · saved to <code>'+r.saved+'</code>'):'');
+ r.imgs.forEach((im,i)=>{const cell=document.createElement('div');
+  cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px';
+  const a=document.createElement('a');a.href=im.src;a.download=name.split('.')[0]+'_'+String(i).padStart(2,'0')+'.png';
+  const img=new Image();img.src=im.src;img.title=im.w+'×'+im.h+' (click to download)';
+  const dh=Math.min(128,im.h);
+  img.style.cssText='height:'+dh+'px;border:1px solid #333;border-radius:4px;background:#fff;image-rendering:'+(im.w>=200?'auto':'pixelated');
+  a.appendChild(img);cell.appendChild(a);
+  const cap=document.createElement('span');cap.className='note';cap.style.fontSize='10px';cap.textContent=im.w+'×'+im.h;
+  cell.appendChild(cap);box.appendChild(cell);});
+ toast(r.count+' textures','ok');
+ box.scrollIntoView({behavior:'smooth',block:'nearest'});}
 async function extractPak(name){const r=await j('/api/extractpak',{iso:iso(),name});
  if(r.error){toast(r.error,'bad');return}
  toast(name+' → '+r.size.toLocaleString()+' B ('+(r.decoded?r.codec+', decoded':r.codec+', raw')+')','ok');
@@ -1339,6 +1360,26 @@ class H(http.server.BaseHTTPRequestHandler):
                 try:
                     files = P.datapak_list(iso, filt=d.get("filter", ""))
                     return self._send(200, json.dumps({"files": files, "total": len(files)}))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/textures":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                nm = d.get("name", "")
+                try:
+                    import base64
+                    tx = P.render_textures(iso, nm)
+                    saved = None
+                    if d.get("save"):
+                        out_dir = os.path.join(os.path.dirname(os.path.abspath(iso)), "datapak_extracted",
+                                               nm.split(".")[0] + "_textures")
+                        os.makedirs(out_dir, exist_ok=True)
+                        for i, (png, w, h) in enumerate(tx):
+                            with open(os.path.join(out_dir, "tex_%03d.png" % i), "wb") as wf: wf.write(png)
+                        saved = os.path.abspath(out_dir)
+                    return self._send(200, json.dumps({"name": nm, "count": len(tx), "saved": saved,
+                        "imgs": [{"src": "data:image/png;base64," + base64.b64encode(p).decode(), "w": w, "h": h}
+                                 for (p, w, h) in tx]}))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/extractpak":
