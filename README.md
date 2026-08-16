@@ -1,10 +1,18 @@
 # Suikoden V ISO & Save Editor
 
-A cross-platform editor for **Suikoden V** (PS2, USA `SLUS-21291`), modeled on the
+A cross-platform editor for **Suikoden V** (PS2), modeled on the
 [Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a
 local web app in your browser — nothing is uploaded, and the server only touches the
 file you point it at. It ships with **no game ROM/ISO**; supply your own
 legally-obtained ISO and/or save files.
+
+**Regions:** NTSC-U (`SLUS-21291`) is fully supported. **PAL (`SLES-54087`)** is
+auto-detected from the ISO serial and supported for all tables whose PAL offsets are
+verified (stats, affinities, equipable skills, gear, weapon growth, MP growth, skill
+effects, enemies, spells, rune & healing prices). A few tables whose PAL offsets aren't
+mapped yet (rune→spell grant, shop item prices, character starting-equipment, Unites,
+the ELF Reference/Text tab, Hard Mode) are hidden in PAL mode until reverse-engineered.
+A **PAL** / **NTSC-U** badge in the header shows the detected region.
 
 Every editable field was reverse-engineered and then **verified** against public stat
 guides; fields that could not be confirmed are shown read-only or omitted rather than

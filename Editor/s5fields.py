@@ -391,3 +391,59 @@ def load_characters():
         return json.load(open(os.path.join(HERE, "s5_characters.json")))
     except Exception:
         return []
+
+
+# ---- Region awareness (NTSC-U default; PAL bases VERIFIED via extract byte-match) ----
+# The game DATA is byte-identical across regions (same in-record offsets/strides/counts);
+# only the absolute table BASES differ, plus PAL rune-price stride 76->80. So region
+# support = rebind the 15 verified table bases. detect via the serial @0x828BD.
+REGION = "ntsc-u"
+SERIALS = {"ntsc-u": b"SLUS_212.91", "pal": b"SLES_540.87"}
+REGION_NAMES = {"ntsc-u": "NTSC-U (SLUS-21291)", "pal": "PAL (SLES-54087)"}
+
+# Features whose PAL offsets are NOT yet located — hidden/disabled in PAL mode so we
+# never write unverified fields. (Char sub-sections, shop item prices, rune->spell grant,
+# unites, ELF Reference/Text.) The Save editor is region-handled separately in s5save.
+GATED_IN_PAL = ["starting equipment", "starting items", "runegrant", "prices", "unites", "reference"]
+
+# PAL bases (SLES_540.87) — see reference_s5_pal_map. NTSC bases are captured live below.
+_PAL = {
+    "stats": 0x48FB60, "affinities": 0x490720, "equipable skills": 0x4B80D1,
+    "weapon growth": 0x49D9B0, "spell": 0x4FC950, "runeprice": 0x4F0B20, "runeprice_stride": 80,
+    "healprice": 0x4D2980, "mp": 0x49D8B0, "skillfx": 0x4B44BC, "enemy": 0x4A4347,
+    "armor_head": 0x49AF70, "armor_body": 0x491B90, "armor_arm": 0x499490,
+    "armor_foot": 0x49C6B0, "armor_accessory": 0x4B2070,
+}
+
+def _snapshot_bases():
+    return {
+        "stats": TABLES["stats"][0], "affinities": TABLES["affinities"][0],
+        "equipable skills": TABLES["equipable skills"][0], "weapon growth": TABLES["weapon growth"][0],
+        "spell": SPELL_BASE, "runeprice": RUNEPRICE_BASE, "runeprice_stride": RUNEPRICE_STRIDE,
+        "healprice": HEALPRICE_BASE, "mp": MP_BASE, "skillfx": SKILLFX_BASE, "enemy": ENEMY_BASE,
+        "armor_head": ARMOR_TABLES["head"][0], "armor_body": ARMOR_TABLES["body"][0],
+        "armor_arm": ARMOR_TABLES["arm"][0], "armor_foot": ARMOR_TABLES["foot"][0],
+        "armor_accessory": ARMOR_TABLES["accessory"][0],
+    }
+
+_NTSC = _snapshot_bases()
+
+def set_region(region):
+    """Rebind all region-variable table bases in place. No-op if unknown."""
+    global REGION, SPELL_BASE, RUNEPRICE_BASE, RUNEPRICE_STRIDE, HEALPRICE_BASE
+    global MP_BASE, SKILLFX_BASE, ENEMY_BASE
+    b = {"ntsc-u": _NTSC, "pal": _PAL}.get(region)
+    if not b:
+        return REGION
+    REGION = region
+    for key in ("stats", "affinities", "equipable skills", "weapon growth"):
+        base, stride, fields = TABLES[key]
+        TABLES[key] = (b[key], stride, fields)
+    for slot in ("head", "body", "arm", "foot", "accessory"):
+        base, count = ARMOR_TABLES[slot]
+        ARMOR_TABLES[slot] = (b["armor_" + slot], count)
+    SPELL_BASE = b["spell"]
+    RUNEPRICE_BASE = b["runeprice"]; RUNEPRICE_STRIDE = b["runeprice_stride"]
+    HEALPRICE_BASE = b["healprice"]
+    MP_BASE = b["mp"]; SKILLFX_BASE = b["skillfx"]; ENEMY_BASE = b["enemy"]
+    return REGION
