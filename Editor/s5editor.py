@@ -228,6 +228,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button data-tab=price onclick=showTab('price')>Prices</button>
    <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
    <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
+   <button data-tab=assets onclick=showTab('assets')>Assets / Portraits</button>
    <button data-tab=tools onclick=showTab('tools')>Tools</button>
   </div>
  </div>
@@ -447,15 +448,31 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span id=otxtnote class=note></span>
   </div>
   <div class=scroll id=overlaytext></div>
-  <h2 style="margin-top:18px">Assets (DATA.PAK)</h2>
-  <p class=sub><code>DATA.PAK</code> is the game's 2.3 GB CRI ROFS asset volume — ~7,700 internal files (backgrounds, UI, effects, and character <b>portraits</b> as <code>FACE_*.ROM</code>). <b>List</b> browses them; <b>Extract</b> pulls one out to <code>datapak_extracted/</code>. Files stored uncompressed (<code>non</code>), LZSS (<code>szl</code>) or <code>bpe</code>-compressed are all decoded. Any <code>FACE</code> file has a <b>Portraits</b> button: battle faces (<code>BTL_FACE</code>, 128×64) and the high-res per-character portraits (<code>FACE_PC*</code>/<code>EC*</code>, 256×256, one file per character with all expressions) render as PNGs, viewable/downloadable individually or as a sprite sheet.</p>
+ </section>
+ <section class=panel id=p-assets>
+  <h2>Assets &amp; Portraits</h2>
+  <p class=sub>Character art and every other asset packed into <code>DATA.PAK</code> — the game's 2.3&nbsp;GB CRI ROFS volume (~7,700 files). Portraits render straight to PNG in your browser; any file can be extracted to <code>datapak_extracted/</code>.</p>
+
+  <h2 style="margin-top:14px">Portraits</h2>
+  <p class=sub>Pick a portrait set and view every expression/pose. <b>Battle faces</b> (<code>BTL_FACE</code>) hold the whole main cast at 128×64; the <b>character portraits</b> (<code>FACE_PC*</code> / <code>FACE_EC*</code>) are one file per character at 256×256 with all their expressions. Click any face to download it, or grab the whole set as one sprite sheet.</p>
+  <div class=row>
+   <span class=note>Portrait set</span>
+   <select id=faceSel style="min-width:220px"></select>
+   <button onclick="viewPortraits(document.getElementById('faceSel').value)">Show portraits</button>
+   <button class=ghost onclick="downloadSheet(document.getElementById('faceSel').value)">⬇ Sprite sheet</button>
+   <button class=ghost onclick=loadFaceList()>Refresh list</button>
+   <span id=facenote class=note></span>
+  </div>
+  <div id=portraits style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:#111;padding:10px;border-radius:8px;margin-top:8px;min-height:40px"></div>
+
+  <h2 style="margin-top:20px">All DATA.PAK files</h2>
+  <p class=sub>Browse and extract any internal file (backgrounds, UI, effects, sound banks, models…). Files stored uncompressed (<code>non</code>), LZSS (<code>szl</code>) or <code>bpe</code>-compressed are decoded on extract; others are dumped as the raw container. <code>FACE</code> rows also get a <b>Portraits</b> shortcut.</p>
   <div class=row>
    <button onclick=loadDatapak()>List DATA.PAK files</button>
    <input id=pakfilter size=18 placeholder="filter path (e.g. FACE)" onkeydown="if(event.key==='Enter')loadDatapak()">
    <span id=paknote class=note></span>
   </div>
   <div class=scroll id=datapak></div>
-  <div id=portraits style="display:flex;flex-wrap:wrap;gap:6px;background:#111;padding:8px;border-radius:8px;margin-top:8px"></div>
  </section>
 </main>
 <footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.1.0</footer>
@@ -521,9 +538,10 @@ function reopenLast(){if(LASTISO){document.getElementById('iso').value=LASTISO;v
 function needIso(){if(!iso()){toast('Open your ISO first','bad');showTab('char');return false}return true}
 function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==name));
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));
- const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['enemy','price','hard','ref','tools'].includes(name));
+ const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['enemy','price','hard','ref','assets','tools'].includes(name));
  const om=document.getElementById('othermenu');if(om)om.classList.remove('open');
- if(name=='tools'&&iso())modStatus();}
+ if(name=='tools'&&iso())modStatus();
+ if(name=='assets'&&iso()&&!FACELIST.length)loadFaceList();}
 function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
 document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
  if(d&&!d.contains(e.target)){const om=document.getElementById('othermenu');if(om)om.classList.remove('open');}});
@@ -940,7 +958,20 @@ async function reinsertOverlay(name){if(!needIso())return;
  if(r.error){toast(r.error,'bad');document.getElementById('ovlnote').innerHTML='<span class=bad>'+r.error+'</span>';return}
  toast(name+' re-inserted ('+r.newCompSize.toLocaleString()+' B, '+r.slack+' B slack)','ok');
  document.getElementById('ovlnote').textContent=name+': recompressed '+r.container.toLocaleString()+' / '+r.slot.toLocaleString()+' B slot';}
-let PAKFILES=[];
+let PAKFILES=[], FACELIST=[];
+async function loadFaceList(){if(!needIso())return;
+ const sel=document.getElementById('faceSel');const note=document.getElementById('facenote');
+ note.textContent='finding portrait files…';
+ const r=await j('/api/datapak',{iso:iso(),filter:'FACE'});
+ if(r.error){note.textContent='';toast(r.error,'bad');return}
+ // only real portrait containers, sorted: BTL_FACE first, then FACE_PC*, FACE_EC*
+ FACELIST=(r.files||[]).filter(e=>/FACE/.test(e.name)&&e.size>64)
+  .sort((a,b)=>{const rank=n=>n.startsWith('BTL')?0:n.startsWith('FACE_PC')?1:2;
+   return rank(a.name)-rank(b.name)||a.name.localeCompare(b.name);});
+ sel.innerHTML=FACELIST.map(e=>{const nm=e.name.replace('.ROM','');
+  const lbl=nm==='BTL_FACE'?'BTL_FACE — battle faces (all cast)':nm;
+  return `<option value="${e.name}">${lbl}</option>`;}).join('');
+ note.textContent=FACELIST.length+' portrait sets';}
 async function loadDatapak(){if(!needIso())return;
  const filt=document.getElementById('pakfilter').value.trim();
  document.getElementById('paknote').textContent='reading DATA.PAK…';
@@ -953,18 +984,29 @@ async function loadDatapak(){if(!needIso())return;
   `<td>${e.codec}</td><td><button class="ghost mini" onclick="extractPak('${e.name}')">Extract</button>`+
   (isface?`<button class="ghost mini" onclick="viewPortraits('${e.name}')">Portraits</button>`:'')+`</td></tr>`});
  document.getElementById('datapak').innerHTML=h+'</tbody></table>'+(PAKFILES.length>800?'<p class=note>showing first 800 — filter to narrow</p>':'');}
-async function viewPortraits(name){if(!needIso())return;
- document.getElementById('paknote').textContent='decoding '+name+' portraits…';
- const box=document.getElementById('portraits');box.innerHTML='';
+async function viewPortraits(name){if(!needIso()||!name)return;
+ const fn=document.getElementById('facenote'), pn=document.getElementById('paknote');
+ const note=(fn&&document.getElementById('p-assets').classList.contains('on'))?fn:pn;
+ if(fn)fn.textContent='decoding '+name+' portraits…'; if(pn)pn.textContent='';
+ const box=document.getElementById('portraits');box.innerHTML='<span class=note>decoding '+name+'…</span>';
  const r=await j('/api/portraits',{iso:iso(),name,save:true});
- if(r.error){document.getElementById('paknote').textContent='';toast(r.error,'bad');return}
- document.getElementById('paknote').innerHTML=r.count+' portraits from '+name+(r.saved?(' · saved PNGs to <code>'+r.saved+'</code>'):'');
- const bar=document.createElement('div');bar.style.cssText='width:100%;margin-bottom:4px';
- bar.innerHTML='<button class="ghost mini" onclick="downloadSheet(\''+name+'\')">⬇ Download all as sprite sheet (PNG)</button>';
+ box.innerHTML='';
+ if(r.error){if(note)note.textContent='';toast(r.error,'bad');return}
+ if(note)note.innerHTML=r.count+' portraits from <b>'+name+'</b>'+(r.saved?(' · saved to <code>'+r.saved+'</code>'):'');
+ // hi-res 256px portraits look better smoothed and larger; small battle faces stay pixel-crisp
+ const big=r.faces.length&&(r.w||0)>=200;
+ const bar=document.createElement('div');bar.style.cssText='width:100%;margin-bottom:6px';
+ bar.innerHTML='<button class="ghost mini" onclick="downloadSheet(\''+name+'\')">⬇ Download all as sprite sheet</button>';
  box.appendChild(bar);
- r.faces.forEach((src,i)=>{const a=document.createElement('a');a.href=src;a.download='face_'+String(i).padStart(3,'0')+'.png';
-  const im=new Image();im.src=src;im.title='face '+i+' (click to download)';im.style.cssText='height:64px;image-rendering:pixelated;border:1px solid #333';
-  a.appendChild(im);box.appendChild(a);});
+ r.faces.forEach((src,i)=>{const cell=document.createElement('div');
+  cell.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px';
+  const a=document.createElement('a');a.href=src;a.download=name.split('.')[0]+'_'+String(i).padStart(2,'0')+'.png';
+  const im=new Image();im.src=src;im.title='click to download';
+  im.style.cssText='height:'+(big?128:72)+'px;border:1px solid #333;border-radius:4px;background:#fff;'
+   +(big?'image-rendering:auto':'image-rendering:pixelated');
+  a.appendChild(im);cell.appendChild(a);
+  const cap=document.createElement('span');cap.className='note';cap.style.fontSize='10px';cap.textContent='#'+i;
+  cell.appendChild(cap);box.appendChild(cell);});
  toast(r.count+' portraits','ok');}
 async function downloadSheet(name){if(!needIso())return;toast('composing sheet…','ok');
  const r=await j('/api/portraits',{iso:iso(),name,sheet:true,cols:8});
@@ -1303,7 +1345,8 @@ class H(http.server.BaseHTTPRequestHandler):
                         return self._send(200, json.dumps({"error": str(e)}))
                 try:
                     import base64
-                    faces = P.render_portraits(iso, nm)
+                    bufs, W, H = P._decode_faces(iso, nm)
+                    faces = [P._png(W, H, b) for b in bufs]
                     save = d.get("save")
                     saved = None
                     if save:
@@ -1313,7 +1356,7 @@ class H(http.server.BaseHTTPRequestHandler):
                         for i, png in enumerate(faces):
                             with open(os.path.join(out_dir, "face_%03d.png" % i), "wb") as w: w.write(png)
                         saved = os.path.abspath(out_dir)
-                    return self._send(200, json.dumps({"name": nm, "count": len(faces), "saved": saved,
+                    return self._send(200, json.dumps({"name": nm, "count": len(faces), "saved": saved, "w": W, "h": H,
                         "faces": ["data:image/png;base64," + base64.b64encode(p).decode() for p in faces]}))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
