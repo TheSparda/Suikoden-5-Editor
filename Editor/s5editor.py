@@ -448,7 +448,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   </div>
   <div class=scroll id=overlaytext></div>
   <h2 style="margin-top:18px">Assets (DATA.PAK)</h2>
-  <p class=sub><code>DATA.PAK</code> is the game's 2.3 GB CRI ROFS asset volume — ~7,700 internal files (backgrounds, UI, effects, and character <b>portraits</b> as <code>FACE_*.ROM</code>). <b>List</b> browses them; <b>Extract</b> pulls one out to <code>datapak_extracted/</code>. Files stored uncompressed (<code>non</code>) or LZSS (<code>szl</code>) are decoded to <code>.bin</code>; the <code>bpe</code>-compressed ones (most textures/portraits) are dumped as raw <code>.rom</code> for now — a <code>bpe</code> decoder + PS2 texture→PNG step is in progress.</p>
+  <p class=sub><code>DATA.PAK</code> is the game's 2.3 GB CRI ROFS asset volume — ~7,700 internal files (backgrounds, UI, effects, and character <b>portraits</b> as <code>FACE_*.ROM</code>). <b>List</b> browses them; <b>Extract</b> pulls one out to <code>datapak_extracted/</code>. Files stored uncompressed (<code>non</code>), LZSS (<code>szl</code>) or <code>bpe</code>-compressed are all decoded. Any <code>FACE</code> file has a <b>Portraits</b> button: battle faces (<code>BTL_FACE</code>, 128×64) and the high-res per-character portraits (<code>FACE_PC*</code>/<code>EC*</code>, 256×256, one file per character with all expressions) render as PNGs, viewable/downloadable individually or as a sprite sheet.</p>
   <div class=row>
    <button onclick=loadDatapak()>List DATA.PAK files</button>
    <input id=pakfilter size=18 placeholder="filter path (e.g. FACE)" onkeydown="if(event.key==='Enter')loadDatapak()">

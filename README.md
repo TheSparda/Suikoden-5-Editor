@@ -99,9 +99,11 @@ is independent of which ISO you have open.)
   them (endings, letters, lore, newspaper, …).
 - **Assets (DATA.PAK)** — browse the game's 2.3 GB CRI ROFS asset volume (~7,700 internal
   files: backgrounds, UI, effects, character portraits as `FACE_*.ROM`) and extract any of
-  them. Files stored uncompressed or LZSS are decoded; `bpe`-compressed textures are dumped
-  raw for now (a `bpe` decoder + PS2 texture→PNG step for portrait *rendering* is in
-  progress).
+  them (uncompressed, LZSS and `bpe`-compressed files are all decoded). Every `FACE` file
+  has a **Portraits** button that renders the textures to PNG in the browser — the battle
+  face set (`BTL_FACE`, 92 faces at 128×64) and the **high-res per-character portraits**
+  (`FACE_PC*`/`FACE_EC*`, 256×256, one file per character with all their expressions).
+  Download faces individually or as a one-click sprite sheet.
 
 Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
 grouped navigation, and a light/dark theme toggle.

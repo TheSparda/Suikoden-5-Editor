@@ -497,39 +497,78 @@ def _unswizzle_clut256(c):
                 out[(i + 24 + j) * 4 + k] = c[(i + 24 + j) * 4 + k]
     return out
 
-# Portrait texture geometry (verified vs BTL_FACE): each face = 128x32 8-bit indices
-# (4096 B) + a 256-color RGBA CLUT (1024 B), rendered at 2x vertical -> 128x64.
-_FACE_W, _FACE_H, _FACE_IDX, _FACE_CLUT = 128, 32, 4096, 1024
+# Portrait textures come in two containers, both holding `ff ff 03 18`-marked pixel
+# records whose 20-byte header self-describes W(u32)/H(u32)/bpp(u32): 8-bit indices
+# (W*H) + a 256-color RGBA CLUT (1024 B). Verified: BTL_FACE = dxt container, 128x32
+# faces, CSM1-swizzled CLUT, drawn 2x vertical; FACE_PC*/EC*/ME* = nested `epb` chunk
+# sequence, 256x256 faces, linear CLUT.
 
-def _decode_faces(iso_path, name):
-    """Decode a FACE/BTL_FACE dxt texture file to a list of RGBA face buffers (128x64).
-    Returns (faces, W, H). Raises ValueError if not a dxt texture container."""
-    _, data, codec = _datapak_read(iso_path, name)
-    if data[:4] != b"\x00dxt":
-        raise ValueError(f"{name} is not a portrait/dxt texture (tag {data[:4].hex()}, codec {codec})")
-    marks = []; i = 0x40
+def _bpe_chunks(data):
+    """Split a nested \\x00epb chunk sequence (FACE_PC/EC/ME payloads) and bpe-decompress
+    each chunk. Per chunk: u32@4 = align4(chunk size)-4 (next-chunk skip, NOT dec size),
+    u32@8 = header size (data at +hdr+8), u32@0xC = compressed size; the compressed
+    stream itself starts with a u32 true decompressed size."""
+    out = []; off = 0
+    while off + 16 <= len(data) and data[off:off+4] == b"\x00epb":
+        hdr  = int.from_bytes(data[off+8:off+12], "little")
+        comp = int.from_bytes(data[off+12:off+16], "little")
+        if int.from_bytes(data[off+4:off+8], "little") == 0 or comp < 5: break
+        s = data[off + hdr + 8:off + hdr + 8 + comp]
+        out.append(_bpe_decompress(s[4:], int.from_bytes(s[:4], "little")))
+        off = (off + hdr + 8 + comp + 3) & ~3
+    return out
+
+def _scan_pixel_records(body, swizzled_clut):
+    """Yield (rgba, W, H) for each pixel record in a dxt-style body: marker `ffff0318`,
+    then u32 W, u32 H, u32 bpp(=8), u32 stride, then W*H indices + 1024-byte CLUT.
+    Wide low faces (H*2 < W) are drawn at 2x vertical for correct proportions."""
+    marks = []; i = 0
     while True:
-        j = data.find(b"\xff\xff\x03\x18", i)
+        j = body.find(b"\xff\xff\x03\x18", i)
         if j < 0: break
         marks.append(j); i = j + 4
-    W, H = _FACE_W, _FACE_H * 2
-    faces = []
+    marks.append(len(body))
     for k in range(len(marks) - 1):
-        if not (5100 <= marks[k + 1] - marks[k] <= 5200):
-            continue
-        s = data[marks[k] + 20:marks[k + 1]]
-        if len(s) < _FACE_IDX + _FACE_CLUT:
-            continue
-        idx = s[:_FACE_IDX]; clut = _unswizzle_clut256(s[_FACE_IDX:_FACE_IDX + _FACE_CLUT])
-        rgba = bytearray(W * H * 4)
-        for y in range(_FACE_H):
-            for x in range(_FACE_W):
-                ci = idx[y * _FACE_W + x]
-                r, g, b, a = clut[ci*4], clut[ci*4+1], clut[ci*4+2], min(255, clut[ci*4+3] * 2)
-                for dy in range(2):
-                    o = ((y * 2 + dy) * W + x) * 4
+        m = marks[k]
+        if m + 20 > len(body): continue
+        W = int.from_bytes(body[m+4:m+8], "little")
+        H = int.from_bytes(body[m+8:m+12], "little")
+        bpp = int.from_bytes(body[m+12:m+16], "little")
+        if bpp != 8 or not (8 <= W <= 1024 and 8 <= H <= 1024): continue
+        if marks[k+1] - m < 20 + W * H + 1024: continue
+        s = body[m+20:m+20 + W * H + 1024]
+        idx = s[:W * H]; clut = s[W * H:]
+        if swizzled_clut: clut = _unswizzle_clut256(clut)
+        v = 2 if H * 2 < W else 1
+        rgba = bytearray(W * H * v * 4)
+        for y in range(H):
+            for x in range(W):
+                ci = idx[y * W + x]
+                r, g, b = clut[ci*4], clut[ci*4+1], clut[ci*4+2]
+                a = min(255, clut[ci*4+3] * 2)
+                for dy in range(v):
+                    o = ((y * v + dy) * W + x) * 4
                     rgba[o], rgba[o+1], rgba[o+2], rgba[o+3] = r, g, b, a
-        faces.append(rgba)
+        yield rgba, W, H * v
+
+def _decode_faces(iso_path, name):
+    """Decode a FACE texture file (BTL_FACE dxt container, or FACE_PC/EC/ME nested epb
+    chunks) to a list of RGBA face buffers. Returns (faces, W, H)."""
+    _, data, codec = _datapak_read(iso_path, name)
+    if data[:4] == b"\x00dxt":
+        bodies = [(data[0x40:], True)]          # dxt: CSM1-swizzled CLUT
+    elif data[:4] == b"\x00epb":
+        bodies = [(b, False) for b in _bpe_chunks(data)]  # nested chunks: linear CLUT
+    else:
+        raise ValueError(f"{name} is not a portrait texture (tag {data[:4].hex()}, codec {codec})")
+    faces = []; W = H = None
+    for body, swiz in bodies:
+        for rgba, w, h in _scan_pixel_records(body, swiz):
+            if W is None: W, H = w, h
+            if (w, h) != (W, H): continue       # keep sheet grid uniform
+            faces.append(rgba)
+    if not faces:
+        raise ValueError(f"no pixel records found in {name}")
     return faces, W, H
 
 def render_portraits(iso_path, name):
