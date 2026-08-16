@@ -2,14 +2,14 @@
 
 A cross-platform editor for **Suikoden V** (PS2, USA `SLUS-21291`), modeled on the
 [Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a
-local web app in your browser — nothing is uploaded, the server only touches the file
-you point it at, and it ships with **no game data**. Supply your own legally-obtained
-ISO and/or save files.
+local web app in your browser — nothing is uploaded, and the server only touches the
+file you point it at. It ships with **no game ROM/ISO**; supply your own
+legally-obtained ISO and/or save files.
 
 Every editable field was reverse-engineered and then **verified** against public stat
-guides (and cross-checked against a community data-table reference); fields that could
-not be confirmed are shown read-only or omitted rather than guessed. Any write makes a
-`.bak` first.
+guides; fields that could not be confirmed are shown read-only or omitted rather than
+guessed. Writes are protected by an optional `.bak` backup (a toggle in the header,
+on by default).
 
 ## Run
 
@@ -43,8 +43,14 @@ game's data:
 
 ### Runes & Spells
 - Which contiguous spell range each **rune** teaches (rune → spell grant table).
-- **Spell** definition: element, power / heal amount, and target shape.
+- **Spell** definition: element, power / heal amount, target shape, and status effect
+  (None / Revive / Add status).
 - A **custom spell-set builder** for composing a rune's spell list.
+
+### Unites
+Every unite attack (49, verified against the Unites guide) with its participant slots
+editable via full-roster dropdowns. Member count is fixed (the table is packed) and the
+damage/target are engine-driven, so those are shown for reference.
 
 ### Gear (Armor)
 Five slots — Head / Body / Arm / Foot / Accessory — labeled with English item names.
@@ -73,17 +79,22 @@ Reads and writes PS2 saves across formats and regions:
 - **Open directly** (file picker or path) or **scan a folder** for both cards and
   standalone saves.
 - Editable: hero name, castle name, New Game Plus. Level is shown read-only (it's the
-  save-select display cache; real unit levels live elsewhere). A `.bak` is always made.
+  save-select display cache; real unit levels live elsewhere).
 
 ### Other ▾
-- **Enemies** — HP / combat stats and item drops (drop offsets verified via a known
-  enemy).
-- **Prices** — buy / sell for items and equipment.
+- **Enemies** — Level, combat stats, Potch / Skill-Point rewards, per-enemy elemental
+  affinities (E–S), and the five item-drop slots picked by item name (verified via the
+  in-game drop table).
+- **Prices** — buy / sell for items & equipment, rune (orb) prices, and healing-item
+  prices.
 - **Reference / Text** — clean English name lists (Characters, Spells, Skills, Runes,
   Enemies, Healing Items, all Gear slots) for lookup, plus the raw boot-ELF strings
   (all languages) which you can edit in place (byte-capped).
 - **Hard Mode** — scale growth rates down by a factor (idempotent; restorable).
-- **Tools** — raw hex peek at any offset.
+- **Tools** — raw hex peek at any offset; **overlay tools** that extract/decompress the
+  disc's engine overlays (OVL/\*.ROM), re-insert edited ones (LZSS), and an **Overlay
+  Text** editor for the story/dialogue text inside them (endings, letters, lore,
+  newspaper, …).
 
 Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
 grouped navigation, and a light/dark theme toggle.
@@ -112,7 +123,16 @@ Start Editor (Mac).command / (Windows).bat   launchers
 
 ## Privacy & scope
 
-The repository contains no copyrighted game content. Game images (`*.iso`), save files,
-stat guides, screenshots, and internal reverse-engineering working notes are all
-git-ignored and never distributed. All ISO offsets were independently reverse-engineered
-and verified against public stat guides. Not affiliated with Konami.
+The repository contains **no game ROM/ISO, save files, audio, or script/story assets**.
+It does include small reverse-engineered **reference tables** — id→name maps (characters,
+items, runes, spells, skills, armor, enemies, unites) and a boot-ELF string index — which
+the editor needs to show meaningful labels; this is interoperability data, not the game.
+Game images (`*.iso`), saves, stat guides, screenshots, and internal reverse-engineering
+working notes are all git-ignored and never distributed. All offsets were independently
+reverse-engineered and verified against public stat guides. Fan project; not affiliated
+with or endorsed by Konami. Suikoden V is © Konami.
+
+## License
+
+See `LICENSE`. Reverse-engineered offset/name data is provided for interoperability with
+your own legally-owned copy of the game.

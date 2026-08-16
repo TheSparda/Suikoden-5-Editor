@@ -27,7 +27,7 @@ def _skill_label(i):
 # Skill-rank byte value -> grade (verified 01=E .. 07=SS).
 RANK_NAMES = ["—", "E", "D", "C", "B", "A", "S", "SS"]
 # Elemental affinity grade (value IS the grade): 0=None,1=E,2=D,3=C,4=B,5=A,6=S.
-# VERIFIED vs the Nightmare affinities1.txt + the ISO affinity table. (Distinct scale
+# VERIFIED vs a community-documented affinities1.txt + the ISO affinity table. (Distinct scale
 # from RANK_NAMES, which is 1-based with 0="—".)
 AFFINITY_GRADES = ["None", "E", "D", "C", "B", "A", "S"]
 
@@ -49,7 +49,7 @@ def _char_stat_fields():
 TABLES = {
     "stats":      (0x48A970, 0x12, _char_stat_fields()),
     # ---- Elemental affinities (VERIFIED @0x48B530, stride 14, char-indexed like stats).
-    # Recovered by byte-matching the Nightmare "Affinity" module slice into the ISO, then
+    # Recovered by byte-matching a community-documented "Affinity" module slice into the ISO, then
     # verified by content: Prince Sun=A(5), Zerase Fire/Star/Dark=A, Lance Punch=A. Each of
     # the 14 elements is one grade byte 0=None..6=S (AFFINITY_GRADES). Column order is the
     # Affinity module's (Wind@3 / Water@4, matching our spell ELEMENT_NAMES, not the
@@ -58,7 +58,7 @@ TABLES = {
         ["Sun", "Fire", "Lightning", "Wind", "Water", "Earth", "Star", "Sound",
          "Holy", "Dark", "Slash", "Thrust", "Punch", "Shoot"])]),
     # ---- Equipable-skill CAPS per character (VERIFIED @0x4B2731, stride 49, count 113,
-    # char-indexed). Recovered from the Nightmare "Equipable Skill" module + byte-matched
+    # char-indexed). Recovered from a community-documented "Equipable Skill" module + byte-matched
     # (block is byte-identical to the extract). Each of the 48 skills is one byte = the
     # max rank this character can equip it at: 0=None..7=SS (RANK_NAMES). Verified by
     # content: Prince Attack/Technique/MDef=S; Zerase Magic/Incantation=S + SS support
@@ -167,7 +167,7 @@ NAME_MAX_CHARS  = 7
 
 # ---- Rune (orb) price table (VERIFIED @0x4E24FC vs the rune guide: Fire Orb
 # 6000/3000, Shield Orb 35000/17500; sell = buy/2; event-only orbs have buy=0).
-# From the Nightmare Rune Price module (NTSC-U), byte-matched into the ISO. 70 records,
+# From a community-documented Rune Price module (NTSC-U), byte-matched into the ISO. 70 records,
 # stride 76; buy @+0 and sell @+4 are 3-byte LE (byte 3/7 always 0). Names = runes.txt
 # order (s5_runeprice_names.json). NOTE: PAL uses stride 80 (separate layout).
 RUNEPRICE_BASE, RUNEPRICE_STRIDE, RUNEPRICE_COUNT = 0x4E24FC, 76, 70
@@ -176,7 +176,7 @@ def _runeprice_names():
     except Exception: return []
 RUNEPRICE_NAMES = _runeprice_names()
 
-# ---- Healing-item price table (@0x4CCFD0, from the Nightmare Healing Item Price
+# ---- Healing-item price table (@0x4CCFD0, from a community-documented Healing Item Price
 # module, byte-matched into the ISO). 41 records, stride 88; buy @+0 / sell @+4,
 # 3-byte LE. Names = healing items.txt order (s5_healprice_names.json).
 HEALPRICE_BASE, HEALPRICE_STRIDE, HEALPRICE_COUNT = 0x4CCFD0, 88, 41
@@ -231,7 +231,7 @@ ARMOR_ELEMENTS = ["Sun", "Fire", "Lightning", "Wind", "Water", "Earth", "Star",
 # Element Atk (our 0x41..0x4E) + Def (0x4F..0x5C) are 14 signed bytes each, VERIFIED:
 # each nonzero byte matches the piece's own summary text exactly (Sun Helm "Sun ATK+1"
 # -> Sun ATK=1; Flame Helmet "Fire DEF+1" -> Fire DEF=1; "+1" with no ATK/DEF word sets
-# both). Recovered via the Nightmare Head Gear module (module offset - 8 = our offset).
+# both). Recovered via a community-documented Head Gear module (module offset - 8 = our offset).
 # Type (base-3): armor weight class 1=Light/2=Medium/3=Heavy (accessories use a different
 # set 1=Cape..6=Ring). SPD penalty (base-2): unsigned speed cost, scales with weight class.
 ARMOR_FIELDS = [
@@ -293,7 +293,7 @@ def armor_summary_en(jp):
     return re.sub(r"\s+", " ", s).strip()
 
 # ---- MP growth thresholds (VERIFIED @0x4986C0; this is the old "LADDER" table, now
-# identified via the Nightmare MP Growth module + byte-match). 4 groups = magic Levels
+# identified via a community-documented MP Growth module + byte-match). 4 groups = magic Levels
 # 1-4; each group is 9 u16 MP-cost thresholds (a 10th u16 = 999 terminator/pad). Content
 # confirmed: Lv1 [0,20,40,75,100,130,165,225,290], Lv4 [180,270,450,520,...]. Editing
 # tunes MP requirements but can't raise the 9/9/7/5 casts-per-level cap.
@@ -320,7 +320,7 @@ UNITE_NAMES = _unite_names()
 UNITE_EXTRA_CHARS = {129: "ReMiFa", 130: "MiFaSo", 131: "FaSoLa", 132: "SoLaTi", 133: "LaTiDo"}
 
 # ---- Skill effect magnitudes (VERIFIED @0x4AEB1C, stride 36, count 165; byte-identical
-# to the Nightmare extract). Per skill: 7 u16 values = the skill's magnitude at rank
+# to a community-documented extract). Per skill: 7 u16 values = the skill's magnitude at rank
 # E/D/C/B/A/S/SS, at offsets 0,2,4,6,8,10,12. Verified content: "Attack +" 5..40,
 # "Stamina (% HP)" 105..130, "Karmic Effect" starts at C. GLOBAL table (indexed by skill
 # id, shared by all units). Names from skills.txt (s5_skilleffect_names.json, 165).
@@ -353,7 +353,7 @@ GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — us
 
 # ---- Enemy / unit editor -----------------------------------------------------
 # Enemies live at 0x49F0DC / stride 0x7C, indexed by a unit id. FULL record layout
-# recovered from the Nightmare Enemy module (its base 0x49F157 = ours + 0x7B, so
+# recovered from a community-documented Enemy module (its base 0x49F157 = ours + 0x7B, so
 # module offset - 1 = our offset, module enemy i = our id i+1) and VERIFIED on real
 # records: Nariqua (our id 4) Lv45 HP1800 Potch2500 SP135, 20%-drop cat7/item0x10 =
 # Rune Pieces / Drain Piece (our original ground truth); Holly Boy (id 1) Lv10 HP80
