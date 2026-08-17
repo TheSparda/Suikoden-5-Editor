@@ -920,16 +920,16 @@ function _sel(id,names,val){let h=`<select id="${id}">`;
  for(const k of keys){h+=`<option value="${k}" ${String(val)==k?'selected':''}>${k}: ${names[k]}</option>`}
  return h+`</select>`;}
 function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('csel'+i).value;
- const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames;
+ const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames,RN=r.runeNames;
  const asel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,A[slot],val)}</div></div>`;
- const rnum=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in><input type=number id="ce${i}_${slot}" value="${val}" min=0 max=255></div></div>`;
+ const rsel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,RN,val)}</div></div>`;
  const lvl=`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`;
  document.getElementById('cfld'+i).innerHTML='<div class=grid>'
   +lvl
   +asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)
   +asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot)
-  +rnum('rhead','Head Rune (ID)',c.runes.rhead)+rnum('rright','Right Rune (ID)',c.runes.rright)+rnum('rleft','Left Rune (ID)',c.runes.rleft)
-  +'</div><span class=note>Level and armor are verified. Rune slots are raw numeric IDs — the game has ~90 runes and our name table is incomplete, so names are not shown yet (the slot still edits correctly).</span>'
+  +rsel('rhead','Head Rune',c.runes.rhead)+rsel('rright','Right Rune',c.runes.rright)+rsel('rleft','Left Rune',c.runes.rleft)
+  +'</div><span class=note>Level, armor and runes are reverse-engineered from the game and cross-verified. (Rune 0 = empty slot.)</span>'
   +(c.active?'':'<br><span class=note>This character shows inactive (not yet recruited) in this save.</span>');}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
@@ -1748,8 +1748,8 @@ class H(http.server.BaseHTTPRequestHandler):
                 armorNames = {"helm": armor.get("head", {}), "body": armor.get("body", {}),
                               "glove": armor.get("glove", {}), "foot": armor.get("foot", {})}
                 try:
-                    _rn = json.load(open(os.path.join(HERE, "s5_rune_names.json")))
-                    runeNames = {str(i): (e["name"] if isinstance(e, dict) else e) for i, e in enumerate(_rn)}
+                    _rn = json.load(open(os.path.join(HERE, "s5_rune_ids.json")))  # equip-id-ordered
+                    runeNames = {str(i): e for i, e in enumerate(_rn)}
                 except Exception: runeNames = {}
                 return self._send(200, json.dumps({"chars": chars, "armorNames": armorNames, "runeNames": runeNames}))
             if self.path == "/api/peek":
