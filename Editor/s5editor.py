@@ -920,16 +920,19 @@ function _sel(id,names,val){let h=`<select id="${id}">`;
  for(const k of keys){h+=`<option value="${k}" ${String(val)==k?'selected':''}>${k}: ${names[k]}</option>`}
  return h+`</select>`;}
 function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('csel'+i).value;
- const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames,RN=r.runeNames;
- const rsel=(slot,val)=>`<div class=fld><label>${slot}</label><div class=in>${_sel('ce'+i+'_'+slot,RN,val)}</div></div>`;
+ const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames;
  const asel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,A[slot],val)}</div></div>`;
+ const rnum=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in><input type=number id="ce${i}_${slot}" value="${val}" min=0 max=255></div></div>`;
+ const lvl=`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`;
  document.getElementById('cfld'+i).innerHTML='<div class=grid>'
+  +lvl
   +asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)
   +asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot)
-  +rsel('rhead',c.runes.rhead)+rsel('rright',c.runes.rright)+rsel('rleft',c.runes.rleft)
-  +'</div>'+(c.active?'':'<span class=note>Note: this character shows inactive (not yet recruited) in this save.</span>');}
+  +rnum('rhead','Head Rune (ID)',c.runes.rhead)+rnum('rright','Right Rune (ID)',c.runes.rright)+rnum('rleft','Left Rune (ID)',c.runes.rleft)
+  +'</div><span class=note>Level and armor are verified. Rune slots are raw numeric IDs — the game has ~90 runes and our name table is incomplete, so names are not shown yet (the slot still edits correctly).</span>'
+  +(c.active?'':'<br><span class=note>This character shows inactive (not yet recruited) in this save.</span>');}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
- const edits={};for(const s of ['helm','body','glove','foot','rhead','rright','rleft']){
+ const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  const bakOn=document.getElementById('bakToggle').checked;
  if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
