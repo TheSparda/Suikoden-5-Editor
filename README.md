@@ -85,10 +85,24 @@ you can edit in place (byte-capped).
 Scale every character's growth rates down by a factor (idempotent; fully restorable).
 
 ### Save Editor
-Reads and writes PS2 saves across formats and regions (`.ps2`, `.psu`, `.xps`/`.sps`,
-`.cbs`), region-aware (NTSC-U / PAL / NTSC-J), by file picker or folder scan. Editable:
-hero name, castle name, New Game Plus. (The save editor detects each save's own region and
-is independent of which ISO you have open.)
+Reads and writes PS2 saves across formats and regions (`.ps2` memory cards, `.psu`,
+`.xps`/`.sps`, `.cbs`), region-aware (NTSC-U / PAL / NTSC-J), by file picker or folder
+scan. The save layout was reverse-engineered from the game itself (the save file is a
+verbatim image of the game's save RAM; there is **no checksum** — the game only validates
+three fixed header magics, so edits are safe) and every field below is cross-verified
+against the game's own data tables. Editable:
+
+- **Hero name, castle name, New Game Plus** (fast-forward).
+- **Per character** (all 120, via the *Characters* panel): **Level** (1–99),
+  **equipped armor** (Helm / Armor / Gloves / Boots by name), **equipped runes**
+  (Head / Right / Left hand, all 92 runes by name), the two **equipped battle-skill
+  slots**, and all **48 skill ranks** (None → SS — support skills like Cook or Forge
+  use the same scale as their fixed in-game grade).
+- **Recruitment** (the *Recruitment* panel): all characters as a searchable checkbox
+  roster with a live counter, check/uncheck-all, and one-click write of just the changed
+  flags. Story-only characters and antagonists are locked so saves stay consistent.
+
+ECC (memory cards) and a `.bak` backup are handled automatically on every write.
 
 ### Tools
 - **Share / Patch** — export your edits so others can apply them (see the walkthrough
