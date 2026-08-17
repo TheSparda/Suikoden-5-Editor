@@ -911,8 +911,19 @@ async function openChars(i){const sv=window._saves[i];const box=document.getElem
  box._open=true; CHARDATA[i]=r;
  const opts=r.chars.map(c=>`<option value="${c.idx}">${c.idx}: ${c.name}${c.active?'':' (inactive)'}</option>`).join('');
  box.innerHTML=`<div class=row><span class=note>Character</span><select id="csel${i}" onchange="renderChar(${i})">${opts}</select>`
-  +`<button onclick="writeChar(${i})">Write equipment</button></div><div id="cfld${i}"></div>`;
+  +`<button onclick="writeChar(${i})">Write character</button>`
+  +`<button class=ghost onclick="recruitAll(${i})" title="Set the recruited flag for every recruitable character (108 Stars)">Recruit ALL</button></div><div id="cfld${i}"></div>`;
  renderChar(i);}
+async function recruitAll(i){const sv=window._saves[i];const r=CHARDATA[i];
+ const edits={};let n=0;
+ for(const c of r.chars){if(c.recruitable&&!c.recruited){edits['c'+c.idx+'_rec']=1;n++;}}
+ if(!n){toast('Everyone recruitable is already recruited','ok');return}
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm('Recruit '+n+' missing character(s) in '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
+ const res=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
+ if(res.error)toast('Error: '+res.error,'bad');
+ else{toast('Recruited '+res.changed+' character(s)','ok');
+  const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error){CHARDATA[i]=rr;renderChar(i);}}}
 function _sel(id,names,val){let h=`<select id="${id}">`;
  // ensure current value present even if unnamed
  const keys=Object.keys(names);
@@ -926,8 +937,11 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
  const sub=t=>`<div style="font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:12px 14px 0">${t}</div>`;
  const g=inner=>`<div class=grid style="padding-top:8px">${inner}</div>`;
  document.getElementById('cfld'+i).innerHTML=
-   sub('Level')
-  +`<div class=grid style="grid-template-columns:150px;padding-top:8px"><div class=fld><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div></div>`
+   sub('Level & recruitment')
+  +`<div class=grid style="grid-template-columns:150px 260px;padding-top:8px">`
+  +`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`
+  +`<div class=fld><label>Recruited</label><div class=in><label class=chk><input type=checkbox id="ce${i}_rec" ${c.recruited?'checked':''} ${c.recruitable?'':'disabled title="Not recruitable (story/antagonist)"'}> <span class=note>${c.recruitable?'in the roster':'not recruitable'}</span></label></div></div>`
+  +`</div>`
   +sub('Equipment')
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
   +sub('Runes')
@@ -940,6 +954,7 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  for(let s=0;s<48;s++){const el=document.getElementById('ce'+i+'_sk'+s);if(el)edits['c'+idx+'_sk'+s]=+el.value;}
+ const rec=document.getElementById('ce'+i+'_rec');if(rec&&!rec.disabled)edits['c'+idx+'_rec']=rec.checked?1:0;
  const bakOn=document.getElementById('bakToggle').checked;
  if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
