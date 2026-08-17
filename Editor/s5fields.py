@@ -12,13 +12,25 @@ import json, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
+def res_json(name):
+    """Load a bundled s5_*.json resource. Reads from disk beside the sources normally;
+    inside the single-file .pyz build (where open() can't reach archive members) it
+    falls back to pkgutil, which reads straight out of the zip."""
+    p = os.path.join(HERE, name)
+    if os.path.exists(p):
+        with open(p) as f: return json.load(f)
+    import pkgutil
+    data = pkgutil.get_data(__name__, name)
+    if data is None: raise FileNotFoundError(name)
+    return json.loads(data.decode("utf-8"))
+
 SERIAL_OFF = 0x828BD
 SERIAL_STR = b"SLUS_212.91"
 
 # ---- per-character tables: name -> (base, stride, [(label, off, width, kind), ...])
 # kind: num | rank (0..7 skill grade) | item | rune
 def _skill_names():
-    try: return json.load(open(os.path.join(HERE, "s5_skill_names.json")))
+    try: return res_json("s5_skill_names.json")
     except Exception: return []
 SKILL_NAMES = _skill_names()
 def _skill_label(i):
@@ -172,7 +184,7 @@ NAME_MAX_CHARS  = 7
 # order (s5_runeprice_names.json). NOTE: PAL uses stride 80 (separate layout).
 RUNEPRICE_BASE, RUNEPRICE_STRIDE, RUNEPRICE_COUNT = 0x4E24FC, 76, 70
 def _runeprice_names():
-    try: return json.load(open(os.path.join(HERE, "s5_runeprice_names.json")))
+    try: return res_json("s5_runeprice_names.json")
     except Exception: return []
 RUNEPRICE_NAMES = _runeprice_names()
 
@@ -181,7 +193,7 @@ RUNEPRICE_NAMES = _runeprice_names()
 # 3-byte LE. Names = healing items.txt order (s5_healprice_names.json).
 HEALPRICE_BASE, HEALPRICE_STRIDE, HEALPRICE_COUNT = 0x4CCFD0, 88, 41
 def _healprice_names():
-    try: return json.load(open(os.path.join(HERE, "s5_healprice_names.json")))
+    try: return res_json("s5_healprice_names.json")
     except Exception: return []
 HEALPRICE_NAMES = _healprice_names()
 
@@ -313,7 +325,7 @@ MP_FIELD_LABELS = ["1st MP", "2nd MP", "3rd MP", "4th MP", "5th MP (Lv4 cap)",
 # English names/effects (guide-sourced) in s5_unite_names.json, index = record order.
 UNITE_BASE, UNITE_COUNT, UNITE_SCAN_END = 0x4D3420, 49, 0x4D6000
 def _unite_names():
-    try: return json.load(open(os.path.join(HERE, "s5_unite_names.json")))
+    try: return res_json("s5_unite_names.json")
     except Exception: return []
 UNITE_NAMES = _unite_names()
 # DoReMi quintuplet ids (not in s5_characters.json roster).
@@ -327,7 +339,7 @@ UNITE_EXTRA_CHARS = {129: "ReMiFa", 130: "MiFaSo", 131: "FaSoLa", 132: "SoLaTi",
 SKILLFX_BASE, SKILLFX_STRIDE, SKILLFX_COUNT = 0x4AEB1C, 36, 165
 SKILLFX_RANKS = ["E", "D", "C", "B", "A", "S", "SS"]
 def _skillfx_names():
-    try: return json.load(open(os.path.join(HERE, "s5_skilleffect_names.json")))
+    try: return res_json("s5_skilleffect_names.json")
     except Exception: return []
 SKILLFX_NAMES = _skillfx_names()
 
@@ -381,14 +393,14 @@ def _enemy_fields():
 ENEMY_FIELDS = _enemy_fields()
 
 def _drop_items():
-    try: return json.load(open(os.path.join(HERE, "s5_drop_items.json")))
+    try: return res_json("s5_drop_items.json")
     except Exception: return {"categories": {}, "items": {}}
 DROP_TABLE = _drop_items()
 
 def load_characters():
     """[{id, name}] playable list; falls back to empty if json missing."""
     try:
-        return json.load(open(os.path.join(HERE, "s5_characters.json")))
+        return res_json("s5_characters.json")
     except Exception:
         return []
 
