@@ -86,11 +86,13 @@ S5_FIELDS = {
 #   +0x49 skill ranks (47 bytes, 0..7)                       -> order not yet field-verified
 # (Save has no body checksum; only card ECC, refreshed on write.)
 CHAR_BASE, CHAR_STRIDE, NUM_CHARS = 0x2A8, 0x160, 120
-CHAR_ARMOR, CHAR_RUNE, CHAR_SKILL, CHAR_LEVEL = 0xF4, 0xEC, 0x49, 0xC1
+CHAR_ARMOR, CHAR_RUNE, CHAR_ACTIVE, CHAR_LEVEL, CHAR_SKILLS = 0xF4, 0xEC, 0x49, 0xC1, 0x119
+SKILL_COUNT = 48                                   # skill ranks @+0x119..+0x148, each 0=None..7=SS
 ARMOR_SLOTS = ("helm", "body", "glove", "foot")   # +0xF4,+0xF5,+0xF6,+0xF7 (VERIFIED vs item tables)
-RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (slot offset ok; ids are raw —
-#   the game's rune-id space (~0..91) exceeds our name table, so we edit/display raw ids, not names)
-# CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char, max == story-cap level in each save).
+RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED vs innate runes)
+# CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char max == story-cap level in each save).
+# CHAR_SKILLS @+0x119: 48 skill ranks (ISO skill order), VERIFIED — 100% respect the ISO
+#   per-char equipable-skill CAPS across all saves (Zerase Magic/Incant=S, Georg physical=A).
 
 def _char_off(idx): return CHAR_BASE + idx * CHAR_STRIDE
 
@@ -101,9 +103,10 @@ def read_character(gd, idx):
     if r + CHAR_STRIDE > len(gd): return None
     armor = {s: gd[r + CHAR_ARMOR + i] for i, s in enumerate(ARMOR_SLOTS)}
     runes = {s: gd[r + CHAR_RUNE + i] for i, s in enumerate(RUNE_SLOTS)}
-    active = any(gd[r + CHAR_SKILL:r + CHAR_SKILL + 47])
+    active = any(gd[r + CHAR_ACTIVE:r + CHAR_ACTIVE + 47])
+    skills = list(gd[r + CHAR_SKILLS:r + CHAR_SKILLS + SKILL_COUNT])
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
-            "armor": armor, "runes": runes}
+            "armor": armor, "runes": runes, "skills": skills}
 
 def read_all_characters(gd):
     return [c for i in range(NUM_CHARS) if (c := read_character(gd, i))]
@@ -138,6 +141,10 @@ def _apply_char_edit(b, key, val):
         b[r + CHAR_RUNE + RUNE_SLOTS.index(slot)] = int(val) & 0xFF
     elif slot == "level":
         b[r + CHAR_LEVEL] = max(1, min(99, int(val)))
+    elif slot.startswith("sk"):
+        sn = int(slot[2:])
+        if not (0 <= sn < SKILL_COUNT): return False
+        b[r + CHAR_SKILLS + sn] = max(0, min(7, int(val)))
     else:
         return False
     return True
