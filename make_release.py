@@ -14,10 +14,27 @@ DIST = os.path.join(ROOT, "dist")
 OUT = os.path.join(DIST, "Suikoden5Editor.pyz")
 
 MAIN = "import s5editor\ns5editor.main()\n"
-COMMAND = """#!/bin/bash
-cd "$(dirname "$0")"
-exec python3 "./Suikoden5Editor.pyz"
-"""
+
+# Two small launchers, each written with the line endings its OS needs (cmd.exe wants
+# CRLF; sh breaks on a stray CR). Both just find Python 3 and run the bundled .pyz that
+# sits beside them. Emitted together from this one build step.
+SH_LAUNCHER = '''#!/bin/sh
+# Suikoden V Editor — macOS / Linux launcher (double-click on macOS).
+DIR="$(cd "$(dirname "$0")" && pwd)"
+PY="$(command -v python3 || command -v python)"
+if [ -z "$PY" ]; then
+  echo "Python 3 is required. Install it from https://www.python.org/downloads/"
+  read -r _; exit 1
+fi
+exec "$PY" "$DIR/Suikoden5Editor.pyz" "$@"
+'''
+BAT_LAUNCHER = '''@echo off
+rem Suikoden V Editor - Windows launcher (double-click).
+where py >nul 2>nul && ( py -3 "%~dp0Suikoden5Editor.pyz" %* & goto :eof )
+where python >nul 2>nul && ( python "%~dp0Suikoden5Editor.pyz" %* & goto :eof )
+echo Python 3 is required. Install from https://www.python.org/downloads/ and tick "Add to PATH".
+pause
+'''
 
 def main():
     os.makedirs(DIST, exist_ok=True)
@@ -30,11 +47,15 @@ def main():
             f.write(MAIN)
         zipapp.create_archive(tmp, OUT, interpreter="/usr/bin/env python3", compressed=True)
     os.chmod(OUT, os.stat(OUT).st_mode | stat.S_IEXEC)
-    cmd = os.path.join(DIST, "Suikoden5Editor (Mac).command")
-    with open(cmd, "w") as f: f.write(COMMAND)
-    os.chmod(cmd, os.stat(cmd).st_mode | stat.S_IEXEC)
+    launchers = []
+    mac = os.path.join(DIST, "Suikoden5Editor (Mac, Linux).command")
+    with open(mac, "w", newline="\n") as f: f.write(SH_LAUNCHER)
+    os.chmod(mac, os.stat(mac).st_mode | stat.S_IEXEC); launchers.append(mac)
+    win = os.path.join(DIST, "Suikoden5Editor (Windows).bat")
+    with open(win, "w", newline="\r\n") as f: f.write(BAT_LAUNCHER)
+    launchers.append(win)
     print(f"bundled {n} files -> {OUT} ({os.path.getsize(OUT)//1024} KB)")
-    print(f"mac double-click wrapper -> {cmd}")
+    for p in launchers: print(f"launcher -> {p}")
 
 if __name__ == "__main__":
     main()
