@@ -93,6 +93,12 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 # CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char max == story-cap level in each save).
 # CHAR_SKILLS @+0x119: 48 skill ranks (ISO skill order), VERIFIED — 100% respect the ISO
 #   per-char equipable-skill CAPS across all saves (Zerase Magic/Incant=S, Georg physical=A).
+# RECRUIT_BASE: recruitment bitfield (bit index == character id, LSB-first, 15 bytes).
+#   VERIFIED across 6 saves: count scales with progress (58@lvl39 -> 112 complete), perfect
+#   same-playthrough monotonicity (bits only gained, never lost), story chars set everywhere,
+#   and the completionist's zero bits are exactly ids 112-119 (Sialeeds + the villains).
+RECRUIT_BASE = 0xD7CA
+NON_RECRUITABLE = set(range(112, 120))   # Sialeeds, Zahhak, Alenia, Marscal, Gizel, Dolph, Bahram, Dilber
 
 def _char_off(idx): return CHAR_BASE + idx * CHAR_STRIDE
 
@@ -105,7 +111,9 @@ def read_character(gd, idx):
     runes = {s: gd[r + CHAR_RUNE + i] for i, s in enumerate(RUNE_SLOTS)}
     active = any(gd[r + CHAR_ACTIVE:r + CHAR_ACTIVE + 47])
     skills = list(gd[r + CHAR_SKILLS:r + CHAR_SKILLS + SKILL_COUNT])
+    recruited = (gd[RECRUIT_BASE + (idx >> 3)] >> (idx & 7)) & 1
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
+            "recruited": recruited, "recruitable": idx not in NON_RECRUITABLE,
             "armor": armor, "runes": runes, "skills": skills}
 
 def read_all_characters(gd):
@@ -145,6 +153,10 @@ def _apply_char_edit(b, key, val):
         sn = int(slot[2:])
         if not (0 <= sn < SKILL_COUNT): return False
         b[r + CHAR_SKILLS + sn] = max(0, min(7, int(val)))
+    elif slot == "rec":
+        byte, mask = RECRUIT_BASE + (idx >> 3), 1 << (idx & 7)
+        if int(val): b[byte] |= mask
+        else:        b[byte] &= ~mask & 0xFF
     else:
         return False
     return True
