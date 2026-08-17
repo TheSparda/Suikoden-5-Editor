@@ -12,7 +12,10 @@ import s5fields as F
 import s5save as SV
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STATE = os.path.join(HERE, ".s5editor.json")
+# State lives next to the sources normally; in the single-file .pyz build HERE is inside
+# the archive (not a real, writable directory), so fall back to the user's home.
+STATE = (os.path.join(HERE, ".s5editor.json") if os.path.isdir(HERE)
+         else os.path.expanduser("~/.s5editor.json"))
 PORT = int(os.environ.get("PORT", "8055"))
 
 def load_state():
@@ -1286,7 +1289,7 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/pickiso":
                 return self._send(200, json.dumps(pick_iso_dialog()))
             if self.path == "/api/spells":
-                try: names = json.load(open(os.path.join(HERE, "s5_spell_names.json")))
+                try: names = F.res_json("s5_spell_names.json")
                 except Exception: names = []
                 return self._send(200, json.dumps({"spells": names}))
             if self.path == "/api/spell":
@@ -1314,7 +1317,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
                 rid = int(d["id"])
-                try: spnames = json.load(open(os.path.join(HERE, "s5_spell_names.json")))
+                try: spnames = F.res_json("s5_spell_names.json")
                 except Exception: spnames = []
                 synth = rid >= F.SYNTH_RUNE_BASE
                 with P.Iso(iso) as g:
@@ -1373,7 +1376,7 @@ class H(http.server.BaseHTTPRequestHandler):
             if self.path == "/api/enemies":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
-                try: names = json.load(open(os.path.join(HERE, "s5_enemy_names.json")))
+                try: names = F.res_json("s5_enemy_names.json")
                 except Exception: names = {}
                 with P.Iso(iso) as g: enemies = P.read_enemies(g, names)
                 return self._send(200, json.dumps({"enemies": enemies}))
@@ -1620,19 +1623,19 @@ class H(http.server.BaseHTTPRequestHandler):
                     n = P.hardmode_apply(iso, float(d.get("factor", 0.5)))
                 return self._send(200, json.dumps({"ok": True, "n": n}))
             if self.path == "/api/maps":
-                try: items = json.load(open(os.path.join(HERE, "s5_item_names.json")))
+                try: items = F.res_json("s5_item_names.json")
                 except Exception: items = {}
                 try:
-                    _rn = json.load(open(os.path.join(HERE, "s5_rune_names.json")))
+                    _rn = F.res_json("s5_rune_names.json")
                     runes = {str(i): (e.get("name") if isinstance(e, dict) else e)
                              for i, e in enumerate(_rn)}
                 except Exception: runes = {}
                 try:
-                    _ar = json.load(open(os.path.join(HERE, "s5_armor_names.json")))
+                    _ar = F.res_json("s5_armor_names.json")
                     armor = {slot: _ar.get(slot, {}) for slot in ("head", "body", "glove", "foot")}
                 except Exception: armor = {"head": {}, "body": {}, "glove": {}, "foot": {}}
                 heldfile = "s5_held_items_pal.json" if F.REGION == "pal" else "s5_held_items.json"
-                try: held = json.load(open(os.path.join(HERE, heldfile))).get("map", {})
+                try: held = F.res_json(heldfile).get("map", {})
                 except Exception: held = {}
                 return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
                     "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES,
@@ -1710,7 +1713,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 # Clean, canonical English name lists (index -> name, read-only: no ELF
                 # offset). Shown first so they're the default browse view.
                 try:
-                    en = json.load(open(os.path.join(HERE, "s5_ref_english.json")))
+                    en = F.res_json("s5_ref_english.json")
                     for cat, names in en.items():
                         out[cat] = [{"i": i, "name": n} for i, n in enumerate(names)]
                 except Exception:
@@ -1721,7 +1724,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 # in PAL we serve only the read-only English lists above and skip these.
                 if F.REGION != "pal":
                     try:
-                        ref = json.load(open(os.path.join(HERE, "s5_reference.json")))
+                        ref = F.res_json("s5_reference.json")
                         for cat, entries in ref.items():
                             out[f"{cat} (ELF text · editable)"] = entries
                     except Exception:
@@ -1735,7 +1738,11 @@ class H(http.server.BaseHTTPRequestHandler):
                     cap = P.set_cstring(g, int(str(d["off"]), 0), str(d["text"]))
                 return self._send(200, json.dumps({"ok": True, "cap": cap}))
             if self.path == "/api/savescan":
-                roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
+                if os.path.isdir(HERE):     # running from sources
+                    roots = [os.path.join(HERE, "..", "Saves"), os.path.join(HERE, "..")]
+                else:                        # single-file .pyz: scan next to the app
+                    base = os.path.dirname(HERE)
+                    roots = [os.path.join(base, "Saves"), base]
                 if d.get("root"): roots.insert(0, d["root"])
                 saves = []; seen = set()
                 # 1) memory-card images
@@ -1814,15 +1821,15 @@ class H(http.server.BaseHTTPRequestHandler):
                 if not gd:
                     return self._send(200, json.dumps({"error": "could not read gamedata payload"}))
                 chars = SV.read_all_characters(gd)
-                try: cnames = {c["id"]: c["name"] for c in json.load(open(os.path.join(HERE, "s5_characters.json")))}
+                try: cnames = {c["id"]: c["name"] for c in F.res_json("s5_characters.json")}
                 except Exception: cnames = {}
                 for c in chars: c["name"] = cnames.get(c["idx"], f"Character {c['idx']}")
-                try: armor = json.load(open(os.path.join(HERE, "s5_armor_names.json")))
+                try: armor = F.res_json("s5_armor_names.json")
                 except Exception: armor = {}
                 armorNames = {"helm": armor.get("head", {}), "body": armor.get("body", {}),
                               "glove": armor.get("glove", {}), "foot": armor.get("foot", {})}
                 try:
-                    _rn = json.load(open(os.path.join(HERE, "s5_rune_ids.json")))  # equip-id-ordered
+                    _rn = F.res_json("s5_rune_ids.json")  # equip-id-ordered
                     runeNames = {str(i): e for i, e in enumerate(_rn)}
                 except Exception: runeNames = {}
                 skillNames = ["Stamina","Attack","Defense","Technique","Vitality","Agility","Magic",

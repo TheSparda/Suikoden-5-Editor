@@ -853,7 +853,7 @@ def _armor_name_jp(iso, base):
 
 try:
     import json as _json_armor
-    _ARMOR_EN = _json_armor.load(open(os.path.join(HERE, "s5_armor_stat_names.json")))
+    _ARMOR_EN = F.res_json("s5_armor_stat_names.json")
 except Exception:
     _ARMOR_EN = {}
 def _armor_name(iso, slot, i, base):
@@ -1167,8 +1167,7 @@ def _dumpregion(a):
 
 def _ids(a):
     import json
-    path = os.path.join(HERE, "s5_reference.json")
-    try: ref = json.load(open(path))
+    try: ref = F.res_json("s5_reference.json")
     except Exception: print("s5_reference.json not found"); return 2
     cats = [a.category] if a.category else list(ref)
     for c in cats:
