@@ -77,6 +77,66 @@ S5_FIELDS = {
     "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
 }
 
+# ---- Per-character record array (VERIFIED by RE + name cross-ref, 2026-08-16).
+# The save stores the roster verbatim in the game's live layout: base 0x2A8, stride 0x160,
+# record index == character id. Verified fields (byte ids) within each record:
+#   +0xF4 equipped armor: Helm, Body(Armor), Gloves, Foot   -> cross-checked vs s5_armor_names
+#         (119/119 active records valid across 5 distinct saves; per-slot maxes 32/71/37/30)
+#   +0xEC equipped runes: Head, Right hand, Left hand        -> decode to real rune ids
+#   +0x49 skill ranks (47 bytes, 0..7)                       -> order not yet field-verified
+# (Save has no body checksum; only card ECC, refreshed on write.)
+CHAR_BASE, CHAR_STRIDE, NUM_CHARS = 0x2A8, 0x160, 120
+CHAR_ARMOR, CHAR_RUNE, CHAR_SKILL = 0xF4, 0xEC, 0x49
+ARMOR_SLOTS = ("helm", "body", "glove", "foot")   # +0xF4,+0xF5,+0xF6,+0xF7
+RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE
+
+def _char_off(idx): return CHAR_BASE + idx * CHAR_STRIDE
+
+def read_character(gd, idx):
+    """Read one character's equipped armor + rune byte-ids from a gamedata payload.
+    Returns None if the record is out of range."""
+    r = _char_off(idx)
+    if r + CHAR_STRIDE > len(gd): return None
+    armor = {s: gd[r + CHAR_ARMOR + i] for i, s in enumerate(ARMOR_SLOTS)}
+    runes = {s: gd[r + CHAR_RUNE + i] for i, s in enumerate(RUNE_SLOTS)}
+    active = any(gd[r + CHAR_SKILL:r + CHAR_SKILL + 47])
+    return {"idx": idx, "active": active, "armor": armor, "runes": runes}
+
+def read_all_characters(gd):
+    return [c for i in range(NUM_CHARS) if (c := read_character(gd, i))]
+
+def read_gamedata_payload(path, folder=None):
+    """Return the raw 74024-byte gamedata payload for a save file (individual .cbs/.sps/.xps)
+    or a memory-card image (folder = the save-folder name). None if not found."""
+    head = b""
+    try: head = open(path, "rb").read(20)
+    except Exception: return None
+    if head[:4] == b"CFU\x00" or head[:17] == b"\x0d\x00\x00\x00SharkPortSave":
+        fs = load_individual_save(path)
+        return next((v for v in fs.values() if len(v) == GAMEDATA_SIZE), None) if fs else None
+    with open(path, "rb") as f:
+        card = MemCard(f.read())
+    tgt = next((s for s in card.find_saves() if folder in (None, s["folder"])), None)
+    if not tgt: return None
+    return card.read_file(tgt["cluster"], tgt["length"], tgt["folder"])
+
+def _apply_char_edit(b, key, val):
+    """Apply a per-character equipment edit keyed 'c<idx>_<slot>' to bytearray b.
+    Returns True if applied. Slots: helm/body/glove/foot (armor), rhead/rright/rleft (rune)."""
+    if not key.startswith("c") or "_" not in key: return False
+    idx_s, slot = key[1:].split("_", 1)
+    if not idx_s.isdigit(): return False
+    idx = int(idx_s)
+    if idx >= NUM_CHARS: return False
+    r = _char_off(idx)
+    if slot in ARMOR_SLOTS:
+        b[r + CHAR_ARMOR + ARMOR_SLOTS.index(slot)] = int(val) & 0xFF
+    elif slot in RUNE_SLOTS:
+        b[r + CHAR_RUNE + RUNE_SLOTS.index(slot)] = int(val) & 0xFF
+    else:
+        return False
+    return True
+
 # ---- Individual save-file decoders (CodeBreaker .cbs, SharkPort/X-Port .sps/.xps).
 # Ported to py3 from mymc (Ross Ridge, public domain). Return {filename: bytes}.
 _CBS_RC4 = bytes([0x5f,0x1f,0x85,0x6f,0x31,0xaa,0x3b,0x18,0x21,0xb9,0xce,0x1c,0x07,0x4c,0x9c,0xb4,0x81,0xb8,0xef,0x98,0x59,0xae,0xf9,0x26,0xe3,0x80,0xa3,0x29,0x2d,0x73,0x51,0x62,0x7c,0x64,0x46,0xf4,0x34,0x1a,0xf6,0xe1,0xba,0x3a,0x0d,0x82,0x79,0x0a,0x5c,0x16,0x71,0x49,0x8e,0xac,0x8c,0x9f,0x35,0x19,0x45,0x94,0x3f,0x56,0x0c,0x91,0x00,0x0b,0xd7,0xb0,0xdd,0x39,0x66,0xa1,0x76,0x52,0x13,0x57,0xf3,0xbb,0x4e,0xe5,0xdc,0xf0,0x65,0x84,0xb2,0xd6,0xdf,0x15,0x3c,0x63,0x1d,0x89,0x14,0xbd,0xd2,0x36,0xfe,0xb1,0xca,0x8b,0xa4,0xc6,0x9e,0x67,0x47,0x37,0x42,0x6d,0x6a,0x03,0x92,0x70,0x05,0x7d,0x96,0x2f,0x40,0x90,0xc4,0xf1,0x3e,0x3d,0x01,0xf7,0x68,0x1e,0xc3,0xfc,0x72,0xb5,0x54,0xcf,0xe7,0x41,0xe4,0x4d,0x83,0x55,0x12,0x22,0x09,0x78,0xfa,0xde,0xa7,0x06,0x08,0x23,0xbf,0x0f,0xcc,0xc1,0x97,0x61,0xc5,0x4a,0xe6,0xa0,0x11,0xc2,0xea,0x74,0x02,0x87,0xd5,0xd1,0x9d,0xb7,0x7e,0x38,0x60,0x53,0x95,0x8d,0x25,0x77,0x10,0x5e,0x9b,0x7f,0xd8,0x6e,0xda,0xa2,0x2e,0x20,0x4f,0xcd,0x8f,0xcb,0xbe,0x5a,0xe0,0xed,0x2c,0x9a,0xd4,0xe2,0xaf,0xd0,0xa9,0xe8,0xad,0x7a,0xbc,0xa8,0xf2,0xee,0xeb,0xf5,0xa6,0x99,0x28,0x24,0x6c,0x2b,0x75,0x5d,0xf8,0xd3,0x86,0x17,0xfb,0xc0,0x7b,0xb3,0x58,0xdb,0xc7,0x4b,0xff,0x04,0x50,0xe9,0x88,0x69,0xc9,0x2a,0xab,0xfd,0x5b,0x1b,0x8a,0xd9,0xec,0x27,0x44,0x0e,0x33,0xc8,0x6b,0x93,0x32,0x48,0xb6,0x30,0x43,0xa5])
@@ -213,17 +273,20 @@ def decode_gamedata(gd):
     return out
 
 def apply_gamedata_edits(gd, edits):
-    """edits: {field: value}. Returns (new_gd, changed). Only S5_FIELDS are writable."""
+    """edits: {field: value}. Returns (new_gd, changed). Writable: S5_FIELDS (header) plus
+    per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft)."""
     b = bytearray(gd); changed = 0
     for k, v in (edits or {}).items():
-        if k not in S5_FIELDS: continue
-        off, w, kind = S5_FIELDS[k]
-        if kind == "str":
-            s = str(v).encode("latin1", "replace")[:w-1]
-            b[off:off+w] = s + b"\x00"*(w-len(s))
-        else:
-            b[off:off+w] = int(v).to_bytes(w, "little")
-        changed += 1
+        if k in S5_FIELDS:
+            off, w, kind = S5_FIELDS[k]
+            if kind == "str":
+                s = str(v).encode("latin1", "replace")[:w-1]
+                b[off:off+w] = s + b"\x00"*(w-len(s))
+            else:
+                b[off:off+w] = int(v).to_bytes(w, "little")
+            changed += 1
+        elif _apply_char_edit(b, k, v):
+            changed += 1
     return bytes(b), changed
 
 def write_save_fields(card_path, folder, edits, make_backup=True):
