@@ -1,37 +1,47 @@
 # Suikoden V ISO & Save Editor
 
 A cross-platform editor for **Suikoden V** (PS2), modeled on the
-[Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a
-local web app in your browser — nothing is uploaded, and the server only touches the
-file you point it at. It ships with **no game ROM/ISO**; supply your own
-legally-obtained ISO and/or save files.
+[Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a local
+web app in your browser — nothing is uploaded, and the server only touches the files you
+point it at. It ships with **no game ROM/ISO**; supply your own legally-obtained ISO and
+save files.
 
-Every editable field was reverse-engineered and then **verified** against public stat
-guides and the game's own data; fields that couldn't be confirmed are shown read-only or
-omitted rather than guessed. Writes are protected by an optional `.bak` backup (a toggle
-in the header, on by default).
+**At a glance:**
 
-**Regions:** NTSC-U (`SLUS-21291`) and PAL (`SLES-54087`) are both fully supported and
-**auto-detected** from the ISO serial — a **NTSC-U** / **PAL** badge in the header shows
-which. Every editor works on both regions. The only PAL limitation is the raw
-in-place *ELF-text editor* (the Reference / Text tab shows read-only English name lists
-in PAL, but not the string editor — the region's 5-language layout can't be relocated
-safely).
+- **ISO editing** — characters, runes & spells, gear, enemies, prices, unites, MP growth,
+  skill effects, text, and a one-click Hard Mode. Edits apply to a *new game*.
+- **Save editing** — full per-character editing (level, armor, runes, battle-skill slots,
+  all 48 skill ranks) plus **recruitment** of the 108 Stars, hero/castle names, and New
+  Game Plus. Works on real saves across every common format.
+- **Asset explorer** — every character portrait rendered to PNG in the browser (battle
+  faces + high-res 256×256 portrait sets), a general texture viewer (sprites, effects,
+  UI art), and a browser/extractor for all ~7,700 files in the game's DATA.PAK.
+- **Mod sharing** — export your ISO edits as a tiny, reversible `.s5mod` recipe or a
+  standard `.xdelta` patch instead of shipping a 4.5 GB disc image.
+- **Both regions** — NTSC-U (`SLUS-21291`) and PAL (`SLES-54087`), auto-detected from the
+  ISO serial (badge in the header). Saves additionally support NTSC-J detection.
 
-## Run
+Every editable field was **reverse-engineered and verified** — against public stat guides,
+the game's own data tables, and (for saves) the game's disassembled save code. Fields that
+couldn't be confirmed are shown read-only or omitted rather than guessed. Writes are
+protected by an optional `.bak` backup (header toggle, on by default).
+
+## Quick start
 
 - **macOS:** double-click `Start Editor (Mac).command`
 - **Windows:** double-click `Start Editor (Windows).bat`
 - **Any:** `cd Editor && python3 s5editor.py`
 
 Requires Python 3.8+ (standard library only — no `pip install`). The app opens your
-browser at `http://127.0.0.1:8055/` (override with the `PORT` env var). Open your ISO
-with **Browse… / Open / Verify**; the serial is checked and the region badge appears.
+browser at `http://127.0.0.1:8055/` (override with the `PORT` env var). Open your ISO with
+**Browse… / Open / Verify**; the serial is checked and the region badge appears. The Save
+Editor works independently of the ISO — open a save file directly or scan a folder.
 
-> **ISO edits apply to a NEW GAME.** They change the game's base data, so start a new
-> game to see them. Use real in-game save files, not emulator save states.
+> **ISO edits apply to a NEW GAME** (they change the game's base data). To change an
+> existing playthrough, use the **Save Editor**. Use real in-game saves, not emulator
+> save states.
 
-## Features
+## ISO editors
 
 ### Characters
 Per-character, indexed by the in-game roster, verified byte-for-byte:
@@ -51,84 +61,87 @@ Per-character, indexed by the in-game roster, verified byte-for-byte:
   **custom spell-set builder**.
 - **Spell** definition: element, power / heal amount, target shape, and status effect.
 
-### Unites
-Every unite attack (49, verified against the Unites guide) with its participant slots
-editable via full-roster dropdowns. Member count is fixed (the table is packed) and the
-damage/target are engine-driven, so those are shown for reference.
-
 ### Gear (Armor)
 Five slots — Head / Body / Arm / Foot / Accessory — with English item names, verified vs
 the Armor List guide: DEF, buy/sell, weight **Type** + SPD penalty, stat bonuses, proc
 effects (auto-heal / drain / counter / …), and **per-element ATK & DEF** for all 14
 elements. The game's own description text is shown read-only.
 
-### MP Growth
-The MP-cost thresholds for each magic level (Lv1–Lv4). This table is **global** — shared
-by every unit.
-
-### Skill Effects
-The magnitude of each of the **165 skills** at every rank (E → SS). Global, filterable.
-
 ### Enemies
 Level, combat stats, Potch / Skill-Point rewards, per-enemy elemental affinities (E–S),
 and the five item-drop slots picked by item name (verified via the in-game drop table).
+
+### Unites
+Every unite attack (49, verified against the Unites guide) with its participant slots
+editable via full-roster dropdowns. Member count is fixed (the table is packed) and the
+damage/target are engine-driven, so those are shown for reference.
+
+### MP Growth & Skill Effects
+- **MP Growth** — the MP-cost thresholds for each magic level (Lv1–Lv4); global table.
+- **Skill Effects** — the magnitude of each of the **165 skills** at every rank (E → SS);
+  global, filterable.
 
 ### Prices
 Buy / sell for items & equipment, rune (orb) prices, and healing-item prices.
 
 ### Reference / Text
 Clean English name lists (Characters, Spells, Skills, Runes, Enemies, Healing Items, all
-Gear slots) for lookup, plus — on NTSC-U — the raw boot-ELF strings (all languages) which
-you can edit in place (byte-capped).
+Gear slots) for lookup, plus — on NTSC-U — the raw boot-ELF strings (all languages),
+editable in place (byte-capped). PAL shows the read-only lists (its 5-language string
+layout can't be relocated safely).
 
 ### Hard Mode
-Scale every character's growth rates down by a factor (idempotent; fully restorable).
+Scale every character's growth rates down by a factor — idempotent and fully restorable.
 
-### Save Editor
-Reads and writes PS2 saves across formats and regions (`.ps2` memory cards, `.psu`,
-`.xps`/`.sps`, `.cbs`), region-aware (NTSC-U / PAL / NTSC-J), by file picker or folder
-scan. The save layout was reverse-engineered from the game itself (the save file is a
-verbatim image of the game's save RAM; there is **no checksum** — the game only validates
-three fixed header magics, so edits are safe) and every field below is cross-verified
-against the game's own data tables. Editable:
+## Save Editor
 
-- **Hero name, castle name, New Game Plus** (fast-forward).
-- **Per character** (all 120, via the *Characters* panel): **Level** (1–99),
-  **equipped armor** (Helm / Armor / Gloves / Boots by name), **equipped runes**
-  (Head / Right / Left hand, all 92 runes by name), the two **equipped battle-skill
-  slots**, and all **48 skill ranks** (None → SS — support skills like Cook or Forge
-  use the same scale as their fixed in-game grade).
-- **Recruitment** (the *Recruitment* panel): all characters as a searchable checkbox
-  roster with a live counter, check/uncheck-all, and one-click write of just the changed
-  flags. Story-only characters and antagonists are locked so saves stay consistent.
+Reads and writes PS2 saves across formats and regions — `.ps2` memory-card images,
+`.psu`, `.xps`/`.sps` (SharkPort/X-Port), and `.cbs` (CodeBreaker, transparently
+decrypted and re-encrypted) — for NTSC-U / PAL / NTSC-J saves, opened by file picker or
+folder scan.
 
-ECC (memory cards) and a `.bak` backup are handled automatically on every write.
+The save layout was reverse-engineered from the game itself: the save file is a verbatim
+image of the game's save RAM, and disassembling the save routines proved there is **no
+body checksum** (the game validates only three fixed header values), so field edits are
+safe. Every field below is cross-verified against the game's own data tables.
 
-### Tools
-- **Share / Patch** — export your edits so others can apply them (see the walkthrough
-  below).
-- **Raw hex** — peek at any absolute ISO offset.
-- **Overlays** — extract/decompress the disc's engine overlays (OVL/\*.ROM), re-insert
-  edited ones (LZSS), and an **Overlay Text** editor for the story/dialogue text inside
-  them (endings, letters, lore, newspaper, …).
+- **Header** — hero name, castle name, **New Game Plus** (fast-forward).
+- **Characters panel** — for any of the 120 characters:
+  - **Level** (1–99)
+  - **Equipped armor** — Helm / Armor / Gloves / Boots, picked by name
+  - **Equipped runes** — Head / Right / Left hand, with the full **92-rune name table**
+    extracted from the ISO (verified against innate runes: Zerase = Star, Prince = Dawn)
+  - **Equipped battle-skill slots** — the two active skill slots
+  - **All 48 skill ranks** (None → SS) — support skills (Cook, Forge, Tutor, …) use the
+    same scale as their fixed in-game grades
+- **Recruitment panel** — the 108-Stars recruitment flags as a searchable checkbox
+  roster: live recruited counter, name filter, check/uncheck-all, per-character
+  **Recruit** toggle, a one-click **Recruit ALL**, and a write that applies only the
+  flags you changed. Story-only characters and antagonists are locked so saves stay
+  consistent.
 
-### Assets & Portraits
-Its own tab (under **Other → Assets / Portraits**). A **Portraits** gallery lets you pick a
-portrait set from a dropdown and view every expression/pose rendered to PNG in the browser —
-the battle face set (`BTL_FACE`, 92 faces at 128×64) and the **high-res per-character
-portraits** (`FACE_PC*`/`FACE_EC*`, 256×256, one file per character with all their
-expressions). Click any face to download it, or grab the whole set as a **ZIP** of individual
-PNGs or a single **sprite sheet** — or **Download ALL portraits** at once as one ZIP with a
-folder per set (every FACE file in the game). Below
-that, an **All DATA.PAK files** browser lets you search and extract any of the ~7,700 internal
-files in the game's 2.3 GB CRI ROFS asset volume (uncompressed, LZSS and `bpe`-compressed
-files are all decoded). Decodable rows also get a **Textures** button that renders any packed
-image to PNG at native size — field/map sprites (`SR_CHR*`), effect & particle art (`*_TEX*`:
-fire, explosions, lens flares…), and UI window skins (`TLK_WIN`/`GMF*`) — handling both 8-bit
-palettized and 32-bit direct-colour textures.
+Memory-card **ECC is recomputed automatically** on every card write, and a `.bak` backup
+is made first when backups are on. Verified by an automated suite: full write→read
+round-trips of every field on every supported format (79 checks, NTSC-U + PAL).
 
-Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
-grouped navigation, and a light/dark theme toggle.
+## Assets & Portraits
+
+Its own tab (under **Other → Assets / Portraits**), backed by decoders for the game's
+CRI ROFS volume, Konami's LZSS and `bpe` compression, and its `dxt` texture container —
+all reverse-engineered for this editor.
+
+- **Portraits gallery** — pick a portrait set from a dropdown and view every
+  expression/pose rendered to PNG in the browser: the battle face set (`BTL_FACE`,
+  92 faces) and the **high-res 256×256 per-character portraits** (`FACE_PC*`/`FACE_EC*`,
+  one file per character with all their expressions). Download any face, a set as a
+  **ZIP** of PNGs or a **sprite sheet**, or **ALL portraits** at once (one ZIP, a folder
+  per set).
+- **All DATA.PAK files** — browse, search and extract any of the ~7,700 internal files in
+  the 2.3 GB asset volume (stored, LZSS and `bpe`-compressed files are all decoded).
+- **Texture viewer** — decodable files get a **Textures** button that renders any packed
+  image to PNG at native size: field/map sprites (`SR_CHR*`), effect & particle art
+  (`*_TEX*`: fire, explosions, lens flares…), and UI window skins (`TLK_WIN`/`GMF*`) —
+  both 8-bit palettized and 32-bit direct-colour.
 
 ## Sharing your edits — patching walkthrough
 
@@ -186,6 +199,17 @@ new patched ISO alongside.
 - **xdelta** when your mod includes **overlay text/data edits** (recipes don't capture
   those), or when you want a single universal patch the wider PS2 community can apply.
 
+## Tools
+
+- **Share / Patch** — the recipe + xdelta workflow above.
+- **Overlays** — extract/decompress the disc's 17 engine overlays (OVL/\*.ROM),
+  re-insert edited ones (LZSS, sector-slot guarded), and an **Overlay Text** editor for
+  the story/dialogue text inside them (endings, letters, lore, newspaper, …).
+- **Raw hex** — peek at any absolute ISO offset.
+
+Shared UX across tabs: filters, per-field restore (↺), dirty highlighting, Save / Revert,
+grouped navigation, and a light/dark theme toggle.
+
 ## CLI
 
 ```bash
@@ -195,15 +219,15 @@ python3 s5patch.py dump   "/path/to/Suikoden V.iso" --id 0
 python3 s5patch.py set    "/path/to/Suikoden V.iso" --id 0 --table stats --field HP --value 200
 ```
 
-## Layout
+## Project layout
 
 ```
 Editor/
   s5editor.py            local web app (all tabs + JSON API)
-  s5patch.py             ISO engine + CLI (verify / dump / set / recipe / xdelta / overlays)
+  s5patch.py             ISO engine + CLI (verify / dump / set / recipe / xdelta / overlays / assets)
   s5fields.py            verified ISO tables + field schema (NTSC-U + PAL bases, region switch)
   s5save.py              PS2 memory-card + standalone-save engine (.ps2/.psu/.xps/.sps/.cbs)
-  s5_*.json              verified name/reference data (incl. s5_held_items_pal.json for PAL)
+  s5_*.json              verified name/reference data (runes, items, armor, characters, …)
 Start Editor (Mac).command / (Windows).bat   launchers
 ```
 
@@ -212,9 +236,10 @@ Start Editor (Mac).command / (Windows).bat   launchers
 The repository contains **no game ROM/ISO, save files, audio, or script/story assets**. It
 includes small reverse-engineered **reference tables** — id→name maps and offset data — that
 the editor needs to show meaningful labels; this is interoperability data, not the game.
-Game images (`*.iso`), saves, exported patches (`*.s5mod`, `*.xdelta`), extracted overlays,
-stat guides, and internal working notes are all git-ignored and never distributed. Fan
-project; not affiliated with or endorsed by Konami. Suikoden V is © Konami.
+Game images (`*.iso`), saves, exported patches (`*.s5mod`, `*.xdelta`), extracted overlays
+and assets, stat guides, and internal working notes are all git-ignored and never
+distributed. Fan project; not affiliated with or endorsed by Konami. Suikoden V is
+© Konami.
 
 ## License
 
