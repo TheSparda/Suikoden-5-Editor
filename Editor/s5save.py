@@ -98,7 +98,9 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 #   same-playthrough monotonicity (bits only gained, never lost), story chars set everywhere,
 #   and the completionist's zero bits are exactly ids 112-119 (Sialeeds + the villains).
 RECRUIT_BASE = 0xD7CA
-NON_RECRUITABLE = set(range(112, 120))   # Sialeeds, Zahhak, Alenia, Marscal, Gizel, Dolph, Bahram, Dilber
+# 109-111 (Arshtat, Ferid, Lymsleia) carry the bit from their temporary story-party stints
+# but are not recruitable stars; 112-119 are Sialeeds + the antagonists.
+NON_RECRUITABLE = set(range(109, 120))
 
 def _char_off(idx): return CHAR_BASE + idx * CHAR_STRIDE
 
