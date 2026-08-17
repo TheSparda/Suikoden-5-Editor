@@ -895,13 +895,13 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
   const ro=sv.editable===false;
   const foot=ro
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
-    : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
+    : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button> <button class=ghost onclick=openRecruit(${i})>Recruitment…</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
    `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the (upcoming) unit editor, not here."></div></div>`+
    `<div class=fld><label>New Game Plus</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
-   `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div></div>`}).join('');}
+   `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div><div id="recruit${i}" style="margin-top:8px"></div></div>`}).join('');}
 let CHARDATA={};
 async function openChars(i){const sv=window._saves[i];const box=document.getElementById('chars'+i);
  if(box._open){box._open=false;box.innerHTML='';return}
@@ -924,6 +924,47 @@ async function recruitAll(i){const sv=window._saves[i];const r=CHARDATA[i];
  if(res.error)toast('Error: '+res.error,'bad');
  else{toast('Recruited '+res.changed+' character(s)','ok');
   const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error){CHARDATA[i]=rr;renderChar(i);}}}
+async function openRecruit(i){const sv=window._saves[i];const box=document.getElementById('recruit'+i);
+ if(box._open){box._open=false;box.innerHTML='';return}
+ box.innerHTML='<span class=note>loading roster…</span>';
+ const r=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});
+ if(r.error){box.innerHTML='<span class=bad>'+r.error+'</span>';return}
+ box._open=true; CHARDATA[i]=r;
+ box.innerHTML=`<div class=sec><h3>Recruitment — <span id="reccount${i}"></span></h3>
+  <div class=row style="padding:10px 14px 0">
+   <input id="recfilter${i}" size=18 placeholder="search name…" oninput="recruitFilter(${i})">
+   <button class="ghost mini" onclick="recruitCheckAll(${i},true)">Check all</button>
+   <button class="ghost mini" onclick="recruitCheckAll(${i},false)">Uncheck all</button>
+   <button onclick="writeRecruit(${i})">Write changes</button>
+   <span class=note>greyed = not recruitable (story/antagonist)</span>
+  </div>
+  <div id="recgrid${i}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px"></div></div>`;
+ const grid=document.getElementById('recgrid'+i);
+ grid.innerHTML=r.chars.map(c=>{
+  const dis=!c.recruitable;
+  return `<label class=chk data-name="${c.name.toLowerCase()}" style="${dis?'opacity:.4':''}">`
+   +`<input type=checkbox data-idx="${c.idx}" ${c.recruited?'checked':''} ${dis?'disabled':''} onchange="recruitCount(${i})">`
+   +` <span class=note style="text-transform:none">${c.idx}: ${c.name}</span></label>`;}).join('');
+ recruitCount(i);}
+function recruitCount(i){const boxes=[...document.querySelectorAll('#recgrid'+i+' input[type=checkbox]')];
+ const on=boxes.filter(b=>b.checked).length;
+ const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+boxes.filter(b=>!b.disabled).length+' recruited';}
+function recruitFilter(i){const q=document.getElementById('recfilter'+i).value.trim().toLowerCase();
+ document.querySelectorAll('#recgrid'+i+' label').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q))?'':'none';});}
+function recruitCheckAll(i,on){document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{
+  if(!b.disabled&&b.closest('label').style.display!=='none')b.checked=on;});recruitCount(i);}
+async function writeRecruit(i){const sv=window._saves[i];const r=CHARDATA[i];
+ const edits={};let n=0;
+ document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{
+  if(b.disabled)return;const idx=+b.dataset.idx;const c=r.chars.find(x=>x.idx===idx);
+  if(c&&(!!c.recruited)!==b.checked){edits['c'+idx+'_rec']=b.checked?1:0;n++;}});
+ if(!n){toast('No recruitment changes','ok');return}
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm('Write '+n+' recruitment change(s) to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
+ const res=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
+ if(res.error){toast('Error: '+res.error,'bad');return}
+ toast('Wrote '+res.changed+' recruitment change(s)','ok');
+ const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error)CHARDATA[i]=rr;}
 function _sel(id,names,val){let h=`<select id="${id}">`;
  // ensure current value present even if unnamed
  const keys=Object.keys(names);
