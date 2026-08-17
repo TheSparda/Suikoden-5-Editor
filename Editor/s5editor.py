@@ -533,7 +533,11 @@ function toast(msg,kind){const t=document.createElement('div');t.className='tst 
  document.getElementById('toast').appendChild(t);setTimeout(()=>{t.style.opacity=0;setTimeout(()=>t.remove(),300)},3200)}
 async function j(u,b){spin(true);try{
  const r=await fetch(u,{method:b?'POST':'GET',body:b&&JSON.stringify(b),headers:{'content-type':'application/json'}});
- return await r.json();}catch(e){toast('Request failed: '+e,'bad');return{error:String(e)}}finally{spin(false)}}
+ return await r.json();}catch(e){
+ const msg=/Failed to fetch|NetworkError|Load failed/.test(String(e))
+   ?'Editor server not running — relaunch it (Start Editor) and reload this page'
+   :'Request failed: '+e;
+ toast(msg,'bad');return{error:msg}}finally{spin(false)}}
 function iso(){return document.getElementById('iso').value}
 let LASTISO='';
 async function browseIso(){const r=await j('/api/pickiso',{});
@@ -904,12 +908,14 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
    `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div><div id="recruit${i}" style="margin-top:8px"></div></div>`}).join('');}
 let CHARDATA={};
 async function openChars(i){const sv=window._saves[i];const box=document.getElementById('chars'+i);
+ if(box._loading)return;
  if(box._open){box._open=false;box.innerHTML='';return}
- box.innerHTML='loading characters…';
+ box._loading=true;box.innerHTML='loading characters…';
  const r=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});
+ box._loading=false;
  if(r.error){box.innerHTML='<span class=bad>'+r.error+'</span>';return}
  box._open=true; CHARDATA[i]=r;
- const opts=r.chars.map(c=>`<option value="${c.idx}">${c.idx}: ${c.name}${c.active?'':' (inactive)'}</option>`).join('');
+ const opts=r.chars.map(c=>`<option value="${c.idx}">${c.idx}: ${c.name}${c.recruited||!c.recruitable?'':' (not recruited)'}</option>`).join('');
  box.innerHTML=`<div class=row><span class=note>Character</span><select id="csel${i}" onchange="renderChar(${i})">${opts}</select>`
   +`<button onclick="writeChar(${i})">Write character</button>`
   +`<button class=ghost onclick="recruitAll(${i})" title="Set the recruited flag for every recruitable character (108 Stars)">Recruit ALL</button></div><div id="cfld${i}"></div>`;
@@ -925,9 +931,11 @@ async function recruitAll(i){const sv=window._saves[i];const r=CHARDATA[i];
  else{toast('Recruited '+res.changed+' character(s)','ok');
   const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error){CHARDATA[i]=rr;renderChar(i);}}}
 async function openRecruit(i){const sv=window._saves[i];const box=document.getElementById('recruit'+i);
+ if(box._loading)return;
  if(box._open){box._open=false;box.innerHTML='';return}
- box.innerHTML='<span class=note>loading roster…</span>';
+ box._loading=true;box.innerHTML='<span class=note>loading roster…</span>';
  const r=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});
+ box._loading=false;
  if(r.error){box.innerHTML='<span class=bad>'+r.error+'</span>';return}
  box._open=true; CHARDATA[i]=r;
  box.innerHTML=`<div class=sec><h3>Recruitment — <span id="reccount${i}"></span></h3>
@@ -993,7 +1001,7 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +sub('Skill ranks')
   +g((c.skills||[]).map((v,s)=>s===26?'':`<div class=fld><label>${(r.skillNames[s]||('Skill '+s))}</label><div class=in>${_sel('ce'+i+'_sk'+s,r.rankNames,v)}</div></div>`).join(''))
   +'<div style="padding:8px 14px 12px"><span class=note>Level, armor, runes and skill ranks are reverse-engineered and cross-verified (skills validated against the game per-character caps). Rune 0 = empty slot.'
-  +(c.active?'':' · <b>This character is inactive (not yet recruited) in this save.</b>')+'</span></div>';}
+  +(c.recruited||!c.recruitable?'':' · <b>This character is not yet recruited in this save.</b>')+'</span></div>';}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
