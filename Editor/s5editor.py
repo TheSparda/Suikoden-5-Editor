@@ -923,14 +923,17 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
  const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames,RN=r.runeNames;
  const asel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,A[slot],val)}</div></div>`;
  const rsel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,RN,val)}</div></div>`;
- const lvl=`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`;
- document.getElementById('cfld'+i).innerHTML='<div class=grid>'
-  +lvl
-  +asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)
-  +asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot)
-  +rsel('rhead','Head Rune',c.runes.rhead)+rsel('rright','Right Rune',c.runes.rright)+rsel('rleft','Left Rune',c.runes.rleft)
-  +'</div><span class=note>Level, armor and runes are reverse-engineered from the game and cross-verified. (Rune 0 = empty slot.)</span>'
-  +(c.active?'':'<br><span class=note>This character shows inactive (not yet recruited) in this save.</span>');}
+ const sub=t=>`<div style="font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:12px 14px 0">${t}</div>`;
+ const g=inner=>`<div class=grid style="padding-top:8px">${inner}</div>`;
+ document.getElementById('cfld'+i).innerHTML=
+   sub('Level')
+  +`<div class=grid style="grid-template-columns:150px;padding-top:8px"><div class=fld><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div></div>`
+  +sub('Equipment')
+  +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
+  +sub('Runes')
+  +g(rsel('rhead','Head',c.runes.rhead)+rsel('rright','Right hand',c.runes.rright)+rsel('rleft','Left hand',c.runes.rleft))
+  +'<div style="padding:8px 14px 12px"><span class=note>Level, armor and runes are reverse-engineered and cross-verified. Rune 0 = empty slot.'
+  +(c.active?'':' · <b>This character is inactive (not yet recruited) in this save.</b>')+'</span></div>';}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
