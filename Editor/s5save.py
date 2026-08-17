@@ -97,6 +97,10 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 #   VERIFIED across 6 saves: count scales with progress (58@lvl39 -> 112 complete), perfect
 #   same-playthrough monotonicity (bits only gained, never lost), story chars set everywhere,
 #   and the completionist's zero bits are exactly ids 112-119 (Sialeeds + the villains).
+# CHAR_SLOTS @+0xF2/+0xF3: the two EQUIPPED skill slots (1-based skill id, 0=empty).
+#   VERIFIED: 100% of slotted skills are ones the character has a rank in (566 recruited
+#   records, all saves) + identity fits (Prince slots Royal Paradise, Jeane slots Rune Sage).
+CHAR_SLOTS = 0xF2
 RECRUIT_BASE = 0xD7CA
 # 109-111 (Arshtat, Ferid, Lymsleia) carry the bit from their temporary story-party stints
 # but are not recruitable stars; 112-119 are Sialeeds + the antagonists.
@@ -116,6 +120,7 @@ def read_character(gd, idx):
     recruited = (gd[RECRUIT_BASE + (idx >> 3)] >> (idx & 7)) & 1
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
             "recruited": recruited, "recruitable": idx not in NON_RECRUITABLE,
+            "slots": [gd[r + CHAR_SLOTS], gd[r + CHAR_SLOTS + 1]],
             "armor": armor, "runes": runes, "skills": skills}
 
 def read_all_characters(gd):
@@ -159,6 +164,8 @@ def _apply_char_edit(b, key, val):
         byte, mask = RECRUIT_BASE + (idx >> 3), 1 << (idx & 7)
         if int(val): b[byte] |= mask
         else:        b[byte] &= ~mask & 0xFF
+    elif slot in ("ss0", "ss1"):
+        b[r + CHAR_SLOTS + int(slot[2])] = max(0, min(SKILL_COUNT, int(val)))
     else:
         return False
     return True

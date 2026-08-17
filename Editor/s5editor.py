@@ -987,6 +987,9 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
   +sub('Runes')
   +g(rsel('rhead','Head',c.runes.rhead)+rsel('rright','Right hand',c.runes.rright)+rsel('rleft','Left hand',c.runes.rleft))
+  +sub('Equipped skill slots')
+  +g([0,1].map(k=>{const names={'0':'— empty —'};(r.skillNames||[]).forEach((n,s)=>{if(s!==26)names[String(s+1)]=n;});
+     return `<div class=fld><label>Slot ${k+1}</label><div class=in>${_sel('ce'+i+'_ss'+k,names,(c.slots||[0,0])[k])}</div></div>`;}).join(''))
   +sub('Skill ranks')
   +g((c.skills||[]).map((v,s)=>s===26?'':`<div class=fld><label>${(r.skillNames[s]||('Skill '+s))}</label><div class=in>${_sel('ce'+i+'_sk'+s,r.rankNames,v)}</div></div>`).join(''))
   +'<div style="padding:8px 14px 12px"><span class=note>Level, armor, runes and skill ranks are reverse-engineered and cross-verified (skills validated against the game per-character caps). Rune 0 = empty slot.'
@@ -995,6 +998,7 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  for(let s=0;s<48;s++){const el=document.getElementById('ce'+i+'_sk'+s);if(el)edits['c'+idx+'_sk'+s]=+el.value;}
+ for(const s of ['ss0','ss1']){const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  const rec=document.getElementById('ce'+i+'_rec');if(rec&&!rec.disabled)edits['c'+idx+'_rec']=rec.checked?1:0;
  const bakOn=document.getElementById('bakToggle').checked;
  if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
