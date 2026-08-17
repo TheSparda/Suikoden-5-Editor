@@ -932,11 +932,14 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
   +sub('Runes')
   +g(rsel('rhead','Head',c.runes.rhead)+rsel('rright','Right hand',c.runes.rright)+rsel('rleft','Left hand',c.runes.rleft))
-  +'<div style="padding:8px 14px 12px"><span class=note>Level, armor and runes are reverse-engineered and cross-verified. Rune 0 = empty slot.'
+  +sub('Skill ranks')
+  +g((c.skills||[]).map((v,s)=>s===26?'':`<div class=fld><label>${(r.skillNames[s]||('Skill '+s))}</label><div class=in>${_sel('ce'+i+'_sk'+s,r.rankNames,v)}</div></div>`).join(''))
+  +'<div style="padding:8px 14px 12px"><span class=note>Level, armor, runes and skill ranks are reverse-engineered and cross-verified (skills validated against the game per-character caps). Rune 0 = empty slot.'
   +(c.active?'':' · <b>This character is inactive (not yet recruited) in this save.</b>')+'</span></div>';}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
+ for(let s=0;s<48;s++){const el=document.getElementById('ce'+i+'_sk'+s);if(el)edits['c'+idx+'_sk'+s]=+el.value;}
  const bakOn=document.getElementById('bakToggle').checked;
  if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
@@ -1754,7 +1757,17 @@ class H(http.server.BaseHTTPRequestHandler):
                     _rn = json.load(open(os.path.join(HERE, "s5_rune_ids.json")))  # equip-id-ordered
                     runeNames = {str(i): e for i, e in enumerate(_rn)}
                 except Exception: runeNames = {}
-                return self._send(200, json.dumps({"chars": chars, "armorNames": armorNames, "runeNames": runeNames}))
+                skillNames = ["Stamina","Attack","Defense","Technique","Vitality","Agility","Magic",
+                    "Magic Defense","Incantation","Sword of Magic","Raging Lion","Fate Control",
+                    "Karmic Effect","Armor of Gods","Swift Foot","Triple Harmony","All-out Strike",
+                    "Untold Clarity","Divine Right","Zen Sword","Sacred Oath","Royal Paradise","Thief",
+                    "Mow Down","Pierce","Freeze","(unused)","Barrage","Long Throw","Dragon Special",
+                    "Forge","Combat Teacher","Chain Magic","Analyze","Potch Finder","Treasure Hunt",
+                    "Escape Route","Healing","Treatment","Haggle","Trade In","Cook","Rune Sage","Bard",
+                    "Perfect Pitch","Appraisal","Bath","Tutor"]
+                rankNames = ["None","E","D","C","B","A","S","SS"]
+                return self._send(200, json.dumps({"chars": chars, "armorNames": armorNames,
+                    "runeNames": runeNames, "skillNames": skillNames, "rankNames": rankNames}))
             if self.path == "/api/peek":
                 off = int(str(d.get("off", "0")), 0); ln = max(1, min(256, int(str(d.get("len", "16")), 0)))
                 with P.Iso(iso) as g: b = g.rd(off, ln)
