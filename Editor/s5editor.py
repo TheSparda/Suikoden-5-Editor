@@ -383,7 +383,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-save>
   <h2>Save Editor</h2>
-  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, and New Game Plus (fast-forward). ECC and a <code>.bak</code> are handled automatically on write.</p>
+  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, New Game Plus (fast-forward), and — per character — <b>equipped armor</b> (Helm/Armor/Gloves/Boots) and <b>runes</b> (Head/Right/Left) via the <b>Characters</b> button. ECC and a <code>.bak</code> are handled automatically on write (S5 has no save-body checksum). Offsets reverse-engineered from the game and cross-verified against the item tables.</p>
   <div class=row>
    <button onclick=browseSave()>Open save file…</button>
    <input id=savepath size=40 placeholder="/path/to/save.ps2" onkeydown="if(event.key=='Enter')openSaveFile()">
@@ -895,13 +895,48 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
   const ro=sv.editable===false;
   const foot=ro
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
-    : `<button onclick=saveWrite(${i})>Write to save</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
+    : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
    `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the (upcoming) unit editor, not here."></div></div>`+
    `<div class=fld><label>New Game Plus</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
-   `</div><div class=card-ft>${foot}</div></div>`}).join('');}
+   `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div></div>`}).join('');}
+let CHARDATA={};
+async function openChars(i){const sv=window._saves[i];const box=document.getElementById('chars'+i);
+ if(box._open){box._open=false;box.innerHTML='';return}
+ box.innerHTML='loading characters…';
+ const r=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});
+ if(r.error){box.innerHTML='<span class=bad>'+r.error+'</span>';return}
+ box._open=true; CHARDATA[i]=r;
+ const opts=r.chars.map(c=>`<option value="${c.idx}">${c.idx}: ${c.name}${c.active?'':' (inactive)'}</option>`).join('');
+ box.innerHTML=`<div class=row><span class=note>Character</span><select id="csel${i}" onchange="renderChar(${i})">${opts}</select>`
+  +`<button onclick="writeChar(${i})">Write equipment</button></div><div id="cfld${i}"></div>`;
+ renderChar(i);}
+function _sel(id,names,val){let h=`<select id="${id}">`;
+ // ensure current value present even if unnamed
+ const keys=Object.keys(names);
+ if(!(String(val) in names)) h+=`<option value="${val}" selected>#${val} (unknown)</option>`;
+ for(const k of keys){h+=`<option value="${k}" ${String(val)==k?'selected':''}>${k}: ${names[k]}</option>`}
+ return h+`</select>`;}
+function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('csel'+i).value;
+ const c=r.chars.find(x=>x.idx===idx);const A=r.armorNames,RN=r.runeNames;
+ const rsel=(slot,val)=>`<div class=fld><label>${slot}</label><div class=in>${_sel('ce'+i+'_'+slot,RN,val)}</div></div>`;
+ const asel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,A[slot],val)}</div></div>`;
+ document.getElementById('cfld'+i).innerHTML='<div class=grid>'
+  +asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)
+  +asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot)
+  +rsel('rhead',c.runes.rhead)+rsel('rright',c.runes.rright)+rsel('rleft',c.runes.rleft)
+  +'</div>'+(c.active?'':'<span class=note>Note: this character shows inactive (not yet recruited) in this save.</span>');}
+async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
+ const edits={};for(const s of ['helm','body','glove','foot','rhead','rright','rleft']){
+  const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
+ const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
+ if(r.error)toast('Error: '+r.error,'bad');else{toast('Wrote '+r.changed+' equipment field(s)','ok');
+  // refresh cached data so re-open shows new values
+  const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error)CHARDATA[i]=rr;}}
 async function saveWrite(i){const sv=window._saves[i];
  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
   castleName:document.getElementById('sv'+i+'_castleName').value,
@@ -1696,6 +1731,24 @@ class H(http.server.BaseHTTPRequestHandler):
                 else:
                     r = SV.write_save_fields(card, d["folder"], d.get("edits", {}))
                 return self._send(200, json.dumps(r))
+            if self.path == "/api/savechars":
+                path = d.get("card", "")
+                gd = SV.read_gamedata_payload(path, d.get("folder"))
+                if not gd:
+                    return self._send(200, json.dumps({"error": "could not read gamedata payload"}))
+                chars = SV.read_all_characters(gd)
+                try: cnames = {c["id"]: c["name"] for c in json.load(open(os.path.join(HERE, "s5_characters.json")))}
+                except Exception: cnames = {}
+                for c in chars: c["name"] = cnames.get(c["idx"], f"Character {c['idx']}")
+                try: armor = json.load(open(os.path.join(HERE, "s5_armor_names.json")))
+                except Exception: armor = {}
+                armorNames = {"helm": armor.get("head", {}), "body": armor.get("body", {}),
+                              "glove": armor.get("glove", {}), "foot": armor.get("foot", {})}
+                try:
+                    _rn = json.load(open(os.path.join(HERE, "s5_rune_names.json")))
+                    runeNames = {str(i): (e["name"] if isinstance(e, dict) else e) for i, e in enumerate(_rn)}
+                except Exception: runeNames = {}
+                return self._send(200, json.dumps({"chars": chars, "armorNames": armorNames, "runeNames": runeNames}))
             if self.path == "/api/peek":
                 off = int(str(d.get("off", "0")), 0); ln = max(1, min(256, int(str(d.get("len", "16")), 0)))
                 with P.Iso(iso) as g: b = g.rd(off, ln)
