@@ -6,7 +6,7 @@ archive. Run it with `python3 dist/Suikoden5Editor.pyz` (double-click on Windows
 with the Python launcher installed); a macOS double-click wrapper .command is
 emitted alongside.
 """
-import os, shutil, stat, tempfile, zipapp
+import os, sys, shutil, stat, tempfile, zipapp, zipfile
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "Editor")
@@ -56,6 +56,19 @@ def main():
     launchers.append(win)
     print(f"bundled {n} files -> {OUT} ({os.path.getsize(OUT)//1024} KB)")
     for p in launchers: print(f"launcher -> {p}")
+
+    # Package ONLY the 3 end-user files into the release zip (no source tree).
+    ver = sys.argv[1] if len(sys.argv) > 1 else ""
+    zname = f"Suikoden5Editor-{ver}.zip" if ver else "Suikoden5Editor.zip"
+    zpath = os.path.join(DIST, zname)
+    payload = [OUT] + launchers
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in payload:
+            zi = zipfile.ZipInfo(os.path.basename(p))              # flat, no dirs
+            zi.external_attr = (os.stat(p).st_mode & 0xFFFF) << 16  # keep +x bit
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            with open(p, "rb") as f: z.writestr(zi, f.read())
+    print(f"release zip -> {zpath} ({os.path.getsize(zpath)//1024} KB, {len(payload)} files)")
 
 if __name__ == "__main__":
     main()
