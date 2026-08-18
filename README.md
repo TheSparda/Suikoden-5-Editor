@@ -6,6 +6,9 @@ web app in your browser — nothing is uploaded, and the server only touches the
 point it at. It ships with **no game ROM/ISO**; supply your own legally-obtained ISO and
 save files.
 
+> 💬 **Feature requests / Support** available on the **Toran Castle Discord**:
+> https://discord.gg/KesHMX5P2Z
+
 **At a glance:**
 
 - **ISO editing** — characters, runes & spells, gear, enemies, prices, unites, MP growth,
