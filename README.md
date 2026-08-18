@@ -205,6 +205,12 @@ new patched ISO alongside.
 ## Tools
 
 - **Share / Patch** — the recipe + xdelta workflow above.
+- **Excel / CSV round-trip** — export any of nine data tables (character stats /
+  affinities / skill caps / weapon growth / starting equipment, enemies, prices, skill
+  effects, MP growth) as CSV, bulk-edit in Excel / Sheets / LibreOffice, and import back.
+  Import writes only the cells that changed, with the same range validation, `.bak`
+  backup, and recipe recording as tab edits; blank cells and Excel quirks (BOM, `12.0`
+  decimals) are handled.
 - **Overlays** — extract/decompress the disc's 17 engine overlays (OVL/\*.ROM),
   re-insert edited ones (LZSS, sector-slot guarded), and an **Overlay Text** editor for
   the story/dialogue text inside them (endings, letters, lore, newspaper, …).
