@@ -427,6 +427,17 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button class=ghost onclick=xdeltaApply()>pristine + patch → new ISO</button>
   </div>
   <pre id=patchout>—</pre>
+  <h2 style="margin-top:18px">Excel / CSV round-trip</h2>
+  <p class=sub>Export a data table as CSV, bulk-edit the values in Excel / Sheets / LibreOffice, then import it back. Import writes only the cells that changed (with range validation, a <code>.bak</code>, and recipe recording — same as editing in the tabs). Keep the <code>id</code> column and the header row intact; blank cells are skipped.</p>
+  <div class=row>
+   <span class=note>Table</span><select id=csvds></select>
+   <button onclick=csvExport()>Export CSV</button>
+  </div>
+  <div class=row>
+   <span class=note>Import file</span><input id=csvpath size=36 placeholder="/path/to/edited.csv">
+   <button class=ghost onclick=csvImport()>Import CSV into ISO</button>
+  </div>
+  <pre id=csvout>—</pre>
   <h2 style="margin-top:18px">Raw hex</h2>
   <p class=sub>Raw hex read at any absolute ISO offset (research).</p>
   <div class=row>
@@ -552,7 +563,7 @@ function showTab(name){document.querySelectorAll('nav button').forEach(b=>b.clas
  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id=='p-'+name));
  const ob=document.getElementById('otherbtn');if(ob)ob.classList.toggle('on',['enemy','price','hard','ref','assets','tools'].includes(name));
  const om=document.getElementById('othermenu');if(om)om.classList.remove('open');
- if(name=='tools'&&iso())modStatus();
+ if(name=='tools'){csvInit();if(iso())modStatus();}
  if(name=='assets'&&iso()&&!FACELIST.length)loadFaceList();}
 function toggleOther(){document.getElementById('othermenu').classList.toggle('open');}
 document.addEventListener('click',e=>{const d=document.querySelector('.navdrop');
@@ -1026,6 +1037,25 @@ async function saveWrite(i){const sv=window._saves[i];
  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
  if(r.error)toast('Error: '+r.error,'bad');else toast('Wrote '+r.changed+' field(s) to card','ok')}
 
+async function csvInit(){const r=await j('/api/csvdatasets',{});const sel=document.getElementById('csvds');
+ if(sel&&r.datasets&&!sel.options.length)sel.innerHTML=Object.entries(r.datasets).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');}
+async function csvExport(){if(!needIso())return;const ds=document.getElementById('csvds').value;
+ const r=await j('/api/csvexport',{iso:iso(),dataset:ds});
+ if(r.error){document.getElementById('csvout').textContent=r.error;toast(r.error,'bad');return}
+ const blob=new Blob([r.csv],{type:'text/csv'});const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);a.download=r.filename;a.click();URL.revokeObjectURL(a.href);
+ document.getElementById('csvout').textContent='Exported '+r.filename+' ('+r.csv.split('\n').length+' lines). Edit values in Excel, save as CSV, then import below.';
+ toast('CSV exported','ok');}
+async function csvImport(){if(!needIso())return;const ds=document.getElementById('csvds').value;
+ const p=document.getElementById('csvpath').value.trim();
+ if(!p){toast('Enter the path of the edited CSV','bad');return}
+ if(!confirm('Import CSV into the ISO? Only changed cells are written (a .bak is made when backups are on).'))return;
+ const r=await j('/api/csvimport',{iso:iso(),dataset:ds,path:p});
+ if(r.error){document.getElementById('csvout').textContent=r.error;toast(r.error,'bad');return}
+ let msg='Imported: '+r.changed+' value(s) changed, '+r.skippedCells+' cell(s) skipped';
+ if(r.errorCount)msg+=', '+r.errorCount+' error(s):\n  '+r.errors.join('\n  ');
+ document.getElementById('csvout').textContent=msg;
+ toast(r.changed+' value(s) written','ok');}
 async function peek(){const s=await j('/api/peek',{iso:iso(),off:document.getElementById('roff').value,len:document.getElementById('rlen').value});
  document.getElementById('out').textContent=s.error?s.error:(s.hex+'\n'+s.ascii)}
 
@@ -1420,6 +1450,30 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     P.write_rune_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/csvdatasets":
+                return self._send(200, json.dumps({"datasets": P.CSV_DATASETS}))
+            if self.path == "/api/csvexport":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    fn, text = P.csv_export(iso, d["dataset"])
+                    return self._send(200, json.dumps({"filename": fn, "csv": text}))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/csvimport":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    text = d.get("csv")
+                    if not text:
+                        p = os.path.expanduser(d.get("path", "").strip())
+                        if not p or not os.path.exists(p):
+                            return self._send(200, json.dumps({"error": "CSV file not found: " + p}))
+                        text = open(p, encoding="utf-8-sig").read()   # tolerate Excel BOM
+                    res = P.csv_import(iso, d["dataset"], text)
+                    return self._send(200, json.dumps(res))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/overlays":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))

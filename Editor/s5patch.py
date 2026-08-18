@@ -1052,6 +1052,120 @@ def backup(path):
     if not os.path.exists(bak): shutil.copy2(path, bak)
     return bak
 
+
+# ---- CSV export/import (Excel round-trip) -------------------------------------
+# Every dataset is (record id, field label, int value) through the SAME validated
+# writers the UI uses, so imports get range checks, .bak and recipe journaling for
+# free. Import writes only cells that differ; blank/non-numeric cells are skipped.
+CSV_DATASETS = {
+    "char-stats":       "Characters — stats & growths",
+    "char-affinities":  "Characters — elemental affinities (0=None..6=S)",
+    "char-skillcaps":   "Characters — equipable-skill caps (0=None..7=SS)",
+    "char-weapon":      "Characters — weapon growth (sharpen Lv1-16 attack)",
+    "char-equipment":   "Characters — starting equipment (armor ids)",
+    "enemies":          "Enemies — stats/rewards/affinities/drops",
+    "prices":           "Prices — item buy/sell",
+    "skillfx":          "Skill effects — magnitude per rank (E..SS)",
+    "mp":               "MP growth — thresholds per magic level",
+}
+_CSV_CHAR_TABLE = {"char-stats": "stats", "char-affinities": "affinities",
+                   "char-skillcaps": "equipable skills", "char-weapon": "weapon growth",
+                   "char-equipment": "starting equipment"}
+
+def _csv_rows(iso_path, dataset):
+    """-> (id_headers, field_labels, rows) where each row = [ids..., name, values...]."""
+    with Iso(iso_path) as g:
+        if dataset in _CSV_CHAR_TABLE:
+            t = _CSV_CHAR_TABLE[dataset]
+            labels = [l for (l, o, w, k) in F.TABLES[t][2]]
+            rows = []
+            for c in F.load_characters():
+                vals = [f["value"] for f in read_table(g, t, c["id"])]
+                rows.append([c["id"], c["name"]] + vals)
+            return ["id"], labels, rows
+        if dataset == "enemies":
+            try: names = F.res_json("s5_enemy_names.json")
+            except Exception: names = {}
+            labels = [l for (l, o, w, k) in F.ENEMY_FIELDS]
+            rows = []
+            for e in read_enemies(g):
+                vals = [f["value"] for f in read_enemy(g, e["id"])]
+                rows.append([e["id"], names.get(str(e["id"]), e["name"])] + vals)
+            return ["id"], labels, rows
+        if dataset == "prices":
+            try: items = F.res_json("s5_item_names.json")
+            except Exception: items = {}
+            labels = [n for (n, o, w) in F.PRICE_FIELDS]
+            rows = []
+            for r in read_prices(g):
+                e = items.get(str(r["index"])) if isinstance(items, dict) else None
+                nm = (e.get("name") if isinstance(e, dict) else e) or f"Item {r['index']}"
+                rows.append([r["index"], nm] + [r[n] for n in labels])
+            return ["id"], labels, rows
+        if dataset == "skillfx":
+            rows = [[r["id"], r["name"]] + r["values"] for r in read_skillfx(g)]
+            return ["id"], list(F.SKILLFX_RANKS), rows
+        if dataset == "mp":
+            rows = [[r["group"], r["label"]] + r["values"] for r in read_mp(g)]
+            return ["id"], list(F.MP_FIELD_LABELS), rows
+    raise KeyError(f"unknown dataset {dataset!r}")
+
+def csv_export(iso_path, dataset):
+    import csv, io
+    idh, labels, rows = _csv_rows(iso_path, dataset)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(idh + ["name"] + labels)
+    for r in rows: w.writerow(r)
+    return f"s5_{dataset}.csv", buf.getvalue()
+
+def csv_import(iso_path, dataset, csv_text, make_backup=True):
+    import csv, io
+    idh, labels, cur_rows = _csv_rows(iso_path, dataset)
+    current = {r[0]: dict(zip(labels, r[2:])) for r in cur_rows}
+    rdr = csv.reader(io.StringIO(csv_text))
+    try: header = next(rdr)
+    except StopIteration: return {"error": "empty CSV"}
+    header = [h.strip() for h in header]
+    if not header or header[0].lower() != "id":
+        return {"error": "first column must be 'id' (export a CSV first to see the format)"}
+    colmap = {i: h for i, h in enumerate(header) if h in labels}
+    if not colmap:
+        return {"error": "no known field columns found — headers must match the exported CSV"}
+    changed = skipped = 0; errors = []
+    if make_backup: backup(iso_path)
+    with Iso(iso_path, writable=True) as g:
+        for ln, row in enumerate(rdr, start=2):
+            if not row or not row[0].strip(): continue
+            try: rid = int(row[0])
+            except ValueError:
+                errors.append(f"line {ln}: bad id {row[0]!r}"); continue
+            if rid not in current:
+                errors.append(f"line {ln}: unknown id {rid}"); continue
+            for ci, label in colmap.items():
+                if ci >= len(row): continue
+                cell = row[ci].strip()
+                if cell == "": skipped += 1; continue
+                try: val = int(float(cell))   # Excel may emit "12.0"
+                except ValueError: skipped += 1; continue
+                if current[rid].get(label) == val: continue
+                try:
+                    if dataset in _CSV_CHAR_TABLE:
+                        write_field(g, _CSV_CHAR_TABLE[dataset], rid, label, val)
+                    elif dataset == "enemies":
+                        write_enemy_field(g, rid, label, val)
+                    elif dataset == "prices":
+                        write_price(g, rid, label, val)
+                    elif dataset == "skillfx":
+                        write_skillfx(g, rid, labels.index(label), val)
+                    elif dataset == "mp":
+                        write_mp(g, rid, labels.index(label), val)
+                    changed += 1
+                except Exception as e:
+                    errors.append(f"line {ln} {label}={cell}: {e}")
+    return {"changed": changed, "skippedCells": skipped, "errors": errors[:20],
+            "errorCount": len(errors)}
+
 # ---- Hard Mode: scale every character's VERIFIED starting stats party-wide.
 # Idempotent via a sidecar baseline (originals stored once), so re-applying a new
 # factor always scales the ORIGINAL values and Restore is exact.
