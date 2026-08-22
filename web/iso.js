@@ -182,29 +182,48 @@ function renderField(f, attrs) {
     inner = `<input type="number" ${dataset} value="${f.value}" min="${min}" max="${hi}" onchange="onIsoField(this)">`;
   }
   return `<div class="fld"><label>${esc(f.label)}
-    <span class="pill">${kind==="num"?(f.width+"B"):kind}</span></label><div class="in">${inner}</div></div>`;
+    <span class="pill">${kind==="num"?(f.width+"B"):kind}</span></label><div class="in">${inner}${REVERT_BTN}</div></div>`;
 }
 
 /* dispatch a field write to the right Pyodide setter (write-through). */
-function onIsoField(el) {
-  const v = el.value, view = el.dataset.view, ident = el.dataset.ident;
-  applyIsoWrite(el, v).then((ok) => { if (ok === false) return; trackIso(el, v); afterIsoWrite(view, ident); });
+/* single write path shared by field-change, picker-pick and per-field revert */
+function commitIso(el, value) {
+  return applyIsoWrite(el, value).then((ok) => {
+    if (ok === false) return;
+    trackIso(el, value);
+    afterIsoWrite(el.dataset.view, el.dataset.ident);
+  });
+}
+function onIsoField(el) { commitIso(el, el.value); }
+function setPickDisplay(el, id) {
+  q(".pickbtn-name", el).textContent = nameFor(el.dataset.kind, id);
+  q(".pickbtn-id", el).textContent = "#" + id;
+  el.dataset.origLive = id;
 }
 function onIsoPick(el) {
-  const kind = el.dataset.kind, view = el.dataset.view, ident = el.dataset.ident;
+  const kind = el.dataset.kind;
   const cur = el.dataset.origLive != null ? el.dataset.origLive : q(".pickbtn-id", el).textContent.replace("#","");
   openPicker("Choose " + el.dataset.lbl, kindList(kind) || [], cur, (id) => {
-    q(".pickbtn-name", el).textContent = nameFor(kind, id);
-    q(".pickbtn-id", el).textContent = "#" + id;
-    el.dataset.origLive = id;
-    applyIsoWrite(el, id).then((ok) => { if (ok === false) return; trackIso(el, id); afterIsoWrite(view, ident); });
+    setPickDisplay(el, id); commitIso(el, id);
   }, { hideId: kind !== "spellid" && kind !== "drop" });
+}
+/* Per-field undo: revert a control to the value it had when this view was rendered.
+ * The ↺ button sits right after its control, so previousElementSibling is the field. */
+function revertIsoField(btn) {
+  const el = btn.previousElementSibling;
+  if (!el || el.dataset.orig == null) return;
+  const orig = el.dataset.orig;
+  if (el.classList.contains("pickbtn")) setPickDisplay(el, orig);
+  else el.value = orig;
+  commitIso(el, orig);
 }
 /* Changing a rune's spell set (start/count) changes which spells it teaches → re-render
  * so the per-spell editors below refresh to the new set. */
 function afterIsoWrite(view, ident) {
   if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
 }
+/* the ↺ button markup placed after a control inside its .in / table cell */
+const REVERT_BTN = `<button type="button" class="revert" title="Undo this change" onclick="revertIsoField(this)" tabindex="-1">↺</button>`;
 async function applyIsoWrite(el, value) {
   const view = el.dataset.view, field = el.dataset.field;
   const ident = JSON.parse(el.dataset.ident || "{}");
@@ -385,10 +404,10 @@ function priceView(loadFn, view, cols) {
 function rowFor(view, p, cols) {
   const nm = p.name || ("#" + (p.index));
   return `<tr data-name="${esc(nm.toLowerCase())}"><td class="note">${p.index}</td><td>${esc(nm)}</td>` +
-    cols.map(c => `<td><input type="number" min="0" value="${p[c.field]}"
+    cols.map(c => `<td class="cellwrap"><input type="number" min="0" value="${p[c.field]}"
       data-key="${view}:${p.index}:${c.field}" data-view="${view}" data-ident='${esc(JSON.stringify({index:p.index}))}'
       data-field="${c.field}" data-kind="num" data-orig="${p[c.field]}" data-lbl="${esc(nm+" "+c.label)}" data-grp="${esc(c.group)}"
-      onchange="onIsoField(this)" style="width:120px"></td>`).join("") + `</tr>`;
+      onchange="onIsoField(this)" style="width:100px">${REVERT_BTN}</td>`).join("") + `</tr>`;
 }
 VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",
   [{ field: "buy", label: "Buy", group: "Item prices" }, { field: "sell", label: "Sell", group: "Item prices" }]);
@@ -470,10 +489,10 @@ VIEW_RENDER.skillfx = async (body) => {
   let h = `<div style="padding:10px 14px"><input class="pick-q" id="fxQ" type="search" placeholder="filter skill…" style="max-width:260px"></div>
     <div class="tablewrap"><table><thead><tr><th>#</th><th>Skill</th>${r.ranks.map(rk=>`<th>${rk}</th>`).join("")}</tr></thead><tbody id="fxBody">`;
   h += r.skills.map(s => `<tr data-name="${esc((s.name||"").toLowerCase())}"><td class="note">${s.id}</td><td>${esc(s.name)}</td>` +
-    s.values.map((v, k) => `<td><input type="number" min="0" value="${v}" style="width:90px"
+    s.values.map((v, k) => `<td class="cellwrap"><input type="number" min="0" value="${v}" style="width:78px"
       data-key="skillfx:${s.id}:${k}" data-view="skillfx" data-ident='${esc(JSON.stringify({id:s.id,rank:k}))}'
       data-field="v" data-kind="num" data-orig="${v}" data-lbl="${esc(s.name+" @"+r.ranks[k])}" data-grp="Skill effects"
-      onchange="onIsoField(this)"></td>`).join("") + `</tr>`).join("");
+      onchange="onIsoField(this)">${REVERT_BTN}</td>`).join("") + `</tr>`).join("");
   body.innerHTML = h + `</tbody></table></div>`;
   $("fxQ").oninput = () => { const f = $("fxQ").value.trim().toLowerCase();
     qa("#fxBody tr").forEach(tr => tr.style.display = (!f || tr.dataset.name.includes(f)) ? "" : "none"); };
@@ -518,7 +537,7 @@ VIEW_RENDER.name = async (body) => {
   h += (r.names || []).map(n => `<div class="fld"><label>#${n.index}</label><div class="in">
       <input maxlength="7" value="${esc(n.name)}" data-key="name:${n.index}" data-view="name"
         data-ident='${esc(JSON.stringify({index:n.index}))}' data-field="name" data-kind="str"
-        data-orig="${esc(n.name)}" data-lbl="Name #${n.index}" data-grp="Names" onchange="onIsoField(this)"></div></div>`).join("");
+        data-orig="${esc(n.name)}" data-lbl="Name #${n.index}" data-grp="Names" onchange="onIsoField(this)">${REVERT_BTN}</div></div>`).join("");
   body.innerHTML = h + `</div>`;
 };
 

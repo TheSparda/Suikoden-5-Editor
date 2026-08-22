@@ -146,6 +146,13 @@ th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
 .pickbtn .pickbtn-id{flex:0 0 auto}
 /* dirty highlight + revertable */
 input.dirty,select.dirty,.pickbtn.dirty{border-color:var(--chg-bd);background:var(--chg-bg)}
+/* per-field undo (↺): hidden until the field is dirty, then shown beside it */
+.revert{display:none;flex:0 0 auto;align-items:center;justify-content:center;background:none;border:0;
+ color:var(--gold2);font-size:15px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:6px}
+.revert:hover{background:var(--panel2);filter:none}
+.in:has(.dirty) .revert,td.cellwrap:has(.dirty) .revert{display:inline-flex}
+td.cellwrap{white-space:nowrap}
+td.cellwrap .revert{vertical-align:middle;margin-left:2px}
 /* sticky action toolbar (Save always reachable) */
 .toolbar{position:sticky;bottom:0;z-index:40;display:flex;align-items:center;gap:10px;
  padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));
