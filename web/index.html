@@ -7,8 +7,8 @@
 <meta name="description" content="Edit Suikoden V (PS2) saves in your browser. Nothing is uploaded — the save never leaves your device.">
 <meta name="theme-color" content="#0b1524">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="S5 Save Editor">
@@ -19,6 +19,7 @@
   <span class="logo"></span>
   <b>Suikoden V</b><span class="note">Save Editor · in your browser</span>
   <span class="sp"></span>
+  <button id="installBtn" class="ghost mini hidden">⬇ Install app</button>
   <label class="chk hdr-chk" title="Switch between the dark Falena Twilight and pale Sun Rune themes">
     <input type="checkbox" id="themeToggle"> <span class="note">Light</span>
   </label>
@@ -38,17 +39,22 @@
   <div id="opencard" class="sec" style="display:none">
     <div class="card-hd">Open a save file</div>
     <div style="padding:14px">
-      <p class="sub" style="margin-top:0">
-        Pick a PS2 memory-card image (<code>.ps2 .mc2 .mcd .bin .psu</code>) or a standalone save
-        (<code>.cbs .xps .sps</code>). Everything runs on this device — your save is never uploaded.
-      </p>
-      <div class="row">
-        <input type="file" id="file" accept=".ps2,.mc2,.mcd,.bin,.psu,.psv,.cbs,.xps,.sps,.max,application/octet-stream">
-        <span id="filename" class="note"></span>
+      <div id="drop" class="drop">
+        <div><b>Drop a save file here</b> — or —</div>
+        <div class="row" style="justify-content:center">
+          <button type="button" id="pickBtn">Choose file…</button>
+          <input type="file" id="file" class="hidden"
+                 accept=".ps2,.mc2,.mcd,.bin,.psu,.psv,.cbs,.xps,.sps,.max,application/octet-stream">
+        </div>
+        <div class="muted note" id="filename"></div>
+        <div class="muted note">
+          Supports PS2 memory-card images (<code>.ps2 .mc2 .mcd .bin</code>), <code>.psu</code>,
+          and standalone <code>.cbs .xps .sps</code>.
+        </div>
       </div>
-      <p class="note" id="privacy">
+      <p class="note" id="privacy" style="margin-bottom:0">
         🔒 100% offline &amp; private. This page has no server; the file is read into memory here and the
-        edited copy is downloaded straight back to you.
+        edited copy is downloaded straight back to you. Your original file is never touched.
       </p>
     </div>
   </div>
@@ -56,19 +62,21 @@
   <div id="saves"></div>
 
   <footer>
-    Suikoden V Save Editor (web) · runs your existing Python save module in
-    <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required ·
-    <span id="ver">v1.3.1</span><br>
     Edits <b>verified</b> fields only (hero/castle name, New Game Plus, per-character level, equipment,
     runes, skills, recruitment). Suikoden V saves have no body checksum, so verified-field edits load in-game.
-    Keep your original file until you confirm the edited save loads.
+    Keep your original file until you confirm the edited save loads.<br>
+    Runs this repo's own <code>Editor/s5save.py</code> unchanged in
+    <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required.<br>
+    <span class="credit">Made by <b>TheSparda</b> ·
+      <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
+      · <span id="ver">v1.3.1</span></span>
   </footer>
 </main>
 
 <div id="spin"><div class="sun"></div></div>
 <div id="toast"></div>
 
-<!-- Pyodide runtime (CDN). Cached opaquely by the service worker after first use. -->
+<!-- Pyodide runtime (CDN), version pinned. Cached by the service worker after first use. -->
 <script>window.PYODIDE_VERSION = "0.26.4";</script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script src="app.js"></script>
