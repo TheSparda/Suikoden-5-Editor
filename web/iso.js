@@ -187,17 +187,23 @@ function renderField(f, attrs) {
 
 /* dispatch a field write to the right Pyodide setter (write-through). */
 function onIsoField(el) {
-  const v = el.value;
-  applyIsoWrite(el, v).then(() => trackIso(el, v));
+  const v = el.value, view = el.dataset.view, ident = el.dataset.ident;
+  applyIsoWrite(el, v).then((ok) => { if (ok === false) return; trackIso(el, v); afterIsoWrite(view, ident); });
 }
 function onIsoPick(el) {
-  const kind = el.dataset.kind, cur = el.dataset.origLive != null ? el.dataset.origLive : q(".pickbtn-id", el).textContent.replace("#","");
+  const kind = el.dataset.kind, view = el.dataset.view, ident = el.dataset.ident;
+  const cur = el.dataset.origLive != null ? el.dataset.origLive : q(".pickbtn-id", el).textContent.replace("#","");
   openPicker("Choose " + el.dataset.lbl, kindList(kind) || [], cur, (id) => {
     q(".pickbtn-name", el).textContent = nameFor(kind, id);
     q(".pickbtn-id", el).textContent = "#" + id;
     el.dataset.origLive = id;
-    applyIsoWrite(el, id).then(() => trackIso(el, id));
+    applyIsoWrite(el, id).then((ok) => { if (ok === false) return; trackIso(el, id); afterIsoWrite(view, ident); });
   }, { hideId: kind !== "spellid" && kind !== "drop" });
+}
+/* Changing a rune's spell set (start/count) changes which spells it teaches → re-render
+ * so the per-spell editors below refresh to the new set. */
+function afterIsoWrite(view, ident) {
+  if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
 }
 async function applyIsoWrite(el, value) {
   const view = el.dataset.view, field = el.dataset.field;
@@ -330,15 +336,33 @@ VIEW_RENDER.rune = async (body) => {
 function renderRune(rid) {
   const r = JSON.parse(window.PYISO.rune(rid));
   if (r.error) { $("isoRbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  let h = `<div class="subhd">${esc(r.name)}${r.synthetic?" — read-only":""}</div>`;
+  let h = `<div class="subhd">${esc(r.name)}${r.synthetic ? " — spells not owned by a grant record" : ""}</div>`;
+  h += `<div class="note" style="margin:0 14px">Edit every spell this rune teaches — element, damage/heal power,
+    target (single / all / row / column / cluster) and status.${
+      r.synthetic ? "" : " Use “Spell set” below to change <b>which</b> spells it teaches."}</div>`;
+
+  // Spell-set builder (real grant records only): which contiguous spells the rune grants.
   if (!r.synthetic && r.grant.length) {
-    h += `<div class="grid" style="padding-top:8px">` + r.grant.map(f =>
-      renderField(f, { view: "rune", ident: JSON.stringify({ id: rid }), key: `rune:${rid}:${f.label}`,
-        prefix: `${r.name} · `, group: "Runes" })).join("") + `</div>`;
+    h += `<div class="subhd">Spell set — which spells this rune teaches</div>`;
+    h += `<div class="grid" style="padding-top:8px">` + r.grant.map((f) => {
+      const disp = f.label === "Start spell" ? "First spell (Lv1)" : f.label === "Spell count" ? "Levels" : f.label;
+      return renderField({ ...f, field: f.label, label: disp },
+        { view: "rune", ident: JSON.stringify({ id: rid }), key: `rune:${rid}:${f.label}`,
+          prefix: `${r.name} · `, group: "Runes" });
+    }).join("") + `</div>`;
   }
-  h += `<div class="subhd">Spells taught</div><div style="padding:0 14px 12px">`;
-  h += r.spells.map(s => `<div class="note">Lv${s.level} — ${esc(s.name)} (spell #${s.id})</div>`).join("") || `<div class="note">none</div>`;
-  h += `</div>`;
+
+  // One editable field grid per spell the rune currently teaches (element/power/target/status).
+  if (r.spells.length) {
+    for (const s of r.spells) {
+      h += `<div class="subhd">Lv${s.level} · ${esc(s.name)} <span class="note">(spell #${s.id})</span></div>`;
+      h += `<div class="grid" style="padding-top:8px">` + s.fields.map((f) =>
+        renderField(f, { view: "spell", ident: JSON.stringify({ id: s.id }), key: `spell:${s.id}:${f.label}`,
+          prefix: `${s.name} · `, group: `Rune: ${r.name}` })).join("") + `</div>`;
+    }
+  } else {
+    h += `<div class="note" style="padding:8px 14px">This rune teaches no spells.</div>`;
+  }
   $("isoRbody").innerHTML = h;
 }
 
