@@ -328,7 +328,7 @@ function renderSpell(sid) {
 VIEW_RENDER.rune = async (body) => {
   const runes = JSON.parse(window.PYISO.runes()).runes || [];
   body.innerHTML = `<div class="row" style="padding:10px 14px 0"><span class="note">Rune</span>
-      <select id="isoRsel">${runes.map(r=>`<option value="${r.id}">${esc(r.name)}${r.synthetic?" (read-only)":""}</option>`).join("")}</select></div>
+      <select id="isoRsel">${runes.map(r=>`<option value="${r.id}">${esc(r.name)}${r.synthetic?" (fixed spell set)":""}</option>`).join("")}</select></div>
     <div id="isoRbody"></div>`;
   $("isoRsel").onchange = () => renderRune(+$("isoRsel").value);
   renderRune(runes.length ? +runes[0].id : 0);
@@ -336,10 +336,12 @@ VIEW_RENDER.rune = async (body) => {
 function renderRune(rid) {
   const r = JSON.parse(window.PYISO.rune(rid));
   if (r.error) { $("isoRbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  let h = `<div class="subhd">${esc(r.name)}${r.synthetic ? " — spells not owned by a grant record" : ""}</div>`;
+  let h = `<div class="subhd">${esc(r.name)}</div>`;
   h += `<div class="note" style="margin:0 14px">Edit every spell this rune teaches — element, damage/heal power,
     target (single / all / row / column / cluster) and status.${
-      r.synthetic ? "" : " Use “Spell set” below to change <b>which</b> spells it teaches."}</div>`;
+      r.synthetic
+        ? " This rune's spell list is fixed (no grant record), but each spell below is fully editable."
+        : " Use “Spell set” below to change <b>which</b> spells it teaches."}</div>`;
 
   // Spell-set builder (real grant records only): which contiguous spells the rune grants.
   if (!r.synthetic && r.grant.length) {
