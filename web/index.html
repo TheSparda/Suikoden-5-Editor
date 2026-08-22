@@ -3,69 +3,125 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Suikoden V Save Editor</title>
-<meta name="description" content="Edit Suikoden V (PS2) saves in your browser. Nothing is uploaded — the save never leaves your device.">
+<title>Suikoden V Editor — Save &amp; ISO</title>
+<meta name="description" content="Edit Suikoden V (PS2) saves and discs in your browser. Nothing is uploaded — files never leave your device.">
 <meta name="theme-color" content="#0b1524">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="S5 Save Editor">
+<meta name="apple-mobile-web-app-title" content="S5 Editor">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
   <span class="logo"></span>
-  <b>Suikoden V</b><span class="note">Save Editor · in your browser</span>
+  <b>Suikoden V</b><span class="note hide-xs">Editor · in your browser</span>
+  <nav class="modes">
+    <button class="mode-tab" data-mode="save">Save</button>
+    <button class="mode-tab" data-mode="iso">ISO / Disc</button>
+  </nav>
   <span class="sp"></span>
-  <button id="installBtn" class="ghost mini hidden">⬇ Install app</button>
+  <button id="installBtn" class="ghost mini hidden">⬇ Install</button>
   <label class="chk hdr-chk" title="Switch between the dark Falena Twilight and pale Sun Rune themes">
     <input type="checkbox" id="themeToggle"> <span class="note">Light</span>
   </label>
 </header>
 
 <main>
-  <!-- Boot / load status -->
+  <!-- Shared boot / Pyodide status -->
   <div id="boot" class="sec build">
     <div class="card-hd">Getting ready</div>
     <div style="padding:14px">
-      <div id="bootmsg" class="note">Loading the Python save engine (Pyodide)… first load fetches a few MB; later loads are instant and work offline.</div>
+      <div id="bootmsg" class="note">Loading the Python engine (Pyodide)… first load fetches a few MB; later loads are instant and work offline.</div>
       <div class="bootbar"><div id="bootfill"></div></div>
     </div>
   </div>
 
-  <!-- Open a save -->
-  <div id="opencard" class="sec" style="display:none">
-    <div class="card-hd">Open a save file</div>
-    <div style="padding:14px">
-      <div id="drop" class="drop">
-        <div><b>Drop a save file here</b> — or —</div>
-        <div class="row" style="justify-content:center">
-          <button type="button" id="pickBtn">Choose file…</button>
-          <input type="file" id="file" class="hidden"
-                 accept=".ps2,.mc2,.mcd,.bin,.psu,.psv,.cbs,.xps,.sps,.max,application/octet-stream">
+  <!-- ============================ SAVE EDITOR ============================ -->
+  <section class="mode-pane" data-mode="save" hidden>
+    <div id="opencard" class="sec" style="display:none">
+      <div class="card-hd">Open a save file</div>
+      <div style="padding:14px">
+        <div id="drop" class="drop">
+          <div><b>Drop a save file here</b> — or —</div>
+          <div class="row" style="justify-content:center">
+            <button type="button" id="pickBtn">Choose file…</button>
+            <input type="file" id="file" class="hidden"
+                   accept=".ps2,.mc2,.mcd,.bin,.psu,.psv,.cbs,.xps,.sps,.max,application/octet-stream">
+          </div>
+          <div class="muted note" id="filename"></div>
+          <div class="muted note">
+            Supports PS2 memory-card images (<code>.ps2 .mc2 .mcd .bin</code>), <code>.psu</code>,
+            and standalone <code>.cbs .xps .sps</code>.
+          </div>
         </div>
-        <div class="muted note" id="filename"></div>
-        <div class="muted note">
-          Supports PS2 memory-card images (<code>.ps2 .mc2 .mcd .bin</code>), <code>.psu</code>,
-          and standalone <code>.cbs .xps .sps</code>.
-        </div>
+        <div id="saveLast" class="last-row hidden"></div>
+        <p class="note" id="privacy" style="margin-bottom:0">
+          🔒 100% offline &amp; private. This page has no server; the file is read into memory here and the
+          edited copy is saved straight back to you. Your original file is never touched.
+        </p>
       </div>
-      <p class="note" id="privacy" style="margin-bottom:0">
-        🔒 100% offline &amp; private. This page has no server; the file is read into memory here and the
-        edited copy is downloaded straight back to you. Your original file is never touched.
-      </p>
     </div>
-  </div>
+    <div id="saves"></div>
+  </section>
 
-  <div id="saves"></div>
+  <!-- ============================ ISO EDITOR ============================ -->
+  <section class="mode-pane" data-mode="iso" hidden>
+    <!-- Shown when File System Access is unavailable (mobile / Firefox / Safari) -->
+    <div id="isoBlocked" class="sec build hidden">
+      <div class="card-hd">ISO editing needs a desktop browser</div>
+      <div style="padding:14px" class="note">
+        The disc editor writes changed bytes back into your ~4&nbsp;GB ISO in place, which needs the
+        <b>File System Access API</b> — available in desktop <b>Chrome / Edge / Brave / Opera</b>.
+        It isn't available in this browser, so the ISO editor is disabled here.
+        <br><br>The <b>Save editor</b> works everywhere, including this device — switch to the
+        <b>Save</b> tab above. On desktop you can also export a <code>.s5mod</code> recipe and share it.
+      </div>
+    </div>
+
+    <div id="isoOpen" class="sec hidden">
+      <div class="card-hd">Open a Suikoden V ISO</div>
+      <div style="padding:14px">
+        <div id="isoDrop" class="drop">
+          <div><b>Choose your Suikoden V disc image</b></div>
+          <div class="row" style="justify-content:center">
+            <button type="button" id="isoPickBtn">Choose ISO…</button>
+          </div>
+          <div class="muted note" id="isoFilename"></div>
+          <div class="muted note">
+            USA <code>SLUS-21291</code> or PAL <code>SLES-54087</code>. Only a ~6.6&nbsp;MB slice is read;
+            on save, only the bytes you changed are written back in place.
+          </div>
+        </div>
+        <div id="isoLast" class="last-row hidden"></div>
+        <p class="note" style="margin-bottom:0">
+          🔒 Nothing is uploaded. Edits apply to a <b>new game</b> — do not use emulator save-states.
+          Back up your ISO (or export a recipe) before saving.
+        </p>
+      </div>
+    </div>
+
+    <div id="isoViews" class="hidden">
+      <div id="isoTabs" class="tabstrip"></div>
+      <div id="isoBody"></div>
+    </div>
+
+    <!-- Sticky action toolbar (always reachable) -->
+    <div id="isoToolbar" class="toolbar hidden">
+      <span id="isoUnsaved" class="badge-unsaved">No changes</span>
+      <span class="sp"></span>
+      <button class="ghost mini" id="isoImportBtn" title="Apply a shared .s5mod recipe">Import recipe</button>
+      <button class="ghost mini" id="isoExportBtn" title="Export your edits as a shareable .s5mod recipe">Export recipe</button>
+      <button id="isoSaveBtn" title="Write changed bytes into the ISO / download">Save<span class="dot hidden"></span></button>
+    </div>
+  </section>
 
   <footer>
-    Edits <b>verified</b> fields only (hero/castle name, New Game Plus, per-character level, equipment,
-    runes, skills, recruitment). Suikoden V saves have no body checksum, so verified-field edits load in-game.
-    Keep your original file until you confirm the edited save loads.<br>
-    Runs this repo's own <code>Editor/s5save.py</code> unchanged in
+    <span class="save-foot">Edits <b>verified</b> fields only. Suikoden&nbsp;V saves have no body checksum, so
+      verified-field edits load in-game.</span>
+    Runs this repo's own <code>Editor/s5save.py</code> + <code>s5patch.py</code> unchanged in
     <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required.<br>
     <span class="credit">Made by <b>TheSparda</b> ·
       <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
@@ -79,6 +135,9 @@
 <!-- Pyodide runtime (CDN), version pinned. Cached by the service worker after first use. -->
 <script>window.PYODIDE_VERSION = "0.26.4";</script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="diff-core.js"></script>
+<script src="common.js"></script>
 <script src="app.js"></script>
+<script src="iso.js"></script>
 </body>
 </html>

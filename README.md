@@ -1,6 +1,6 @@
 # Suikoden V ISO & Save Editor
 
-**🌐 Try the web save editor now → https://thesparda.github.io/Suikoden-5-Editor/web/** — no install, runs entirely in your browser (nothing uploaded), installable as an app on Android.
+**🌐 Try the web editor now → https://thesparda.github.io/Suikoden-5-Editor/web/** — no install, runs entirely in your browser (nothing uploaded). **Save editing** works everywhere (installable as an app on Android); **ISO/disc editing** works in desktop Chrome/Edge/Brave/Opera.
 
 A cross-platform editor for **Suikoden V** (PS2), modeled on the
 [Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a local
@@ -11,11 +11,13 @@ save files.
 > 💬 **Feature requests / Support** available on the **Toran Castle Discord**:
 > https://discord.gg/KesHMX5P2Z
 
-> 🌐 **No-install web edition** (save editing only, runs entirely in your browser —
-> nothing uploaded, installs to Android as an app):
+> 🌐 **No-install web edition** — runs entirely in your browser, nothing uploaded, installs
+> to Android as an app:
 > **[thesparda.github.io/Suikoden-5-Editor/web/](https://thesparda.github.io/Suikoden-5-Editor/web/)**
-> (details in [`web/`](web/README.md)). It runs this repo's own `Editor/s5save.py`
-> unchanged inside [Pyodide](https://pyodide.org).
+> (details in [`web/`](web/README.md)). Two modes: a **Save editor** (everywhere) and an
+> **ISO/disc editor** (desktop Chromium). Both run this repo's own `Editor/s5save.py` /
+> `s5patch.py` unchanged inside [Pyodide](https://pyodide.org) — the ISO editor on a
+> ~6.6 MB slice, writing only changed bytes back in place.
 
 **At a glance:**
 

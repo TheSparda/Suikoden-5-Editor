@@ -109,3 +109,81 @@ th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
 .subhd{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;
  letter-spacing:.04em;margin:12px 14px 0}
 .recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px}
+
+/* ===== parity additions: modes, tabs, pickers, review, toolbar ===== */
+@media (max-width:520px){ .hide-xs{display:none} }
+/* keep the header on one line down to 320px */
+@media (max-width:420px){
+  header{gap:7px;padding:0 9px}
+  header b{font-size:16px}
+  .modes{margin-left:0;gap:3px}
+  .mode-tab{padding:6px 9px}
+  .hdr-chk .note{display:none}
+  #installBtn{padding:4px 6px}
+}
+/* header mode tabs */
+.modes{display:flex;gap:4px;margin-left:6px}
+.mode-tab{background:var(--raise);color:var(--ink);font-weight:600;padding:6px 12px;border:1px solid var(--line);border-radius:8px}
+.mode-tab.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--goldink);border:0}
+.mode-pane[hidden]{display:none}
+.mode-pane.hidden{display:none}
+/* ISO view tab strip — one swipeable row, never a wall of wrapped tabs */
+.tabstrip{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:4px;
+ padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:11px 11px 0 0;margin-top:14px}
+.tabstrip .tab{flex:0 0 auto;background:var(--raise);color:var(--ink);font-weight:500;padding:6px 12px;border:1px solid var(--line);border-radius:8px}
+.tabstrip .tab.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--goldink);border:0}
+#isoBody{border:1px solid var(--line);border-top:0;border-radius:0 0 11px 11px;background:var(--panel);
+ box-shadow:var(--shadow);min-height:120px;padding-bottom:70px}
+/* last-opened chip row */
+.last-row{display:flex;gap:8px;align-items:center;margin:10px 0 4px}
+/* pill tag on field labels */
+.pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--mut);
+ border:1px solid var(--line);border-radius:6px;padding:0 4px;margin-left:4px;vertical-align:middle;text-transform:none}
+/* picker button (replaces native <select> for big id lists) */
+.pickbtn{display:flex;align-items:center;gap:8px;width:100%;justify-content:space-between;
+ background:var(--input);color:var(--ink);border:1px solid var(--line);font-weight:500;text-align:left}
+.pickbtn:hover{border-color:var(--gold);filter:none}
+.pickbtn .pickbtn-id{flex:0 0 auto}
+/* dirty highlight + revertable */
+input.dirty,select.dirty,.pickbtn.dirty{border-color:var(--chg-bd);background:var(--chg-bg)}
+/* sticky action toolbar (Save always reachable) */
+.toolbar{position:sticky;bottom:0;z-index:40;display:flex;align-items:center;gap:10px;
+ padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));
+ margin-top:14px;background:linear-gradient(0deg,var(--panel2),var(--panel));
+ border:1px solid var(--line);border-radius:11px;box-shadow:var(--shadow)}
+.toolbar .sp{flex:1}
+.toolbar .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-left:7px;vertical-align:middle}
+.badge-unsaved{font-size:12px;color:var(--mut)}
+.badge-unsaved.on{color:var(--gold2);font-weight:600}
+/* tables (prices / skill effects) */
+.tablewrap{overflow-x:auto;padding:0 6px 12px}
+/* modals: full-width sheets on phones, centered cards on desktop */
+.modal-back{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;
+ background:rgba(6,12,22,.55);backdrop-filter:blur(2px)}
+.modal{width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column;
+ background:var(--panel);border:1px solid var(--gold);border-radius:14px 14px 0 0;box-shadow:var(--shadow)}
+@media (min-width:600px){ .modal-back{align-items:center} .modal{border-radius:14px} }
+.modal-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;
+ background:var(--panel2);color:var(--gold2);font-weight:600;border-bottom:1px solid var(--line);border-radius:14px 14px 0 0}
+.modal-hd .x{background:none;border:0;color:var(--mut);font-size:16px;padding:2px 6px}
+.modal-tools{padding:10px 12px;border-bottom:1px solid var(--line)}
+.pick-q{width:100%}
+.pick-list{overflow-y:auto;flex:1}
+.pick-row{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;background:none;color:var(--ink);
+ border:0;border-bottom:1px solid var(--line);border-radius:0;font-weight:500;padding:9px 12px}
+.pick-row:hover{background:var(--panel2);filter:none}
+.pick-row.sel{background:var(--chg-bg)}
+.pick-id{flex:0 0 auto;color:var(--mut);font-size:12px;min-width:34px}
+.pick-name{flex:0 0 auto}
+.pick-desc{flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-hint{padding:8px 12px}
+/* review-changes modal */
+.review-list{overflow-y:auto;flex:1;padding:6px 0}
+.review-grp{padding:6px 0}
+.review-gt{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--gold2);padding:6px 14px 2px}
+.review-row{display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:baseline;padding:4px 14px}
+.review-lbl{color:var(--ink)}
+.review-old{color:var(--mut);text-decoration:line-through}
+.review-arr{color:var(--mut)}
+.review-new{color:var(--gold2);font-weight:600}
+.modal-ft{display:flex;justify-content:flex-end;gap:10px;padding:12px 14px;border-top:1px solid var(--line)}
