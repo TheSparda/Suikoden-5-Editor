@@ -1,5 +1,7 @@
 # Suikoden V ISO & Save Editor
 
+**🌐 Try the web save editor now → https://thesparda.github.io/Suikoden-5-Editor/web/** — no install, runs entirely in your browser (nothing uploaded), installable as an app on Android.
+
 A cross-platform editor for **Suikoden V** (PS2), modeled on the
 [Suikoden III editor](https://github.com/TheSparda/Suikoden-3-Editor). It runs as a local
 web app in your browser — nothing is uploaded, and the server only touches the files you
@@ -10,8 +12,10 @@ save files.
 > https://discord.gg/KesHMX5P2Z
 
 > 🌐 **No-install web edition** (save editing only, runs entirely in your browser —
-> nothing uploaded, installs to Android as an app): see [`web/`](web/README.md). It runs
-> this repo's own `Editor/s5save.py` unchanged inside [Pyodide](https://pyodide.org).
+> nothing uploaded, installs to Android as an app):
+> **[thesparda.github.io/Suikoden-5-Editor/web/](https://thesparda.github.io/Suikoden-5-Editor/web/)**
+> (details in [`web/`](web/README.md)). It runs this repo's own `Editor/s5save.py`
+> unchanged inside [Pyodide](https://pyodide.org).
 
 **At a glance:**
 
