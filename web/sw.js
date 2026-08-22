@@ -12,9 +12,9 @@ const SHELL = [
   "./style.css",
   "./app.js",
   "./manifest.webmanifest",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-maskable-512.png",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/icon-maskable-512.png",
   // Reused, unchanged from the desktop editor — single source of truth.
   "../Editor/s5save.py",
   "../Editor/s5_characters.json",

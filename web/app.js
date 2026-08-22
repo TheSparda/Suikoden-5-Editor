@@ -73,8 +73,7 @@ async function boot(){
     setBoot("Ready.", 100);
     $("boot").style.display = "none";
     $("opencard").style.display = "";
-    $("file").addEventListener("change", onFile);
-    registerSW();
+    wireFileInputs();
   }catch(e){
     setBoot("Failed to load: " + (e && e.message ? e.message : e), 100);
     $("bootfill").style.background = "var(--bad)";
@@ -148,9 +147,21 @@ def save_write(path, folder, edits_json):
         return json.dumps({"error": str(e)})
 `;
 
+/* ---------- file inputs: picker + drag-and-drop ---------- */
+function wireFileInputs(){
+  const drop = $("drop"), file = $("file"), pick = $("pickBtn");
+  pick.onclick = () => file.click();
+  file.onchange = () => { if(file.files[0]) openFile(file.files[0]); };
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.add("hot"); }));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => {
+    e.preventDefault(); drop.classList.remove("hot"); }));
+  drop.addEventListener("drop", e => {
+    const f = e.dataTransfer && e.dataTransfer.files[0]; if(f) openFile(f); });
+}
+
 /* ---------- open a file ---------- */
-async function onFile(ev){
-  const f = ev.target.files && ev.target.files[0];
+async function openFile(f){
   if(!f) return;
   curFileName = f.name;
   $("filename").textContent = `${f.name} · ${(f.size/1048576).toFixed(2)} MB`;
@@ -401,10 +412,24 @@ $("themeToggle").addEventListener("change", (e) => {
 });
 try{ if(localStorage.getItem("s5theme") === "light"){ document.body.classList.add("light"); $("themeToggle").checked = true; } }catch(_){}
 
-function registerSW(){
+function registerPWA(){
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
+  const btn = $("installBtn");
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let deferred = null;
+  if(standalone) return;
+  window.addEventListener("beforeinstallprompt", (e) => {   // Chromium/Android only
+    e.preventDefault(); deferred = e; btn.classList.remove("hidden");
+  });
+  btn.onclick = async () => {
+    if(!deferred) return;
+    deferred.prompt(); await deferred.userChoice;
+    deferred = null; btn.classList.add("hidden");
+  };
+  window.addEventListener("appinstalled", () => btn.classList.add("hidden"));
 }
 
+registerPWA();
 boot();

@@ -42,17 +42,36 @@ Dropdown names come from the same tables the desktop app uses
 
 ## Install on Android (or desktop) as an app
 
-It's a PWA. Open the live URL in Chrome, then **⋮ → Add to Home screen / Install app**.
-After the first visit it works offline (an app-shell service worker caches the page,
-the Python module, and — best effort — the Pyodide runtime).
+It's a PWA. Open the live URL in Chrome and tap the **⬇ Install app** button in the header
+(or **⋮ → Install app / Add to Home screen**). iOS Safari has no prompt — use
+**Share → Add to Home Screen**. After the first visit it works offline (an app-shell
+service worker caches the page, the Python module, and — best effort — the Pyodide runtime).
+
+## Android end-user flow (emulator saves)
+
+1. Open the Pages URL in Chrome on Android. First load pulls the Pyodide runtime
+   (~10 MB) — wait for **"Ready."**
+2. Tap **⬇ Install app** to add it to your home screen (works offline after the 2nd visit).
+3. In your PS2 emulator (AetherSX2 / NetherSX2 / PCSX2), **export or copy the memory-card
+   file** (`.ps2` / `.mc2`) out to shared storage — or locate a standalone `.psu`/`.cbs`/`.xps`.
+4. Open it in the editor → make your changes → tap **⤓ Download edited save** → the edited
+   copy lands in **Downloads** as `<name>.edited.<ext>`.
+5. Copy the edited file **back** into the emulator's memory-card location (keep the original
+   until you've confirmed it loads).
 
 ## Deploying on GitHub Pages
 
 1. Repo **Settings → Pages → Build and deployment → Source: "Deploy from a branch"**,
    pick your default branch and `/ (root)`.
 2. The editor lives at `/<repo>/web/`. It fetches `../Editor/*.py` and `../Editor/*.json`
-   at runtime, so keep the `Editor/` folder in the deployed tree (it already is).
-3. That's it — no build step. It's three static files plus icons.
+   at runtime, so Pages **must serve from the repo root** (not `/web`), and the `Editor/`
+   folder must stay in the deployed tree (it already is).
+3. A root-level **`.nojekyll`** file is committed so Pages serves `.py` and `_`-prefixed
+   files verbatim (no Jekyll processing).
+4. That's it — no build step. Static files plus icons; the Pyodide version is pinned in
+   `index.html` and `sw.js`.
+
+Live URL shape: `https://<owner>.github.io/<repo>/web/`.
 
 ## Files
 
