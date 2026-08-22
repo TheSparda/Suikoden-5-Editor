@@ -1,0 +1,102 @@
+/* ===== Suikoden V — "Falena" theme (Queendom blue + Sun Rune gold) =====
+   Ported from the desktop editor. Default is the dark "Falena Twilight";
+   body.light switches to the pale "Sun Rune" parchment theme. */
+:root{
+ --bg:#0b1524; --bg2:#0e1a2d; --panel:#132340; --panel2:#1b2f52; --raise:#22406e;
+ --ink:#eaf1fb; --mut:#93a7c6; --line:#294066;
+ --gold:#e6b84e; --gold2:#f4d071; --goldink:#2a1c04;
+ --teal:#4fb0d4; --sun:#e8823a;
+ --input:#0a1526; --thead:#16294a;
+ --ok:#67c07a; --bad:#ff7a76; --warn:#e6b84e;
+ --chg-bd:#f4d071; --chg-bg:#2a2708;
+ --title:"Trajan Pro","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+ --shadow:0 3px 14px rgba(0,0,0,.45); --focus:rgba(230,184,78,.30);
+ --hdr:60px;
+}
+body.light{
+ --bg:#dfe7f2; --bg2:#eef3fa; --panel:#f4f7fc; --panel2:#e6edf7; --raise:#d6e2f2;
+ --ink:#182a44; --mut:#5a6f90; --line:#c2d1e6;
+ --gold:#b9821f; --gold2:#d19c33; --goldink:#fff7e6;
+ --teal:#1f7fa6; --sun:#c25a1b;
+ --input:#ffffff; --thead:#dde7f4;
+ --chg-bd:#b9821f; --chg-bg:#fdf3d6;
+ --shadow:0 2px 10px rgba(30,60,110,.20); --focus:rgba(185,130,31,.28);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+ background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+ padding-bottom:env(safe-area-inset-bottom)}
+a{color:var(--teal)}
+code{background:var(--input);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px}
+header{position:sticky;top:0;z-index:30;height:var(--hdr);display:flex;align-items:center;gap:12px;
+ padding:0 16px;background:linear-gradient(180deg,var(--panel2),var(--panel));
+ border-bottom:2px solid var(--gold);box-shadow:var(--shadow)}
+header .logo{width:26px;height:26px;border-radius:50%;flex:0 0 auto;
+ background:radial-gradient(circle at 50% 45%,var(--gold2),var(--sun) 70%,#7a3d12);
+ box-shadow:0 0 10px rgba(232,130,58,.6)}
+header b{font-family:var(--title);font-size:18px;letter-spacing:.03em;color:var(--gold2)}
+header .sp{flex:1}
+.hdr-chk{display:flex;align-items:center;gap:7px}
+main{padding:16px;max-width:1080px;margin:0 auto}
+footer{max-width:1080px;margin:18px auto 28px;padding:14px 4px 0;border-top:1px solid var(--line);
+ color:var(--mut);font-size:12px;text-align:center;line-height:1.6}
+h2{font-family:var(--title);color:var(--gold2);font-size:19px;margin:2px 0 4px}
+h3{margin:0}
+.sub{color:var(--mut);font-size:12.5px;margin:0 0 14px}
+input,button,select{font:14px system-ui;padding:7px 9px;border-radius:8px;
+ border:1px solid var(--line);background:var(--input);color:var(--ink);outline:none;max-width:100%}
+input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--focus)}
+input[type=file]{padding:8px;cursor:pointer}
+button{background:linear-gradient(180deg,var(--gold2),var(--gold));border:0;color:var(--goldink);
+ font-weight:600;cursor:pointer;transition:filter .12s}
+button:hover{filter:brightness(1.07)}button:active{filter:brightness(.94)}
+button:disabled{filter:grayscale(.6) opacity(.6);cursor:default}
+button.ghost{background:var(--raise);color:var(--ink);font-weight:500}
+button.mini{padding:4px 8px;font-size:13px}
+.row{margin:10px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.note{color:var(--mut);font-size:12px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.sec{margin:14px 0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow)}
+.sec>h3{margin:0;padding:10px 14px;background:var(--panel2);font-size:13px;font-weight:600;
+ color:var(--gold2);letter-spacing:.03em;text-transform:uppercase}
+.sec.build{border:1px solid var(--gold);box-shadow:0 0 0 1px rgba(230,184,78,.15)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;padding:14px}
+.fld label{display:block;font-size:11px;color:var(--mut);margin-bottom:3px;text-transform:uppercase;letter-spacing:.03em}
+.fld .in{display:flex;gap:5px}.fld input,.fld select{width:100%}
+input.chg,select.chg{border-color:var(--chg-bd);background:var(--chg-bg)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+.card-hd{padding:12px 14px;background:var(--panel2);border-bottom:1px solid var(--line);
+ font-weight:600;color:var(--gold2)}
+.fld .in .chk{display:flex;align-items:center;gap:9px;min-height:38px;text-transform:none;
+ letter-spacing:normal;color:var(--ink);cursor:pointer;font-size:14px}
+.chk{display:flex;align-items:center;gap:9px;cursor:pointer}
+.chk input[type=checkbox]{width:18px;height:18px;flex:0 0 auto;accent-color:var(--gold);cursor:pointer;margin:0}
+.card-ft{display:flex;align-items:center;gap:12px;padding:0 14px 14px;flex-wrap:wrap}
+.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;
+ padding:2px 8px;border-radius:999px;vertical-align:middle;color:#0c1524}
+.badge.b-ntsc{background:#67c07a}.badge.b-pal{background:#4fb0d4}.badge.b-jp{background:#e6b84e}
+.badge:empty{display:none}
+/* boot progress bar */
+.bootbar{height:8px;border-radius:6px;background:var(--input);border:1px solid var(--line);
+ overflow:hidden;margin-top:12px}
+#bootfill{height:100%;width:8%;background:linear-gradient(90deg,var(--gold2),var(--sun));
+ transition:width .4s ease}
+/* spinner overlay */
+#spin{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+ background:rgba(6,12,22,.45);backdrop-filter:blur(1.5px)}
+#spin.on{display:flex}
+.sun{width:52px;height:52px;border-radius:50%;border:5px solid rgba(230,184,78,.25);
+ border-top-color:var(--gold2);border-right-color:var(--sun);animation:spin .8s linear infinite;
+ box-shadow:0 0 18px rgba(232,130,58,.5)}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* toasts */
+#toast{position:fixed;right:14px;bottom:14px;z-index:70;display:flex;flex-direction:column;gap:8px}
+.tst{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--gold);
+ color:var(--ink);padding:10px 14px;border-radius:9px;box-shadow:var(--shadow);max-width:340px;
+ animation:tin .2s ease}
+.tst.ok{border-left-color:var(--ok)}.tst.bad{border-left-color:var(--bad)}
+@keyframes tin{from{opacity:0;transform:translateX(12px)}to{opacity:1}}
+.subhd{font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;
+ letter-spacing:.04em;margin:12px 14px 0}
+.recgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Suikoden V Save Editor</title>
+<meta name="description" content="Edit Suikoden V (PS2) saves in your browser. Nothing is uploaded — the save never leaves your device.">
+<meta name="theme-color" content="#0b1524">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="S5 Save Editor">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <span class="logo"></span>
+  <b>Suikoden V</b><span class="note">Save Editor · in your browser</span>
+  <span class="sp"></span>
+  <label class="chk hdr-chk" title="Switch between the dark Falena Twilight and pale Sun Rune themes">
+    <input type="checkbox" id="themeToggle"> <span class="note">Light</span>
+  </label>
+</header>
+
+<main>
+  <!-- Boot / load status -->
+  <div id="boot" class="sec build">
+    <div class="card-hd">Getting ready</div>
+    <div style="padding:14px">
+      <div id="bootmsg" class="note">Loading the Python save engine (Pyodide)… first load fetches a few MB; later loads are instant and work offline.</div>
+      <div class="bootbar"><div id="bootfill"></div></div>
+    </div>
+  </div>
+
+  <!-- Open a save -->
+  <div id="opencard" class="sec" style="display:none">
+    <div class="card-hd">Open a save file</div>
+    <div style="padding:14px">
+      <p class="sub" style="margin-top:0">
+        Pick a PS2 memory-card image (<code>.ps2 .mc2 .mcd .bin .psu</code>) or a standalone save
+        (<code>.cbs .xps .sps</code>). Everything runs on this device — your save is never uploaded.
+      </p>
+      <div class="row">
+        <input type="file" id="file" accept=".ps2,.mc2,.mcd,.bin,.psu,.psv,.cbs,.xps,.sps,.max,application/octet-stream">
+        <span id="filename" class="note"></span>
+      </div>
+      <p class="note" id="privacy">
+        🔒 100% offline &amp; private. This page has no server; the file is read into memory here and the
+        edited copy is downloaded straight back to you.
+      </p>
+    </div>
+  </div>
+
+  <div id="saves"></div>
+
+  <footer>
+    Suikoden V Save Editor (web) · runs your existing Python save module in
+    <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required ·
+    <span id="ver">v1.3.1</span><br>
+    Edits <b>verified</b> fields only (hero/castle name, New Game Plus, per-character level, equipment,
+    runes, skills, recruitment). Suikoden V saves have no body checksum, so verified-field edits load in-game.
+    Keep your original file until you confirm the edited save loads.
+  </footer>
+</main>
+
+<div id="spin"><div class="sun"></div></div>
+<div id="toast"></div>
+
+<!-- Pyodide runtime (CDN). Cached opaquely by the service worker after first use. -->
+<script>window.PYODIDE_VERSION = "0.26.4";</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

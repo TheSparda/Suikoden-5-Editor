@@ -9,6 +9,10 @@ save files.
 > 💬 **Feature requests / Support** available on the **Toran Castle Discord**:
 > https://discord.gg/KesHMX5P2Z
 
+> 🌐 **No-install web edition** (save editing only, runs entirely in your browser —
+> nothing uploaded, installs to Android as an app): see [`web/`](web/README.md). It runs
+> this repo's own `Editor/s5save.py` unchanged inside [Pyodide](https://pyodide.org).
+
 **At a glance:**
 
 - **ISO editing** — characters, runes & spells, gear, enemies, prices, unites, MP growth,
