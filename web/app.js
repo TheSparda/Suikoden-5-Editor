@@ -119,6 +119,7 @@ function isoGlueHandles(){
     mp:g("iso_mp"), setmp:g("iso_setmp"), skillfx:g("iso_skillfx"), setskillfx:g("iso_setskillfx"),
     unites:g("iso_unites"), setunite:g("iso_setunite"),
     names:g("iso_names"), setname:g("iso_setname"),
+    reftextcats:g("iso_reftext_cats"), reftext:g("iso_reftext"), setstring:g("iso_setstring"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
@@ -236,6 +237,32 @@ def iso_reference():
         for cat, names in en.items(): out[cat] = [{"i": i, "name": n} for i, n in enumerate(names)]
     except Exception: pass
     return json.dumps(out)
+
+# ---- editable ELF text (names/descriptions) — read LIVE from the ISO at each offset,
+# so the user sees their disc's real string (not the stale build-time capture). Written
+# capped in-place via set_cstring (never overruns into the next string).
+def iso_reftext_cats():
+    try: return json.dumps({"cats": list(F.res_json("s5_reference.json").keys())})
+    except Exception: return json.dumps({"cats": []})
+def iso_reftext(cat):
+    try:
+        entries = F.res_json("s5_reference.json").get(cat, [])
+        out = []
+        with P.Iso(ISO) as g:
+            for e in entries:
+                off = int(str(e["off"]), 16) if not isinstance(e["off"], int) else e["off"]
+                b = P.read_cstring(g, off, 96)
+                out.append({"off": off, "text": b.decode("latin1", "replace"), "cap": len(b)})
+        return json.dumps({"cat": cat, "entries": out})
+    except Exception as ex:
+        return json.dumps({"error": str(ex)})
+def iso_setstring(off, text):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            cap = P.set_cstring(g, int(off), str(text))
+        return json.dumps({"ok": True, "cap": cap})
+    except Exception as ex:
+        return json.dumps({"error": str(ex)})
 
 def iso_chars():
     chars = F.load_characters()

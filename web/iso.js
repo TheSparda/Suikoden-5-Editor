@@ -48,8 +48,8 @@ const ISO_VIEWS = [
   { id: "mp",       label: "MP growth" },
   { id: "skillfx",  label: "Skill effects" },
   { id: "balance",  label: "Balance" },
-  { id: "name",     label: "Names" },
-  { id: "ref",      label: "Reference" },
+  { id: "name",     label: "Char names" },
+  { id: "ref",      label: "Names / Text" },
 ];
 
 /* Called by app.js once Pyodide + engines are ready. */
@@ -187,6 +187,18 @@ function nameFor(kind, value) {
   const hit = list.find(x => String(x.id) === String(value));
   return hit ? hit.name : ("#" + value);
 }
+/* A readable "what it does" line for a spell, computed from its verified fields
+ * (element · target · power · status) — always correct, no reverse-engineering. */
+function spellFnote(fields) {
+  const g = (p) => fields.find(f => f.label.startsWith(p));
+  const el = g("Element"), pw = g("Power"), tg = g("Target"), st = g("Status");
+  const parts = [];
+  if (el) parts.push(nameFor("element", el.value));
+  if (tg) parts.push(nameFor("target", tg.value));
+  if (pw && pw.value) parts.push(pw.value >= 9999 ? "full heal / max" : (pw.value + " power"));
+  if (st && st.value) { const s = nameFor("spellstatus", st.value); if (s && s !== "None") parts.push(s.toLowerCase()); }
+  return parts.length ? "Effect: " + parts.join(" · ") : "";
+}
 
 /* Render one field. `attrs` carries the dispatch context (view + ident + table/field). */
 function renderField(f, attrs) {
@@ -274,6 +286,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "skillfx") res = window.PYISO.setskillfx(ident.id, ident.rank, +value);
     else if (view === "unite") res = window.PYISO.setunite(ident.id, ident.slot, +value);
     else if (view === "name") res = window.PYISO.setname(ident.index, value);
+    else if (view === "reftext") res = window.PYISO.setstring(+el.dataset.off, value);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -392,7 +405,9 @@ function renderSpell(sid) {
   if (r.error) { $("isoSbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
   const nm = (SPELL_LIST[sid] || {}).name || ("Spell " + sid);
   $("isoSname").textContent = `${sid}: ${nm}`;
-  $("isoSbody").innerHTML = `<div class="grid" style="padding-top:8px">` + r.fields.map(f =>
+  const desc = spellFnote(r.fields);
+  $("isoSbody").innerHTML = (desc ? `<div class="fnote" style="margin:8px 16px 0">${esc(desc)}</div>` : "")
+    + `<div class="grid" style="padding-top:8px">` + r.fields.map(f =>
     renderField(f, { view: "spell", ident: JSON.stringify({ id: sid }), key: `spell:${sid}:${f.label}`,
       prefix: `${nm} · `, group: "Spells" })).join("") + `</div>`;
 }
@@ -430,6 +445,8 @@ function renderRune(rid) {
   if (r.spells.length) {
     for (const s of r.spells) {
       h += `<div class="subhd">Lv${s.level} · ${esc(s.name)} <span class="note">(spell #${s.id})</span></div>`;
+      const desc = spellFnote(s.fields);
+      if (desc) h += `<div class="fnote" style="margin:0 16px 2px">${esc(desc)}</div>`;
       h += `<div class="grid" style="padding-top:8px">` + s.fields.map((f) =>
         renderField(f, { view: "spell", ident: JSON.stringify({ id: s.id }), key: `spell:${s.id}:${f.label}`,
           prefix: `${s.name} · `, group: `Rune: ${r.name}` })).join("") + `</div>`;
@@ -595,18 +612,44 @@ VIEW_RENDER.name = async (body) => {
 };
 
 VIEW_RENDER.ref = async (body) => {
-  const ref = JSON.parse(window.PYISO.reference());
-  const cats = Object.keys(ref);
-  if (!cats.length) { body.innerHTML = `<p class="note" style="padding:14px">No reference lists.</p>`; return; }
-  body.innerHTML = `<div class="row" style="padding:10px 14px 0"><span class="note">List</span>
-      <select id="refSel">${cats.map(c=>`<option>${esc(c)}</option>`).join("")}</select>
+  const ro = JSON.parse(window.PYISO.reference());                       // English read-only lists
+  const editCats = (JSON.parse(window.PYISO.reftextcats()).cats) || [];  // editable ELF text pools
+  const roCats = Object.keys(ro);
+  const opts =
+    (editCats.length ? `<optgroup label="Editable in-game text">${
+      editCats.map(c => `<option value="edit:${esc(c)}">${esc(c)} — names / text</option>`).join("")}</optgroup>` : "")
+    + (roCats.length ? `<optgroup label="Reference (read-only)">${
+      roCats.map(c => `<option value="ro:${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>` : "");
+  if (!opts) { body.innerHTML = `<p class="note" style="padding:14px">No reference data.</p>`; return; }
+  body.innerHTML = `<div class="row" style="padding:10px 16px 0"><span class="note">List</span>
+      <select id="refSel">${opts}</select>
       <input class="pick-q" id="refQ" type="search" placeholder="filter…" style="max-width:220px"></div>
-    <div class="note" style="margin:6px 14px">Read-only name reference.</div>
-    <div id="refBody" class="grid" style="padding:0 14px 14px"></div>`;
+    <div class="fnote" id="refHelp" style="margin:6px 16px"></div>
+    <div id="refBody" class="grid" style="padding:0 16px 14px"></div>`;
   const show = () => {
-    const list = ref[$("refSel").value] || [], f = $("refQ").value.trim().toLowerCase();
-    $("refBody").innerHTML = list.filter(x => !f || String(x.name).toLowerCase().includes(f) || String(x.i).includes(f))
-      .slice(0, 500).map(x => `<div class="note">${x.i}: ${esc(x.name)}</div>`).join("");
+    const val = $("refSel").value, f = $("refQ").value.trim().toLowerCase();
+    const i = val.indexOf(":"), kind = val.slice(0, i), cat = val.slice(i + 1);
+    if (kind === "edit") {
+      $("refHelp").innerHTML = "Edit the game's own text (names &amp; descriptions). Each edit is <b>capped to the "
+        + "original length</b> so it can never overrun the next string. Blank strings are unused slots.";
+      const r = JSON.parse(window.PYISO.reftext(cat));
+      if (r.error) { $("refBody").innerHTML = `<p class="bad">${esc(r.error)}</p>`; return; }
+      const ents = (r.entries || []).filter(e => !f || (e.text || "").toLowerCase().includes(f)
+        || ("0x" + e.off.toString(16)).includes(f));
+      $("refBody").innerHTML = ents.slice(0, 600).map(e => {
+        const hx = "0x" + e.off.toString(16);
+        return `<div class="fld"><label>@${hx} <span class="pill">${e.cap}B</span></label><div class="in">
+          <input type="text" maxlength="${e.cap}" value="${esc(e.text)}" data-key="reftext:${e.off}" data-view="reftext"
+            data-off="${e.off}" data-kind="str" data-orig="${esc(e.text)}" data-lbl="${esc(cat)} @${hx}"
+            data-grp="Text: ${esc(cat)}" onchange="onIsoField(this)">${REVERT_BTN}</div></div>`;
+      }).join("") || `<div class="note">No matches.</div>`;
+      if (ents.length > 600) $("refHelp").innerHTML += ` — showing first 600 of ${ents.length}, keep typing to narrow.`;
+    } else {
+      $("refHelp").textContent = "Read-only name reference.";
+      const list = ro[cat] || [];
+      $("refBody").innerHTML = list.filter(x => !f || String(x.name).toLowerCase().includes(f) || String(x.i).includes(f))
+        .slice(0, 600).map(x => `<div class="note">${x.i}: ${esc(x.name)}</div>`).join("");
+    }
   };
   $("refSel").onchange = show; $("refQ").oninput = show; show();
 };
