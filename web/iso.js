@@ -144,13 +144,13 @@ async function restoreLastISO() {
 /* ---------------- tab strip ---------------- */
 function renderTabs() {
   $("isoTabs").innerHTML = ISO_VIEWS.map(v =>
-    `<button class="tab" data-view="${v.id}">${esc(v.label)}</button>`).join("");
-  qa("#isoTabs .tab").forEach(t => t.onclick = () => selectView(t.dataset.view));
+    `<button class="chip" data-view="${v.id}">${esc(v.label)}</button>`).join("");
+  qa("#isoTabs .chip").forEach(t => t.onclick = () => selectView(t.dataset.view));
 }
 let curView = null;
 async function selectView(id) {
   curView = id;
-  qa("#isoTabs .tab").forEach(t => t.classList.toggle("on", t.dataset.view === id));
+  qa("#isoTabs .chip").forEach(t => t.classList.toggle("on", t.dataset.view === id));
   const body = $("isoBody"); body.innerHTML = `<div class="note" style="padding:14px">Loading…</div>`;
   try { await VIEW_RENDER[id](body); }
   catch (e) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(e.message || e)}</p>`; console.error(e); }

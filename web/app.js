@@ -800,7 +800,7 @@ function updateSaveToolbar(){
     if(!bar){
       bar = document.createElement("div"); bar.id = "saveToolbar"; bar.className = "toolbar";
       bar.innerHTML = `<span id="saveUnsaved" class="badge-unsaved"></span><span class="sp"></span>
-        <button id="saveDoBtn">Save<span class="dot hidden"></span></button>`;
+        <button id="saveDoBtn" class="primary">Save<span class="dot hidden"></span></button>`;
       const pane = q('.mode-pane[data-mode="save"]'); pane.appendChild(bar);
       $("saveDoBtn").onclick = doSave;
     }

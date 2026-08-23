@@ -173,18 +173,22 @@ function confirmReview(title, groups, destLabel, onConfirm) {
   document.body.appendChild(back);
 }
 
-/* ---------- theme (shared by both modes) ---------- */
+/* ---------- theme switcher (footer buttons, like the S3 editor) ---------- */
 function initTheme() {
-  const toggle = $("themeToggle"); if (!toggle) return;
-  const apply = (light) => {
+  const btns = qa(".tb");
+  const apply = (theme) => {
+    const light = theme === "sun";
     document.body.classList.toggle("light", light);
+    btns.forEach((b) => b.classList.toggle("on", b.dataset.theme === theme));
     const m = q('meta[name="theme-color"]'); if (m) m.content = light ? "#dfe7f2" : "#0b1524";
+    try { localStorage.setItem("s5theme", theme); } catch (_) {}
   };
-  toggle.addEventListener("change", (e) => {
-    apply(e.target.checked);
-    try { localStorage.setItem("s5theme", e.target.checked ? "light" : "dark"); } catch (_) {}
-  });
-  try { if (localStorage.getItem("s5theme") === "light") { toggle.checked = true; apply(true); } } catch (_) {}
+  btns.forEach((b) => b.addEventListener("click", () => apply(b.dataset.theme)));
+  let saved = "twilight";
+  try { saved = localStorage.getItem("s5theme") || "twilight"; } catch (_) {}
+  if (saved === "light") saved = "sun";        // migrate old checkbox values
+  if (saved === "dark") saved = "twilight";
+  apply(saved);
 }
 
 /* ---------- PWA install button (Chromium/Android) ---------- */
