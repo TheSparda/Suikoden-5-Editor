@@ -69,18 +69,6 @@
 
   <!-- ============================ ISO EDITOR ============================ -->
   <section class="mode-pane" data-mode="iso" hidden>
-    <!-- Shown when File System Access is unavailable (mobile / Firefox / Safari) -->
-    <div id="isoBlocked" class="sec build hidden">
-      <div class="card-hd">ISO editing needs a desktop browser</div>
-      <div style="padding:14px" class="note">
-        The disc editor writes changed bytes back into your ~4&nbsp;GB ISO in place, which needs the
-        <b>File System Access API</b> — available in desktop <b>Chrome / Edge / Brave / Opera</b>.
-        It isn't available in this browser, so the ISO editor is disabled here.
-        <br><br>The <b>Save editor</b> works everywhere, including this device — switch to the
-        <b>Save</b> tab above. On desktop you can also export a <code>.s5mod</code> recipe and share it.
-      </div>
-    </div>
-
     <div id="isoOpen" class="sec hidden">
       <div class="card-hd">Open a Suikoden V ISO</div>
       <div style="padding:14px">
@@ -96,6 +84,10 @@
           </div>
         </div>
         <div id="isoLast" class="last-row hidden"></div>
+        <p id="isoNoFsNote" class="note hidden" style="margin:0 0 8px">
+          ⚠ This browser can't write the 4&nbsp;GB ISO in place — you can still open, edit, and
+          <b>export a .s5mod recipe</b> to apply on desktop Chrome/Edge/Brave/Opera.
+        </p>
         <p class="note" style="margin-bottom:0">
           🔒 Nothing is uploaded. Edits apply to a <b>new game</b> — do not use emulator save-states.
           Back up your ISO (or export a recipe) before saving.
@@ -111,6 +103,8 @@
     <!-- Sticky action toolbar (always reachable) -->
     <div id="isoToolbar" class="toolbar hidden">
       <span id="isoUnsaved" class="badge-unsaved">No changes</span>
+      <button class="ghost mini" id="isoUndoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+      <button class="ghost mini" id="isoRedoBtn" title="Redo (Ctrl+Y)" disabled>Redo ↷</button>
       <span class="sp"></span>
       <button class="ghost mini" id="isoImportBtn" title="Apply a shared .s5mod recipe">Import recipe</button>
       <button class="ghost mini" id="isoExportBtn" title="Export your edits as a shareable .s5mod recipe">Export recipe</button>
@@ -125,7 +119,8 @@
     <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required.<br>
     <span class="credit">Made by <b>TheSparda</b> ·
       <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
-      · <span id="ver">v1.3.1</span></span>
+      · <span id="ver">v1.4.0</span>
+      · <button id="forceRefresh" class="linkbtn" title="Unregister the service worker, clear caches, and reload — fixes a stuck/stale offline copy">↻ Force refresh</button></span>
   </footer>
 </main>
 

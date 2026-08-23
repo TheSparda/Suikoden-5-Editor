@@ -27,6 +27,12 @@ let SPELL_LIST = [];              // [{id,name}] for spellid pickers
 let isoEdits = {};               // key -> { label, group, to }
 let isoInited = false;
 let isoBadgeRAF = 0;
+/* undo/redo (B18): each step = the byte-runs an action changed, plus a snapshot of the
+ * labelled edit map, so both the disc bytes and the review list restore together. */
+let ISO_PREV = null;             // last-committed slice snapshot (baseline for the next step)
+let ISO_PREV_EDITS = {};
+const undoStack = [], redoStack = [];
+const UNDO_MAX = 300;
 
 /* Views (mirror the desktop ISO tabs, minus the disc-wide graphics/text extras). */
 const ISO_VIEWS = [
@@ -48,13 +54,26 @@ const ISO_VIEWS = [
 
 /* Called by app.js once Pyodide + engines are ready. */
 window.isoReady = function () {
-  const blocked = $("isoBlocked");
-  if (!HAS_FS_ACCESS) { blocked.classList.remove("hidden"); return; }
   $("isoOpen").classList.remove("hidden");
   $("isoPickBtn").onclick = pickISO;
   $("isoImportBtn").onclick = importRecipe;
   $("isoExportBtn").onclick = exportRecipe;
   $("isoSaveBtn").onclick = saveISO;
+  $("isoUndoBtn").onclick = isoUndo;
+  $("isoRedoBtn").onclick = isoRedo;
+  document.addEventListener("keydown", (e) => {
+    if (!ORIG || document.querySelector('.mode-pane[data-mode="iso"]').hidden) return;   // ISO mode only
+    const mod = e.ctrlKey || e.metaKey; if (!mod) return;
+    const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey) { e.preventDefault(); isoUndo(); }
+    else if (k === "y" || (k === "z" && e.shiftKey)) { e.preventDefault(); isoRedo(); }
+  });
+  // v2/A3: usable everywhere. Without File System Access we can't write the 4 GB file
+  // in place, but you can still open + edit + export a .s5mod recipe to apply on desktop.
+  if (!HAS_FS_ACCESS) {
+    const note = $("isoNoFsNote"); if (note) note.classList.remove("hidden");
+    const sv = $("isoSaveBtn"); if (sv) sv.textContent = "Export recipe";
+  }
   restoreLastISO();
 };
 /* Lazily nothing extra on tab-show (kept for parity with common.js hook). */
@@ -63,23 +82,35 @@ window.isoHasUnsaved = () => !!ORIG && recomputeIsoDirty().runs > 0;
 
 /* ---------------- open an ISO ---------------- */
 async function pickISO() {
-  try {
-    const [h] = await window.showOpenFilePicker({
-      types: [{ description: "PS2 ISO", accept: { "application/octet-stream": [".iso",".bin",".img"] } }] });
-    await openISO(h);
-  } catch (e) { if (e && e.name !== "AbortError") toast("Could not open ISO: " + e.message, "bad"); }
+  if (HAS_FS_ACCESS) {
+    try {
+      const [h] = await window.showOpenFilePicker({
+        types: [{ description: "PS2 ISO", accept: { "application/octet-stream": [".iso",".bin",".img"] } }] });
+      await openISO(h);
+    } catch (e) { if (e && e.name !== "AbortError") toast("Could not open ISO: " + e.message, "bad"); }
+    return;
+  }
+  // fallback: plain file input (works on mobile / Firefox / Safari). No writable handle,
+  // so save-in-place is unavailable — but editing + recipe export work.
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".iso,.bin,.img,application/octet-stream";
+  inp.onchange = () => { if (inp.files[0]) openISO(inp.files[0]); };
+  inp.click();
 }
-async function openISO(handle) {
+/* Accepts a FileSystemFileHandle (desktop, writable) or a plain File (read-only reach). */
+async function openISO(src) {
   spin(true);
   try {
-    const file = await handle.getFile();
+    const isHandle = src && typeof src.getFile === "function";
+    const file = isHandle ? await src.getFile() : src;
     if (file.size < ISO_END) { toast("That file is too small to be a Suikoden V disc.", "bad"); return; }
     const slice = new Uint8Array(await file.slice(0, ISO_END).arrayBuffer());
     pyodide.FS.writeFile(ISO_PATH, slice);
     const load = JSON.parse(window.PYISO.load());
     if (load.error) { toast(load.error, "bad"); return; }
-    isoHandle = handle; ORIG = slice.slice(); isoRegion = load.region; isoEdits = {};
-    $("isoFilename").textContent = `${file.name} · ${(file.size/1073741824).toFixed(2)} GB · ${load.regionName}`;
+    isoHandle = isHandle ? src : null; ORIG = slice.slice(); ISO_PREV = slice.slice();
+    isoRegion = load.region; isoEdits = {}; ISO_PREV_EDITS = {}; undoStack.length = 0; redoStack.length = 0;
+    $("isoFilename").textContent = `${file.name} · ${(file.size/1073741824).toFixed(2)} GB · ${load.regionName}${isHandle ? "" : " · read-only (recipe export only)"}`;
     isoMAPS = JSON.parse(window.PYISO.maps());
     try { SPELL_LIST = (JSON.parse(window.PYISO.spellnames()).spells || [])
       .map((n, i) => ({ id: i, name: n || ("Spell " + i) })); } catch (_) { SPELL_LIST = []; }
@@ -88,8 +119,8 @@ async function openISO(handle) {
     $("isoToolbar").classList.remove("hidden");
     renderTabs();
     selectView("char");
-    await idbSet("iso:last", { name: file.name, handle, when: Date.now() });
-    updateIsoToolbar();
+    if (isHandle) await idbSet("iso:last", { name: file.name, handle: src, when: Date.now() });
+    updateIsoToolbar(); updateUndoButtons();
     toast(`Opened ${file.name} (${load.regionName})`, "ok");
   } catch (e) { toast("Could not read the ISO: " + (e.message || e), "bad"); console.error(e); }
   finally { spin(false); }
@@ -192,6 +223,7 @@ function commitIso(el, value) {
     if (ok === false) return;
     trackIso(el, value);
     afterIsoWrite(el.dataset.view, el.dataset.ident);
+    captureUndoStep();
   });
 }
 function onIsoField(el) { commitIso(el, el.value); }
@@ -286,11 +318,32 @@ function renderCharTables(cid) {
     const help = (isoMAPS.help || {})[table];
     h += `<div class="subhd">${esc(table)}</div>`;
     if (help) h += `<div class="note" style="margin:0 14px">${esc(help)}</div>`;
+    if (table === "equipable skills")   // B18 presets: fill the whole cap array at once
+      h += `<div class="row" style="padding:0 14px"><span class="note">Presets:</span>
+        <button class="ghost mini" onclick="charSkillPreset(${cid},7)">Max all (SS)</button>
+        <button class="ghost mini" onclick="charSkillPreset(${cid},6)">All S</button>
+        <button class="ghost mini" onclick="charSkillPreset(${cid},0)">Clear</button></div>`;
     h += `<div class="grid" style="padding-top:8px">` + fields.map(f =>
       renderField(f, { view: "char", ident: JSON.stringify({ id: cid }), table,
         key: `char:${cid}:${table}:${f.label}`, prefix: `${name} · `, group: name })).join("") + `</div>`;
   }
   $("isoCbody").innerHTML = h;
+}
+/* Preset: set every equipable-skill cap for a character to one grade (staged, undoable). */
+function charSkillPreset(cid, value) {
+  const r = JSON.parse(window.PYISO.char(cid));
+  const fields = (r.tables || {})["equipable skills"] || [];
+  if (!fields.length) return;
+  const edits = fields.map(f => ({ table: "equipable skills", field: f.label, value }));
+  const res = JSON.parse(window.PYISO.setchar(JSON.stringify({ id: cid }), JSON.stringify(edits)));
+  if (res.error) { toast(res.error, "bad"); return; }
+  const name = (JSON.parse(window.PYISO.chars()).chars.find(c => c.id === cid) || {}).name || ("Char " + cid);
+  const grade = (isoMAPS.ranks || [])[value] || String(value);
+  isoEdits[`char:${cid}:equipable skills:preset`] =
+    { label: `${name} · all equipable-skill caps → ${grade}`, group: name, to: grade };
+  renderCharTables(cid);
+  updateIsoToolbar(); captureUndoStep();
+  toast(`Set ${edits.length} skill caps to ${grade}.`, "ok");
 }
 
 VIEW_RENDER.gear = async (body) => {
@@ -465,7 +518,7 @@ function pickUniteMember(el, list) {
       const changed = String(id) !== String(el.dataset.orig);
       if (changed) { isoEdits[el.dataset.key] = { label: el.dataset.lbl, group: "Unites", to: nm }; el.classList.add("dirty"); }
       else { delete isoEdits[el.dataset.key]; el.classList.remove("dirty"); }
-      updateIsoToolbar();
+      updateIsoToolbar(); captureUndoStep();
     });
   }, {});
 }
@@ -515,7 +568,7 @@ VIEW_RENDER.balance = async (body) => {
       const r = JSON.parse(window.PYISO.hardmode(+$("hmFactor").value));
       if (r.error) { toast(r.error, "bad"); return; }
       isoEdits["balance"] = { label: `Hard Mode ×${$("hmFactor").value} (all starting stats)`, group: "Balance", to: "applied" };
-      $("hmMsg").textContent = `Scaled ${r.count} characters.`; updateIsoToolbar();
+      $("hmMsg").textContent = `Scaled ${r.count} characters.`; updateIsoToolbar(); captureUndoStep();
     } finally { spin(false); }
   };
   $("hmRestore").onclick = async () => {
@@ -524,7 +577,7 @@ VIEW_RENDER.balance = async (body) => {
       const r = JSON.parse(window.PYISO.hmrestore());
       if (r.error) { toast(r.error, "bad"); return; }
       delete isoEdits["balance"];
-      $("hmMsg").textContent = `Restored ${r.count} characters.`; updateIsoToolbar();
+      $("hmMsg").textContent = `Restored ${r.count} characters.`; updateIsoToolbar(); captureUndoStep();
     } finally { spin(false); }
   };
 };
@@ -575,6 +628,40 @@ function updateIsoToolbar() {
     const dot = q("#isoSaveBtn .dot"); if (dot) dot.classList.toggle("hidden", d.runs === 0);
   });
 }
+/* ---------------- undo / redo (B18) ----------------
+ * After each user action, diff /iso.bin vs the last snapshot into changed runs and push
+ * one step (with the before/after bytes AND the edit-map snapshot). One action = one step,
+ * with zero per-call-site wiring beyond the single captureUndoStep() in commitIso. */
+function captureUndoStep() {
+  if (!ISO_PREV) return;
+  const cur = pyodide.FS.readFile(ISO_PATH);
+  const runs = DiffCore.diffRuns(ISO_PREV, cur);
+  if (!runs.length) return;
+  const step = { runs: runs.map(r => ({ off: r.off, before: ISO_PREV.slice(r.off, r.off + r.len), after: r.bytes })),
+                 editsBefore: ISO_PREV_EDITS, editsAfter: { ...isoEdits } };
+  undoStack.push(step);
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  redoStack.length = 0;
+  ISO_PREV = cur.slice(); ISO_PREV_EDITS = { ...isoEdits };
+  updateUndoButtons();
+}
+function applyStep(step, dir) {   // dir "undo" restores .before, "redo" restores .after
+  const cur = pyodide.FS.readFile(ISO_PATH);
+  for (const r of step.runs) cur.set(dir === "undo" ? r.before : r.after, r.off);
+  pyodide.FS.writeFile(ISO_PATH, cur);
+  isoEdits = { ...(dir === "undo" ? step.editsBefore : step.editsAfter) };
+  ISO_PREV = pyodide.FS.readFile(ISO_PATH).slice(); ISO_PREV_EDITS = { ...isoEdits };
+  if (curView) selectView(curView);     // re-render from the restored bytes
+  updateIsoToolbar(); updateUndoButtons();
+}
+function isoUndo() { if (!undoStack.length) return; const s = undoStack.pop(); redoStack.push(s); applyStep(s, "undo"); }
+function isoRedo() { if (!redoStack.length) return; const s = redoStack.pop(); undoStack.push(s); applyStep(s, "redo"); }
+function updateUndoButtons() {
+  const u = $("isoUndoBtn"), r = $("isoRedoBtn");
+  if (u) u.disabled = undoStack.length === 0;
+  if (r) r.disabled = redoStack.length === 0;
+}
+
 function isoReviewGroups(extraNote) {
   const byGroup = {};
   Object.values(isoEdits).forEach(e => { (byGroup[e.group] = byGroup[e.group] || []).push(e); });
@@ -586,6 +673,10 @@ function isoReviewGroups(extraNote) {
 function saveISO() {
   const d = recomputeIsoDirty();
   if (!d.runs) { toast("No changes to save.", "ok"); return; }
+  if (!isoHandle) {   // opened via file input (mobile / no FS Access) → recipe is the way out
+    toast("This browser can't write the ISO in place — exporting a recipe instead.", "ok");
+    exportRecipe(); return;
+  }
   const groups = isoReviewGroups(`Writes ${d.bytes} byte(s) in ${d.runs} run(s) into the ISO in place.`);
   confirmReview("Apply to ISO", groups, `Save to ${isoHandle.name || "ISO"}`, writeISO);
 }
@@ -601,7 +692,8 @@ async function writeISO() {
     try {
       for (const r of runs) await w.write({ type: "write", position: r.off, data: r.bytes });
     } finally { await w.close(); }
-    ORIG = cur.slice(); isoEdits = {};
+    ORIG = cur.slice(); ISO_PREV = cur.slice(); ISO_PREV_EDITS = {}; isoEdits = {};
+    undoStack.length = 0; redoStack.length = 0; updateUndoButtons();
     qa("#isoBody .dirty").forEach(e => e.classList.remove("dirty"));
     updateIsoToolbar();
     toast(`Saved ${runs.length} change-run(s) into the ISO.`, "ok");
@@ -633,7 +725,7 @@ function importRecipe() {
       if (r.error) { toast("Recipe rejected: " + r.error, "bad"); return; }
       isoEdits["imported"] = { label: `Imported recipe (${r.patchCount} run(s)${r.mismatchedRuns?`, ${r.mismatchedRuns} mismatch`:""})`, group: "Imported", to: "staged" };
       if (curView) selectView(curView);      // re-render so inputs reflect imported bytes
-      updateIsoToolbar();
+      updateIsoToolbar(); captureUndoStep();
       toast(`Applied recipe: ${r.appliedBytes} byte(s)${r.mismatchedRuns?` — ${r.mismatchedRuns} mismatch(es), check region`:""}.`, r.mismatchedRuns ? "bad" : "ok");
     } catch (e) { toast("Could not read recipe: " + (e.message || e), "bad"); }
   };

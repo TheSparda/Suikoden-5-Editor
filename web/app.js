@@ -56,7 +56,7 @@ function setBoot(msg, pct){ if($("bootmsg")) $("bootmsg").textContent = msg;
 /* ---------------- shared boot: Pyodide + both engines ---------------- */
 async function boot(){
   try{
-    initTheme(); initPWA(); initModeTabs();
+    initTheme(); initPWA(); initModeTabs(); initUpdateCheck();
     setBoot("Downloading the Python runtime (Pyodide)…", 10);
     pyodide = await loadPyodide({ indexURL: `https://cdn.jsdelivr.net/pyodide/v${window.PYODIDE_VERSION}/full/` });
     window.pyodide = pyodide;

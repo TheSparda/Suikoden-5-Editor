@@ -194,3 +194,11 @@ td.cellwrap .revert{vertical-align:middle;margin-left:2px}
 .review-arr{color:var(--mut)}
 .review-new{color:var(--gold2);font-weight:600}
 .modal-ft{display:flex;justify-content:flex-end;gap:10px;padding:12px 14px;border-top:1px solid var(--line)}
+/* link-style button (footer force-refresh) */
+.linkbtn{background:none;border:0;color:var(--teal);font:inherit;padding:0;cursor:pointer;text-decoration:underline}
+.linkbtn:hover{filter:none;color:var(--gold2)}
+/* update-available prompt (B17) */
+.update-prompt{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:85;display:none;
+ align-items:center;gap:10px;background:var(--panel2);border:1px solid var(--gold);border-radius:10px;
+ padding:10px 14px;box-shadow:var(--shadow);max-width:92vw}
+.update-prompt.show{display:flex}

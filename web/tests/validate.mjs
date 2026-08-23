@@ -28,7 +28,9 @@ for (const s of ["diff-core.js", "common.js", "app.js", "iso.js", "pyodide.js"])
   ok(`index loads ${s}`, html.includes(s));
 ok("index has Save tab", /data-mode="save"/.test(html));
 ok("index has ISO tab", /data-mode="iso"/.test(html));
-ok("index has ISO blocked card", html.includes('id="isoBlocked"'));
+ok("index has force-refresh (B17)", html.includes('id="forceRefresh"'));
+ok("index has undo/redo buttons (B18)", html.includes('id="isoUndoBtn"') && html.includes('id="isoRedoBtn"'));
+ok("index has no-FS ISO note (A3)", html.includes('id="isoNoFsNote"'));
 
 // 3) service worker precaches shell + every engine JSON app.js loads
 const sw = read("sw.js");
@@ -43,6 +45,15 @@ if (m) {
   const missing = jsons.filter((j) => !sw.includes(j));
   ok("sw precaches every ENGINE_JSON", missing.length === 0, missing.join(","));
 }
+
+// 3b) new-feature wiring guards (behavioral coverage for undo/redo is in e2e/manual)
+const isoSrc = read("iso.js"), commonSrc = read("common.js");
+for (const fn of ["captureUndoStep", "isoUndo", "isoRedo", "charSkillPreset"])
+  ok(`iso.js defines ${fn}`, isoSrc.includes("function " + fn));
+ok("iso.js opens without FS Access (file input fallback)", /type = "file"/.test(isoSrc) && isoSrc.includes("isHandle"));
+for (const fn of ["forceRefresh", "checkVersionBehind", "initUpdateCheck"])
+  ok(`common.js defines ${fn}`, commonSrc.includes("function " + fn));
+ok("app.js calls initUpdateCheck", app.includes("initUpdateCheck()"));
 
 // 4) ISO slice window covers the highest editable table (name table ~0x699300)
 const iso = read("iso.js");

@@ -220,6 +220,45 @@ function initModeTabs() {
   show(init);
 }
 
+/* ---------- PWA staleness escape hatch (B17) ----------
+ * Network-first keeps online users current in theory, but a stuck service worker or
+ * an offline shell can serve an old build. Two mechanisms: a version-behind check that
+ * bypasses every cache, and an always-present Force-refresh that nukes the SW + caches. */
+function initUpdateCheck() {
+  const btn = $("forceRefresh");
+  if (btn) btn.onclick = forceRefresh;
+  checkVersionBehind();
+}
+async function forceRefresh() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
+  } catch (_) {}
+  location.reload();
+}
+async function checkVersionBehind() {
+  try {
+    const running = (($("ver") && $("ver").textContent) || "").trim();
+    if (!running) return;
+    const res = await fetch("index.html?cb=" + Date.now(), { cache: "no-store" });  // bypass HTTP + SW caches
+    if (!res.ok) return;
+    const m = (await res.text()).match(/id="ver">([^<]+)</);
+    if (m && m[1].trim() !== running) showUpdatePrompt(m[1].trim());
+  } catch (_) { /* offline / blocked → silently skip */ }
+}
+function showUpdatePrompt(latest) {
+  let p = $("updatePrompt");
+  if (!p) { p = document.createElement("div"); p.id = "updatePrompt"; p.className = "update-prompt"; document.body.appendChild(p); }
+  p.innerHTML = `<span>A newer version (${esc(latest)}) is available.</span>
+    <button id="updNow">Update now</button><button class="ghost mini" id="updLater">Later</button>`;
+  p.classList.add("show");
+  $("updNow").onclick = forceRefresh;
+  $("updLater").onclick = () => p.classList.remove("show");
+}
+
 /* feature detection shared by both editors */
 const HAS_FS_ACCESS = typeof window !== "undefined" && "showOpenFilePicker" in window;
 function canShareFiles(files) {
