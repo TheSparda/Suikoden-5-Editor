@@ -49,7 +49,7 @@ const ISO_VIEWS = [
   { id: "skillfx",  label: "Skill effects" },
   { id: "balance",  label: "Balance" },
   { id: "name",     label: "Char names" },
-  { id: "ref",      label: "Names / Text" },
+  { id: "ref",      label: "Reference" },
 ];
 
 /* Called by app.js once Pyodide + engines are ready. */
@@ -158,7 +158,21 @@ async function selectView(id) {
 
 /* ---------------- generic field rendering ---------------- */
 function arrList(a) { return (a || []).map((n, i) => ({ id: i, name: n })); }
-function mapList(o) { return Object.keys(o || {}).map(k => ({ id: k, name: o[k] })); }
+/* map id→value where value may be a plain string OR a {name, desc} record (items). */
+function mapList(o) {
+  return Object.keys(o || {}).map(k => {
+    const v = o[k];
+    return (v && typeof v === "object")
+      ? { id: k, name: v.name != null ? v.name : k, desc: v.desc || "" }
+      : { id: k, name: v };
+  });
+}
+/* Resolve an item's English name (+desc) by id, from the s5_item_names table. */
+function itemInfo(id) {
+  const it = isoMAPS && isoMAPS.items ? isoMAPS.items[id] : null;
+  if (!it) return { name: "#" + id, desc: "" };
+  return (typeof it === "object") ? { name: it.name || ("#" + id), desc: it.desc || "" } : { name: it, desc: "" };
+}
 function kindList(kind) {
   const M = isoMAPS || {};
   switch (kind) {
@@ -286,7 +300,6 @@ async function applyIsoWrite(el, value) {
     else if (view === "skillfx") res = window.PYISO.setskillfx(ident.id, ident.rank, +value);
     else if (view === "unite") res = window.PYISO.setunite(ident.id, ident.slot, +value);
     else if (view === "name") res = window.PYISO.setname(ident.index, value);
-    else if (view === "reftext") res = window.PYISO.setstring(+el.dataset.off, value);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -472,8 +485,11 @@ function priceView(loadFn, view, cols) {
   };
 }
 function rowFor(view, p, cols) {
-  const nm = p.name || ("#" + (p.index));
-  return `<tr data-name="${esc(nm.toLowerCase())}"><td class="note">${p.index}</td><td>${esc(nm)}</td>` +
+  let nm = p.name, desc = "";
+  if (!nm && view === "price") { const it = itemInfo(p.index); nm = it.name; desc = it.desc; }
+  nm = nm || ("#" + p.index);
+  const nameCell = desc ? `${esc(nm)}<div class="fnote">${esc(desc)}</div>` : esc(nm);
+  return `<tr data-name="${esc((nm + " " + desc).toLowerCase())}"><td class="note">${p.index}</td><td>${nameCell}</td>` +
     cols.map(c => `<td class="cellwrap"><input type="number" min="0" value="${p[c.field]}"
       data-key="${view}:${p.index}:${c.field}" data-view="${view}" data-ident='${esc(JSON.stringify({index:p.index}))}'
       data-field="${c.field}" data-kind="num" data-orig="${p[c.field]}" data-lbl="${esc(nm+" "+c.label)}" data-grp="${esc(c.group)}"
@@ -602,8 +618,11 @@ VIEW_RENDER.balance = async (body) => {
 VIEW_RENDER.name = async (body) => {
   const r = JSON.parse(window.PYISO.names(0));
   if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  let h = `<div class="note" style="padding:10px 14px">Character name table (ASCII, max 7 chars). Edits apply to a new game.</div>
-    <div class="grid" style="padding:0 14px 14px">`;
+  let h = `<div class="warnbox" style="margin:10px 16px">⚠ <b>Roster / menu short names only</b> (7-char ASCII table).
+      This changes the name shown in menus, party and status for a <b>new game</b> — it does <b>not</b> rewrite
+      dialogue, cutscene or battle text (those are separate), so a rename can read inconsistently in story scenes.
+      Names longer than 7 characters can't be stored here. The hero's name is chosen by the player at game start.</div>
+    <div class="grid" style="padding:0 16px 14px">`;
   h += (r.names || []).map(n => `<div class="fld"><label>#${n.index}</label><div class="in">
       <input maxlength="7" value="${esc(n.name)}" data-key="name:${n.index}" data-view="name"
         data-ident='${esc(JSON.stringify({index:n.index}))}' data-field="name" data-kind="str"
@@ -612,44 +631,18 @@ VIEW_RENDER.name = async (body) => {
 };
 
 VIEW_RENDER.ref = async (body) => {
-  const ro = JSON.parse(window.PYISO.reference());                       // English read-only lists
-  const editCats = (JSON.parse(window.PYISO.reftextcats()).cats) || [];  // editable ELF text pools
-  const roCats = Object.keys(ro);
-  const opts =
-    (editCats.length ? `<optgroup label="Editable in-game text">${
-      editCats.map(c => `<option value="edit:${esc(c)}">${esc(c)} — names / text</option>`).join("")}</optgroup>` : "")
-    + (roCats.length ? `<optgroup label="Reference (read-only)">${
-      roCats.map(c => `<option value="ro:${esc(c)}">${esc(c)}</option>`).join("")}</optgroup>` : "");
-  if (!opts) { body.innerHTML = `<p class="note" style="padding:14px">No reference data.</p>`; return; }
+  const ref = JSON.parse(window.PYISO.reference());
+  const cats = Object.keys(ref);
+  if (!cats.length) { body.innerHTML = `<p class="note" style="padding:14px">No reference lists.</p>`; return; }
   body.innerHTML = `<div class="row" style="padding:10px 16px 0"><span class="note">List</span>
-      <select id="refSel">${opts}</select>
+      <select id="refSel">${cats.map(c=>`<option>${esc(c)}</option>`).join("")}</select>
       <input class="pick-q" id="refQ" type="search" placeholder="filter…" style="max-width:220px"></div>
-    <div class="fnote" id="refHelp" style="margin:6px 16px"></div>
+    <div class="fnote" style="margin:6px 16px">Read-only English name reference.</div>
     <div id="refBody" class="grid" style="padding:0 16px 14px"></div>`;
   const show = () => {
-    const val = $("refSel").value, f = $("refQ").value.trim().toLowerCase();
-    const i = val.indexOf(":"), kind = val.slice(0, i), cat = val.slice(i + 1);
-    if (kind === "edit") {
-      $("refHelp").innerHTML = "Edit the game's own text (names &amp; descriptions). Each edit is <b>capped to the "
-        + "original length</b> so it can never overrun the next string. Blank strings are unused slots.";
-      const r = JSON.parse(window.PYISO.reftext(cat));
-      if (r.error) { $("refBody").innerHTML = `<p class="bad">${esc(r.error)}</p>`; return; }
-      const ents = (r.entries || []).filter(e => !f || (e.text || "").toLowerCase().includes(f)
-        || ("0x" + e.off.toString(16)).includes(f));
-      $("refBody").innerHTML = ents.slice(0, 600).map(e => {
-        const hx = "0x" + e.off.toString(16);
-        return `<div class="fld"><label>@${hx} <span class="pill">${e.cap}B</span></label><div class="in">
-          <input type="text" maxlength="${e.cap}" value="${esc(e.text)}" data-key="reftext:${e.off}" data-view="reftext"
-            data-off="${e.off}" data-kind="str" data-orig="${esc(e.text)}" data-lbl="${esc(cat)} @${hx}"
-            data-grp="Text: ${esc(cat)}" onchange="onIsoField(this)">${REVERT_BTN}</div></div>`;
-      }).join("") || `<div class="note">No matches.</div>`;
-      if (ents.length > 600) $("refHelp").innerHTML += ` — showing first 600 of ${ents.length}, keep typing to narrow.`;
-    } else {
-      $("refHelp").textContent = "Read-only name reference.";
-      const list = ro[cat] || [];
-      $("refBody").innerHTML = list.filter(x => !f || String(x.name).toLowerCase().includes(f) || String(x.i).includes(f))
-        .slice(0, 600).map(x => `<div class="note">${x.i}: ${esc(x.name)}</div>`).join("");
-    }
+    const list = ref[$("refSel").value] || [], f = $("refQ").value.trim().toLowerCase();
+    $("refBody").innerHTML = list.filter(x => !f || String(x.name).toLowerCase().includes(f) || String(x.i).includes(f))
+      .slice(0, 600).map(x => `<div class="note">${x.i}: ${esc(x.name)}</div>`).join("");
   };
   $("refSel").onchange = show; $("refQ").oninput = show; show();
 };
