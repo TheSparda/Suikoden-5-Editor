@@ -37,6 +37,9 @@ const SKILL_NAMES = ["Stamina","Attack","Defense","Technique","Vitality","Agilit
   "Perfect Pitch","Appraisal","Bath","Tutor"];
 const RANK_NAMES = ["None","E","D","C","B","A","S","SS"];
 
+/* ↺ per-field undo button (shown only when its field is dirty, via CSS :has). */
+const REVERT_BTN_SAVE = `<button type="button" class="revert" title="Undo this change" onclick="revertSaveField(this)" tabindex="-1">↺</button>`;
+
 /* JSON tables the Pyodide engines read from /editor (s5fields.res_json opens them there). */
 const ENGINE_JSON = [
   "s5_characters.json","s5_armor_names.json","s5_rune_ids.json","s5_rune_names.json",
@@ -498,15 +501,15 @@ function renderSaves(){
       <div class="grid">
         <div class="fld"><label>Hero name</label><div class="in">
           <input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength="15" ${ro?"disabled":""}
-            data-sk="sv${i}:heroName" data-orig="${esc(fl.heroName)}" data-lbl="Hero name" data-grp="${esc(sv.folder)}"></div></div>
+            data-sk="sv${i}:heroName" data-orig="${esc(fl.heroName)}" data-lbl="Hero name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
         <div class="fld"><label>Castle name</label><div class="in">
           <input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength="15" ${ro?"disabled":""}
-            data-sk="sv${i}:castleName" data-orig="${esc(fl.castleName)}" data-lbl="Castle name" data-grp="${esc(sv.folder)}"></div></div>
+            data-sk="sv${i}:castleName" data-orig="${esc(fl.castleName)}" data-lbl="Castle name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
         <div class="fld"><label>Level <span class="note">(display only)</span></label><div class="in">
           <input type="number" value="${fl.level||0}" disabled title="Save-select display level. Edit unit levels in the Characters panel."></div></div>
         <div class="fld"><label>New Game Plus</label><div class="in">
           <label class="chk"><input type="checkbox" id="sv${i}_ngp" ${fl.newGamePlus?"checked":""} ${ro?"disabled":""}
-            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}"></label></div></div>
+            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}"></label>${ro?"":REVERT_BTN_SAVE}</div></div>
       </div>
       <div class="card-ft">${foot}</div>
       <div id="chars${i}" class="note" style="margin:0 14px 8px"></div>
@@ -573,9 +576,9 @@ async function openChars(i){
 }
 
 /* picker-button field for id-based selects (armor / rune / skill-slot). */
-function pickBtn(sk, listName, curId, curName, onPick){
-  return `<button type="button" class="pickbtn" data-sk="${sk}" onclick='${onPick}'>
-    <span class="pickbtn-name">${esc(curName)}</span><span class="pickbtn-id note">#${esc(curId)}</span></button>`;
+function pickBtn(sk, cf, curId, curName, onPick){
+  return `<button type="button" class="pickbtn" data-sk="${sk}" data-cf="${cf}" data-orig="${esc(curId)}" onclick='${onPick}'>
+    <span class="pickbtn-name">${esc(curName)}</span><span class="pickbtn-id note">#${esc(curId)}</span></button>${REVERT_BTN_SAVE}`;
 }
 function armorList(slot){
   const m = NAMES.armorNames[slot] || {};
@@ -604,16 +607,16 @@ function renderChar(i){
   const g = (inner) => `<div class="grid" style="padding-top:8px">${inner}</div>`;
   const rankSel = (id,val) => selHTML(id, RK, val);
   const aBtn = (slot,lbl,val) => `<div class="fld"><label>${lbl}</label><div class="in">${
-    pickBtn(`c${i}_${slot}`, slot, val, armorName(slot,val),
+    pickBtn(`c${i}_${slot}`, `${i}:${slot}`, val, armorName(slot,val),
       `pickArmor(${i},'${slot}',${val})`)}</div></div>`;
   const rBtn = (slot,lbl,val) => `<div class="fld"><label>${lbl}</label><div class="in">${
-    pickBtn(`c${i}_${slot}`, "rune", val, runeName(val),
+    pickBtn(`c${i}_${slot}`, `${i}:${slot}`, val, runeName(val),
       `pickRune(${i},'${slot}',${val})`)}</div></div>`;
   $(`cfld${i}`).innerHTML =
     sub("Level & recruitment")
     + `<div class="grid" style="grid-template-columns:150px 260px;padding-top:8px">`
-    + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" onchange="writeCharField(${i},'level',this.value,this)"></div></div>`
-    + `<div class="fld"><label>Recruited</label><div class="in"><label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} ${c.recruitable?"":'disabled title="Not recruitable"'} onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">${c.recruitable?"in the roster":"not recruitable"}</span></label></div></div>`
+    + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" data-cf="${i}:level" data-orig="${c.level}" onchange="writeCharField(${i},'level',this.value,this)">${REVERT_BTN_SAVE}</div></div>`
+    + `<div class="fld"><label>Recruited</label><div class="in"><label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} ${c.recruitable?"":'disabled title="Not recruitable"'} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">${c.recruitable?"in the roster":"not recruitable"}</span></label>${c.recruitable?REVERT_BTN_SAVE:""}</div></div>`
     + `</div>`
     + sub("Equipment")
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
@@ -621,17 +624,17 @@ function renderChar(i){
     + g(rBtn("rhead","Head",c.runes.rhead)+rBtn("rright","Right hand",c.runes.rright)+rBtn("rleft","Left hand",c.runes.rleft))
     + sub("Equipped skill slots")
     + g([0,1].map(k => `<div class="fld"><label>Slot ${k+1}</label><div class="in">${
-        pickBtn(`c${i}_ss${k}`, "skill", (c.slots||[0,0])[k], slotName((c.slots||[0,0])[k]),
+        pickBtn(`c${i}_ss${k}`, `${i}:ss${k}`, (c.slots||[0,0])[k], slotName((c.slots||[0,0])[k]),
           `pickSlot(${i},${k},${(c.slots||[0,0])[k]})`)}</div></div>`).join(""))
     + sub("Skill ranks")
     + g((c.skills||[]).map((v,s)=> s===26 ? "" :
         `<div class="fld"><label>${esc(SKILL_NAMES[s]||("Skill "+s))}</label><div class="in">${
-          selHTML(`ce${i}_sk${s}`, RK, v, `writeCharField(${i},'sk${s}',this.value,this)`)}</div></div>`).join(""))
+          selHTML(`ce${i}_sk${s}`, RK, v, `writeCharField(${i},'sk${s}',this.value,this)`, `data-cf="${i}:sk${s}" data-orig="${v}"`)}${REVERT_BTN_SAVE}</div></div>`).join(""))
     + `<div style="padding:8px 14px 12px"><span class="note">Reverse-engineered &amp; cross-verified. Rune 0 = empty slot.${
         c.recruited||!c.recruitable ? "" : " · <b>Not yet recruited in this save.</b>"}</span></div>`;
 }
-function selHTML(id, names, val, onchange){
-  let h = `<select id="${id}" ${onchange?`onchange="${onchange}"`:""}>`;
+function selHTML(id, names, val, onchange, attrs){
+  let h = `<select id="${id}" ${onchange?`onchange="${onchange}"`:""} ${attrs||""}>`;
   if(!(String(val) in names)) h += `<option value="${val}" selected>#${val} (unknown)</option>`;
   for(const k of Object.keys(names)) h += `<option value="${k}" ${String(val)===k?"selected":""}>${k}: ${esc(names[k])}</option>`;
   return h + "</select>";
@@ -655,34 +658,51 @@ async function setCharPick(i, field, id, displayName){
 
 async function writeCharField(i, field, value, el){
   const sv = saves[i], idx = +$(`csel${i}`).value;
-  const c = CHARDATA[i].chars.find(x => x.idx === idx);
   const key = `c${idx}_${field}`;
   spin(true);
   try{
     const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [key]: +value })));
     if(r.error){ toast("Error: " + r.error, "bad"); return; }
-    // refresh cached char data so baselines + re-render stay correct
+    // keep the cache fresh so re-opening the character shows current values
     const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
-    const c2 = CHARDATA[i].chars.find(x => x.idx === idx);
-    const sk = `c${idx}:${field}`, orig = origCharVal(c, field), now = curCharVal(c2, field);
-    if(String(now) !== String(orig)){
-      sEdits[sk] = { label: `${nameOf(idx)} · ${charFieldLabel(field)}`, group: sv.folder, to: charFieldDisplay(field, now) };
+    // dirty vs the value this field had when the panel was rendered (data-orig)
+    const sk = `c${idx}:${field}`;
+    const orig = el && el.dataset ? el.dataset.orig : undefined;
+    const changed = orig != null && String(value) !== String(orig);
+    if(changed){
+      sEdits[sk] = { label: `${nameOf(idx)} · ${charFieldLabel(field)}`, group: sv.folder, to: charFieldDisplay(field, +value) };
       if(el && el.classList) el.classList.add("dirty");
     }else{ delete sEdits[sk]; if(el && el.classList) el.classList.remove("dirty"); }
     updateSaveToolbar();
   }catch(e){ toast("Write failed: " + (e.message||e), "bad"); console.error(e); }
   finally{ spin(false); }
 }
-function origCharVal(c, field){ return _charVal(c, field); }
-function curCharVal(c, field){ return _charVal(c, field); }
-function _charVal(c, field){
-  if(field === "level") return c.level;
-  if(field === "rec") return c.recruited ? 1 : 0;
-  if(field.startsWith("sk")) return (c.skills||[])[+field.slice(2)];
-  if(field.startsWith("ss")) return (c.slots||[])[+field.slice(2)];
-  if(["helm","body","glove","foot"].includes(field)) return c.armor[field];
-  if(["rhead","rright","rleft"].includes(field)) return c.runes[field];
-  return null;
+
+/* Per-field undo for the Save editor: revert a control to its rendered value. */
+function revertSaveField(btn){
+  let el = btn.previousElementSibling;
+  if(el && el.tagName === "LABEL") el = el.querySelector("input");   // NG+/recruited checkbox
+  if(!el || el.dataset.orig == null) return;
+  const orig = el.dataset.orig;
+  if(el.dataset.sk && el.dataset.sk.indexOf("sv") === 0){            // header field
+    const [svk, key] = el.dataset.sk.split(":");
+    const i = +svk.slice(2);
+    if(el.type === "checkbox"){ el.checked = (orig === "1" || orig === 1); stageSaveField(i, key, el.checked?1:0, el); }
+    else { el.value = orig; stageSaveField(i, key, el.value, el); }
+    return;
+  }
+  if(el.dataset.cf){                                                 // character field
+    const [i, field] = el.dataset.cf.split(":");
+    if(el.classList.contains("pickbtn")){
+      q(".pickbtn-name", el).textContent = charFieldDisplay(field, +orig);
+      q(".pickbtn-id", el).textContent = "#" + orig;
+      writeCharField(+i, field, +orig, el);
+    }else if(el.type === "checkbox"){
+      el.checked = (orig === "1" || orig === 1); writeCharField(+i, field, el.checked?1:0, el);
+    }else{
+      el.value = orig; writeCharField(+i, field, +orig, el);
+    }
+  }
 }
 function charFieldLabel(field){
   if(field === "level") return "Level"; if(field === "rec") return "Recruited";
