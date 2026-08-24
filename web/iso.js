@@ -328,6 +328,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "setbonus") res = window.PYISO.setbonus(+el.dataset.setidx, +el.dataset.eff, +value);
     else if (view === "sethandler") res = window.PYISO.sethandler(+el.dataset.setidx, +value);
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
+    else if (view === "gearname") res = window.PYISO.setgearname(el.dataset.slot, +el.dataset.gid, value);
     else if (view === "setgate") res = window.PYISO.setgate(+el.dataset.setidx, value ? 1 : 0, +el.dataset.word || 0);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
@@ -403,33 +404,61 @@ function charSkillPreset(cid, value) {
 
 VIEW_RENDER.gear = async (body) => {
   const slots = ["head","body","arm","foot","accessory"];
-  body.innerHTML = `<div class="row" style="padding:10px 14px 0">
+  body.innerHTML = `<div class="row" style="padding:10px 16px 0">
       <span class="note">Slot</span>
-      <select id="isoGslot">${slots.map(s=>`<option value="${s}">${s}</option>`).join("")}</select>
-      <button class="ghost mini" id="isoGpick">Choose item…</button>
-      <span id="isoGname" class="note"></span></div>
-    <div class="note" style="margin:6px 14px">${esc((isoMAPS.help||{}).gear||"")}</div>
+      <select id="isoGslot">${slots.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
+    <div class="grid" style="padding-top:6px"><div class="fld"><label>Item</label><div class="in">
+      <button type="button" class="pickbtn" id="isoGpick" onclick="openGearPicker()">
+        <span class="pickbtn-name" id="isoGpickName">—</span>
+        <span class="pickbtn-id note" id="isoGpickId"></span></button></div>
+      <div class="fnote" id="isoGname"></div></div></div>
+    <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).gear||"")}</div>
     <div id="isoGbody"></div>`;
   const loadSlot = async () => {
     const slot = $("isoGslot").value;
-    const list = (JSON.parse(window.PYISO.gear(slot)).items || [])
+    GEAR_LIST[slot] = (JSON.parse(window.PYISO.gear(slot)).items || [])
       .map(it => ({ id: it.id, name: it.name, desc: it.effect, cat: "DEF " + it.def }));
-    $("isoGpick").onclick = () => openPicker("Choose " + slot, list, gearCur[slot] || 0,
-      (id) => { gearCur[slot] = +id; renderGearItem(slot, +id); }, {});
-    renderGearItem(slot, gearCur[slot] || (list[0] ? +list[0].id : 0));
+    renderGearItem(slot, gearCur[slot] != null ? gearCur[slot]
+                         : (GEAR_LIST[slot][0] ? +GEAR_LIST[slot][0].id : 0));
   };
   $("isoGslot").onchange = loadSlot;
   loadSlot();
 };
-const gearCur = {};
+const gearCur = {}, GEAR_LIST = {};
+function openGearPicker(){
+  const slot = $("isoGslot").value;
+  openPicker("Choose " + slot, GEAR_LIST[slot] || [], gearCur[slot],
+    (id) => { gearCur[slot] = +id; renderGearItem(slot, +id); }, {});
+}
 function renderGearItem(slot, id) {
   gearCur[slot] = id;
   const r = JSON.parse(window.PYISO.gearitem(slot, id));
   if (r.error) { $("isoGbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  $("isoGname").textContent = `${r.name || ("#"+id)}  ${r.summaryEn ? "· " + r.summaryEn : ""}`;
-  $("isoGbody").innerHTML = `<div class="grid" style="padding-top:8px">` + r.fields.map(f =>
+  // make the selection obvious: name + id on the picker itself, effect underneath
+  $("isoGpickName").textContent = r.name || ("#" + id);
+  $("isoGpickId").textContent = "#" + id;
+  $("isoGname").innerHTML = r.summaryEn ? `<b>${esc(r.summaryEn)}</b>` : "";
+  const nm = r.name || ("#" + id);
+  let h = `<div class="subhd">In-game text</div><div class="grid" style="padding-top:6px">
+    <div class="fld"><label>Name <span class="pill">${r.nameCap||0}B</span></label><div class="in">
+      <input type="text" value="${esc(r.nameJp||"")}" ${r.nameCap?"":"disabled"}
+        data-key="gearname:${slot}:${id}" data-view="gearname" data-slot="${slot}" data-gid="${id}"
+        data-orig="${esc(r.nameJp||"")}" data-kind="str" data-lbl="${esc(nm)} · name"
+        data-grp="Gear · ${slot}" onchange="onIsoField(this)">${r.nameCap?REVERT_BTN:""}</div>
+      <div class="fnote">the disc's own name string (length-capped) · the editor's English
+        label comes from its name table, so this changes the game, not that label</div></div>
+    <div class="fld"><label>Description <span class="pill">${r.descCap||0}B</span></label><div class="in">
+      <input type="text" value="${esc(r.summaryEn||"")}" ${r.descCap?"":"disabled"}
+        data-key="setdesc:${slot}:${id}" data-view="setdesc" data-slot="${slot}" data-statid="${id}"
+        data-orig="${esc(r.summaryEn||"")}" data-raw="${esc(r.summary||"")}" data-kind="str"
+        data-lbl="${esc(nm)} · description" data-grp="Gear · ${slot}"
+        onchange="onIsoField(this)">${r.descCap?REVERT_BTN:""}</div>
+      <div class="fnote">edit in English${r.summary?` · stored now: <span class="dim">${esc(r.summary)}</span>`:""}</div></div>
+    </div><div class="subhd">Stats</div>`;
+  h += `<div class="grid" style="padding-top:6px">` + r.fields.map(f =>
     renderField(f, { view: "gear", ident: JSON.stringify({ slot, id }), key: `gear:${slot}:${id}:${f.label}`,
-      prefix: `${r.name||("#"+id)} · `, group: `Gear · ${slot}` })).join("") + `</div>`;
+      prefix: `${nm} · `, group: `Gear · ${slot}` })).join("") + `</div>`;
+  $("isoGbody").innerHTML = h;
 }
 
 /* ---------------- Equipment sets ----------------

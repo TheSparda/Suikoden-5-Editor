@@ -903,6 +903,29 @@ def write_armor_summary(iso, slot, i, text):
     iso.wr(base, enc + b"\x00" * (cap - len(enc)))
     return {"ok": True, "cap": cap, "wrote": len(enc)}
 
+def armor_name_cap(iso, slot, i):
+    """Writable bytes for a gear piece's own (in-record) name at record−0x1C: the string
+    plus its trailing NUL padding, inside the 0x18-byte window so it can never reach the
+    record start. Same discipline as the description cap."""
+    base = armor_addr(slot, i) - 0x1C
+    win = 0x18
+    cur = iso.rd(base, win)
+    e = cur.find(b"\x00")
+    if e < 0: return win
+    k = e
+    while k < win and cur[k] == 0: k += 1
+    return k
+
+def write_armor_name(iso, slot, i, text):
+    """Edit a gear piece's name as stored in the ISO (Shift-JIS, at record−0x1C).
+    NOTE the editor's English gear labels come from the curated s5_armor_stat_names.json,
+    so changing this updates the DISC's string, not that display label."""
+    cap = armor_name_cap(iso, slot, i)
+    if cap == 0: raise ValueError("this piece has no name slot to edit")
+    enc = str(text).encode("cp932", "replace")[:cap]
+    iso.wr(armor_addr(slot, i) - 0x1C, enc + b"\x00" * (cap - len(enc)))
+    return {"ok": True, "cap": cap, "wrote": len(enc)}
+
 def armor_summary_cap(iso, slot, i):
     """Writable bytes for a piece's description: the existing string PLUS its trailing
     NUL padding, bounded by the first real stat field (+0x41). Using the padding too

@@ -97,10 +97,12 @@ def build_fixture(path):
     jt[1] = H_SET; jt[4] = H_ADD
     buf[F.SET_JT_OFF:F.SET_JT_OFF + 4 * F.SET_COUNT] = struct.pack("<%dI" % F.SET_COUNT, *jt)
 
-    # one armor record with a description, for the summary writer
+    # one armor record with a name (at record-0x1C) and a description, for the text writers
     rec = P.armor_addr("head", 3)
     desc = "頭　直防＋１０".encode("cp932")
     buf[rec + F.ARMOR_SUMMARY_OFF:rec + F.ARMOR_SUMMARY_OFF + len(desc)] = desc
+    nm = "レザーキャップ".encode("cp932")
+    buf[rec - 0x1C:rec - 0x1C + len(nm)] = nm
     open(path, "wb").write(buf)
     return {"H_SET": H_SET, "H_ADD": H_ADD, "H_GATE": H_GATE}
 
@@ -253,6 +255,26 @@ with P.Iso(tmp) as g:
     gg = next(s for s in P.read_sets(g)["sets"] if s["index"] == 4)["gate"]
 chk("can still remove a retargeted restriction", gg["restricted"] is False, str(gg))
 with P.Iso(tmp, writable=True) as g: P.write_set_handler(g, 4, H["H_ADD"])
+
+# ---------------- gear name (in-record string at record-0x1C) ----------------
+with P.Iso(tmp) as g:
+    ncap = P.armor_name_cap(g, "head", 3)
+    n0 = P.read_armor_item(g, "head", 3)["nameJp"]
+chk("in-record name reads back", n0 == "レザーキャップ", repr(n0))
+chk("name cap is inside the 0x18 window", 0 < ncap <= 0x18, str(ncap))
+with P.Iso(tmp, writable=True) as g: rn = P.write_armor_name(g, "head", 3, "Leather Cap")
+with P.Iso(tmp) as g: n1 = P.read_armor_item(g, "head", 3)["nameJp"]
+chk("name write took", n1 == "Leather Cap", repr(n1))
+with P.Iso(tmp) as g: chk("name cap stable after shortening", P.armor_name_cap(g, "head", 3) == ncap)
+with P.Iso(tmp, writable=True) as g: P.write_armor_name(g, "head", 3, "Z" * 200)
+with P.Iso(tmp) as g: n2 = P.read_armor_item(g, "head", 3)["nameJp"]
+chk("over-long name truncated to the cap", len(n2.encode("cp932")) == ncap, str(len(n2)))
+# the record's own fields (buy price at +0) must be untouched by the name write
+with P.Iso(tmp) as g:
+    buy = next(f["value"] for f in P.read_armor_item(g, "head", 3)["fields"] if f["label"] == "Buy price")
+chk("record fields untouched by the name write", buy == 0, str(buy))
+with P.Iso(tmp, writable=True) as g:
+    chk("naming a nonexistent slot rejected", raises_early(lambda: P.write_armor_name(g, "nope", 3, "x")))
 
 # ---------------- error handling ----------------
 def raises(fn):

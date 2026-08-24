@@ -113,6 +113,7 @@ function isoGlueHandles(){
     spellnames:g("iso_spellnames"), spell:g("iso_spell"), setspell:g("iso_setspell"),
     runes:g("iso_runes"), rune:g("iso_rune"), setrune:g("iso_setrune"),
     gear:g("iso_gear"), gearitem:g("iso_gearitem"), setgear:g("iso_setgear"),
+    setgearname:g("iso_setgearname"),
     enemies:g("iso_enemies"), enemy:g("iso_enemy"), setenemy:g("iso_setenemy"),
     prices:g("iso_prices"), setprice:g("iso_setprice"),
     runeprices:g("iso_runeprices"), setruneprice:g("iso_setruneprice"),
@@ -300,7 +301,16 @@ def iso_gear(slot):
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_gearitem(slot, i):
     try:
-        with P.Iso(ISO) as g: return json.dumps(P.read_armor_item(g, slot, int(i)))
+        with P.Iso(ISO) as g:
+            r = P.read_armor_item(g, slot, int(i))
+            r["nameCap"] = P.armor_name_cap(g, slot, int(i))
+            r["descCap"] = P.armor_summary_cap(g, slot, int(i))
+        return json.dumps(r)
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setgearname(slot, i, text):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(P.write_armor_name(g, slot, int(i), str(text)))
     except Exception as e: return json.dumps({"error": str(e)})
 iso_setgear = _setter(lambda g, ident, e: P.write_armor_field(g, ident["slot"], int(ident["id"]), e["field"], int(e["value"])))
 
