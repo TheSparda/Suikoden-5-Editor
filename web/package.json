@@ -3,7 +3,7 @@
   "private": true,
   "description": "Test suite for the Suikoden V web editor (static + pure-logic + engine round-trip + headless e2e).",
   "scripts": {
-    "test": "node tests/validate.mjs && node tests/diff-logic.mjs && node tests/iso-roundtrip.mjs && node tests/save-fields.mjs && node tests/sets-iso.mjs",
+    "test": "node tests/validate.mjs && node tests/diff-logic.mjs && node tests/iso-roundtrip.mjs && node tests/save-fields.mjs && node tests/sets-unit.mjs && node tests/sets-iso.mjs",
     "test:all": "npm test && node tests/e2e.mjs",
     "test:e2e": "node tests/e2e.mjs"
   }

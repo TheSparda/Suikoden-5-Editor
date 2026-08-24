@@ -272,6 +272,16 @@ function revertIsoField(btn) {
   const el = btn.previousElementSibling;
   if (!el || el.dataset.orig == null) return;
   const orig = el.dataset.orig;
+  // Description fields display our English rendering but store the game's own string,
+  // so revert must put the ORIGINAL stored bytes back, not the translation.
+  if (el.dataset.view === "setdesc" && el.dataset.raw != null) {
+    el.value = orig;
+    applyIsoWrite(el, el.dataset.raw).then((ok) => {
+      if (ok === false) return;
+      trackIso(el, orig); captureUndoStep();
+    });
+    return;
+  }
   if (el.classList.contains("pickbtn")) setPickDisplay(el, orig);
   else el.value = orig;
   commitIso(el, orig);
@@ -450,14 +460,14 @@ function renderSet(idx){
         onclick="pickSetMember(${s.index},'${m.slot}')">
         <span class="pickbtn-name">${esc(m.name || ("#"+m.id))}</span>
         <span class="pickbtn-id note">#${m.id}</span></button>${REVERT_BTN}</div>
-      ${m.desc ? `<div class="fnote">${esc(m.desc)}</div>` : ""}
       <div class="in" style="margin-top:4px">
-        <input type="text" value="${esc(m.descRaw||"")}" placeholder="(no in-game description)"
+        <input type="text" value="${esc(m.desc||"")}" placeholder="(no description slot)"
           data-key="setdesc:${m.slot}:${m.statId}" data-view="setdesc" data-slot="${m.slot}"
-          data-statid="${m.statId}" data-orig="${esc(m.descRaw||"")}" data-kind="str"
-          data-lbl="${esc(m.name||("#"+m.id))} · in-game text" data-grp="Sets"
+          data-statid="${m.statId}" data-orig="${esc(m.desc||"")}" data-raw="${esc(m.descRaw||"")}"
+          data-kind="str" data-lbl="${esc(m.name||("#"+m.id))} · description" data-grp="Sets"
           onchange="onIsoField(this)" ${m.descRaw?"":"disabled"}>${m.descRaw?REVERT_BTN:""}</div>
-      <div class="fnote">in-game description (length-capped)</div></div>`).join("");
+      <div class="fnote">description — edit in English${m.descRaw
+        ? ` · stored now: <span class="dim">${esc(m.descRaw)}</span>` : ""}</div></div>`).join("");
   h += `</div>`;
 
   h += `<div class="subhd">Set bonus</div>`;
@@ -502,6 +512,9 @@ function pickSetMember(setIdx, slot){
     const r = JSON.parse(window.PYISO.setmember(setIdx, slot, +id));
     if (r.error) { toast(r.error, "bad"); return; }
     trackIso(el, id); updateIsoToolbar(); captureUndoStep();
+    // Re-read from the engine before redrawing — rendering off the stale cache would
+    // paint the OLD member straight back over the successful write.
+    try { const fresh = JSON.parse(window.PYISO.sets()); if (!fresh.error) SETS = fresh; } catch (_) {}
     renderSet(setIdx);
   }, {});
 }

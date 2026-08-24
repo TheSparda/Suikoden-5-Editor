@@ -71,6 +71,7 @@ for (const fn of ["read_sets", "write_set_member", "write_set_bonus", "write_set
 ok("iso.js has the Sets view", isoSrc.includes('id: "sets"') && isoSrc.includes("function renderSet"));
 ok("iso.js can reassign a set effect (custom sets)", isoSrc.includes('view === "sethandler"'));
 ok("iso.js can edit piece descriptions", isoSrc.includes('view === "setdesc"'));
+ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Editor","s5patch.py"),"utf8").includes("def armor_summary_cap"));
 ok("armor names table has an accessory list",
    !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
 

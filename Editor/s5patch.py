@@ -897,13 +897,27 @@ def write_armor_summary(iso, slot, i, text):
     Capped to the EXISTING string's byte length — the nominal field is longer than the
     string but runs into the stat block, so we never write past the current terminator."""
     base = armor_addr(slot, i) + F.ARMOR_SUMMARY_OFF
-    cur = iso.rd(base, F.ARMOR_SUMMARY_LEN)
-    e = cur.find(b"\x00")
-    cap = e if e >= 0 else len(cur)
+    cap = armor_summary_cap(iso, slot, i)
     if cap == 0: raise ValueError("this piece has no description slot to edit")
     enc = str(text).encode("cp932", "replace")[:cap]
     iso.wr(base, enc + b"\x00" * (cap - len(enc)))
     return {"ok": True, "cap": cap, "wrote": len(enc)}
+
+def armor_summary_cap(iso, slot, i):
+    """Writable bytes for a piece's description: the existing string PLUS its trailing
+    NUL padding, bounded by the first real stat field (+0x41). Using the padding too
+    means a shortened description can still be lengthened again later (a plain
+    strlen cap would shrink permanently), while never touching the stat block —
+    verified: 15 of 219 records DO hold data before +0x41, so we stop at the padding
+    run rather than assuming the whole window is free."""
+    base = armor_addr(slot, i) + F.ARMOR_SUMMARY_OFF
+    win = 0x41 - F.ARMOR_SUMMARY_OFF                 # never write into the stat block
+    cur = iso.rd(base, win)
+    e = cur.find(b"\x00")
+    if e < 0: return win
+    k = e
+    while k < win and cur[k] == 0: k += 1
+    return k
 
 
 def write_armor_field(iso, slot, i, label, value):

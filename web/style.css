@@ -111,6 +111,7 @@ input[type=file]{display:none}
 .fld .in>input,.fld .in>select,.fld .in>.pickbtn{flex:1 1 auto;min-width:0}
 .fnote{font-size:11px;color:var(--mut);opacity:.85;line-height:1.25}
 .fnote b{font-weight:600;color:var(--ink)}
+.fnote .dim{opacity:.65;font-style:italic}
 .fld.faded{opacity:.45}
 .fld.faded:focus-within,.fld.faded:hover{opacity:1}
 .pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--mut);
@@ -177,10 +178,13 @@ td{padding:6px 8px;border-top:1px solid var(--line);vertical-align:middle}
 .badge.b-ntsc{background:#67c07a}.badge.b-pal{background:#4fb0d4}.badge.b-jp{background:#e6b84e}
 .badge:empty{display:none}
 
-/* sticky action toolbar */
-.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:sticky;bottom:0;
-  background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -7px 16px -10px rgba(0,0,0,.55);
-  padding:12px 0 calc(8px + env(safe-area-inset-bottom));margin-top:12px;z-index:5}
+/* sticky action toolbar — a rounded card like everything else, floated just above the
+   bottom edge so its corners read properly instead of looking clipped */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;position:sticky;
+  bottom:calc(10px + env(safe-area-inset-bottom));
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow),0 -8px 18px -12px rgba(0,0,0,.5);
+  padding:11px 14px;margin:14px 0 4px;z-index:5}
 .badge-unsaved{font-size:13px;color:var(--mut)}
 .badge-unsaved.on{color:var(--acc2);font-weight:600}
 .toolbar .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bad);margin-left:7px;vertical-align:middle}
