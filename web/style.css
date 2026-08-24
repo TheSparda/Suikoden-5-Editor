@@ -118,8 +118,11 @@ input[type=file]{display:none}
 .note{color:var(--mut);font-size:12px}
 .ok{color:var(--ok)}.bad{color:var(--bad)}
 
-/* inputs */
-input[type=text],input[type=number],input[type=search],select{
+/* inputs — match on "not the native-widget types" rather than listing text/number/…,
+   so an <input> written without a type attribute still gets the theme (it defaults to
+   text, but input[type=text] does NOT match a missing attribute). */
+input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=color]),
+select{
   font:inherit;background:var(--input-bg);color:var(--ink);border:1px solid var(--line);
   border-radius:6px;padding:6px 9px;width:100%;max-width:100%;transition:border-color .12s,box-shadow .12s}
 select{appearance:none;
@@ -128,6 +131,9 @@ select{appearance:none;
 input:focus,select:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px var(--focusring)}
 input:hover:not(:focus),select:hover:not(:focus){border-color:var(--acc)}
 input.dirty,select.dirty,.pickbtn.dirty{color:var(--warn);border-color:var(--warnbd);background:var(--changed-bg)}
+/* disabled = deliberately not editable (read-only save formats, the locked hero slot) */
+input:disabled,select:disabled,.pickbtn:disabled{color:var(--mut);background:var(--panel2);cursor:default}
+input:disabled:hover,select:disabled:hover{border-color:var(--line)}
 
 /* checkbox rows */
 .chk{display:flex;align-items:center;gap:9px;cursor:pointer;color:var(--ink)}
@@ -251,7 +257,7 @@ footer .note{flex-basis:100%;color:var(--mut);font-size:12px}
   h1{font-size:18px}
   p.sub{font-size:12px;margin:8px 0 12px}
   header{gap:8px}
-  input[type=text],input[type=number],select,.pickbtn{min-height:44px;font-size:15px}
+  input:not([type=checkbox]):not([type=radio]):not([type=file]),select,.pickbtn{min-height:44px;font-size:15px}
   .toolbar button{min-height:44px}
   .modebar{gap:6px}
   .modebar .mode-tab{flex:1 1 0;text-align:center;min-height:44px;padding:10px 8px}
