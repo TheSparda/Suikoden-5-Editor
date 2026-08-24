@@ -96,6 +96,11 @@ input[type=file]{display:none}
 .recent{margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--mut);font-size:13px}
 .warnbox{color:var(--warn);font-size:12.5px;margin:10px 2px 0;padding:8px 12px;border:1px solid var(--warnbd);
   border-radius:8px;background:var(--changed-bg)}
+#saves .warnbox{margin:8px 16px 0}
+/* read-only facts, stated as text so they don't read as broken inputs */
+.ro-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 18px;padding:12px 16px 0}
+.ro-item{font-size:13px;color:var(--ink);white-space:nowrap}
+.ro-item b{font-weight:600;color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-right:5px}
 
 /* layout primitives */
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0}

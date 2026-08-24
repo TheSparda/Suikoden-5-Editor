@@ -21,6 +21,7 @@ let PY = null;                 // save adapters { open, chars, write }
 let NAMES = null;             // { cnames, armorNames, runeNames, skillNames, rankNames }
 let saves = [];               // decoded saves for the current file
 let CHARDATA = {};            // per-save cached { chars:[...] }
+let ROSTER = {};              // per-save roster (recruited flags) for the party pickers
 let curFileName = "save.bin";
 let saveHandle = null;        // FileSystemFileHandle when opened via the FS-Access picker
 let sEdits = {};              // labelled pending edits: key -> { label, group, to }
@@ -427,11 +428,16 @@ async function openFile(f, handle){
   try{
     const buf = new Uint8Array(await f.arrayBuffer());
     pyodide.FS.writeFile(SAVE_PATH, buf);
-    sEdits = {}; CHARDATA = {};
+    sEdits = {}; CHARDATA = {}; ROSTER = {};
     const res = JSON.parse(PY.open(SAVE_PATH));
     if(res.error){ $("saves").innerHTML = `<p class="bad" style="padding:8px">${esc(res.error)}</p>`;
       toast(res.error, "bad"); return; }
     saves = res.saves; saves.forEach(s => s.card = curFileName);
+    // Prefetch each save's roster so party pickers can offer recruited characters only.
+    for(let i=0;i<saves.length;i++){
+      if(saves[i].editable === false) continue;
+      try{ const r = await fetchChars(saves[i]); if(!r.error) ROSTER[i] = r.chars; }catch(_){}
+    }
     renderSaves();
     await rememberSave(buf, f.name, saveHandle);
     toast(`Opened ${saves.length} save(s)`, "ok");
@@ -498,35 +504,33 @@ function renderSaves(){
     return `<div class="sec">
       <div class="card-hd">${esc(sv.folder)} ${badge}
         <span class="note">· ${esc(sv.card)} · ${esc((sv.meta&&sv.meta.title)||"")}</span></div>
-      <div class="grid">
-        <div class="fld"><label>Hero name</label><div class="in">
-          <input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength="15" ${ro?"disabled":""}
-            data-sk="sv${i}:heroName" data-orig="${esc(fl.heroName)}" data-lbl="Hero name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
-        <div class="fld"><label>Castle name</label><div class="in">
-          <input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength="15" ${ro?"disabled":""}
-            data-sk="sv${i}:castleName" data-orig="${esc(fl.castleName)}" data-lbl="Castle name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
-        <div class="fld"><label>Army name</label><div class="in">
-          <input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength="15" ${ro?"disabled":""}
-            data-sk="sv${i}:armyName" data-orig="${esc(fl.armyName)}" data-lbl="Army name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
-        <div class="fld"><label>Potch</label><div class="in">
-          <input type="number" id="sv${i}_potch" value="${fl.potch||0}" min="0" max="99999999" ${ro?"disabled":""}
-            data-sk="sv${i}:potch" data-orig="${fl.potch||0}" data-lbl="Potch" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
-        <div class="fld"><label>Party SP</label><div class="in">
-          <input type="number" id="sv${i}_psp" value="${fl.partySP||0}" min="0" max="999999" ${ro?"disabled":""}
-            data-sk="sv${i}:partySP" data-orig="${fl.partySP||0}" data-lbl="Party SP" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
-        <div class="fld"><label>Level <span class="note">(display only)</span></label><div class="in">
-          <input type="number" value="${fl.level||0}" disabled title="Save-select display level. Edit unit levels in the Characters panel."></div></div>
-        <div class="fld"><label>Playtime <span class="note">(display only)</span></label><div class="in">
-          <input value="${esc(fl.playtime)}" disabled></div></div>
+      <!-- read-only progress facts, stated as text so they don't look like broken inputs -->
+      <div class="ro-row">
+        <span class="ro-item"><b>Level</b> ${fl.level||0}</span>
+        <span class="ro-item"><b>Playtime</b> ${esc(fl.playtime)}</span>
+        <span class="note">from the save-select display · read-only (edit unit levels under Characters)</span>
+      </div>
+      <div class="subhd">Names</div>
+      <div class="grid" style="padding-top:6px">
+        ${nameFld(i, "heroName",   "Hero name",   fl.heroName,   sv.folder, ro, "shown in menus &amp; dialogue")}
+        ${nameFld(i, "castleName", "Castle name", fl.castleName, sv.folder, ro, "your HQ")}
+        ${nameFld(i, "armyName",   "Army name",   fl.armyName,   sv.folder, ro, "your faction")}
+      </div>
+      <div class="subhd">Resources</div>
+      <div class="grid" style="padding-top:6px">
+        ${numFld(i, "potch",   "potch",   "Potch",    fl.potch,   99999999, sv.folder, ro)}
+        ${numFld(i, "psp",     "partySP", "Party SP", fl.partySP, 999999,   sv.folder, ro)}
         <div class="fld"><label>New Game Plus</label><div class="in">
           <label class="chk"><input type="checkbox" id="sv${i}_ngp" ${fl.newGamePlus?"checked":""} ${ro?"disabled":""}
-            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}"></label>${ro?"":REVERT_BTN_SAVE}</div></div>
+            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}">
+            <span class="note">cleared game</span></label>${ro?"":REVERT_BTN_SAVE}</div>
+          <div class="fnote">enables the fast-forward option</div></div>
       </div>
-      ${ro?"":`<div class="subhd">Active party <span class="note">— 6 battle + 4 support slots; slot 1 is the hero</span></div>
-      <div class="grid" style="padding-top:8px">${(fl.party||[]).map((pid,k)=>{
-        const lbl = k===0?"Slot 1 · Hero":(k<6?`Slot ${k+1} · battle`:`Slot ${k+1} · support`);
-        return `<div class="fld"><label>${lbl}</label><div class="in">${partySelHTML(i,k,pid,k===0)}${k===0?"":REVERT_BTN_SAVE}</div></div>`;
-      }).join("")}</div>`}
+      ${ro?"":`<div class="subhd">Active party
+        <span class="note">— tap a slot to choose; only recruited characters can join</span></div>
+      <div id="pwarn${i}"></div>
+      ${partyGroup(i, fl.party||[], 0, 6, "Battle members")}
+      ${partyGroup(i, fl.party||[], 6, 10, "Support members")}`}
       <div class="card-ft">${foot}</div>
       <div id="chars${i}" class="note" style="margin:0 14px 8px"></div>
       <div id="recruit${i}" style="margin:0 14px 10px"></div>
@@ -536,17 +540,99 @@ function renderSaves(){
   updateSaveToolbar();
 }
 
-/* Party slot <select>: 0x0100 = empty; slot 0 (hero) locked. */
-const PARTY_EMPTY = 256;
-function partySelHTML(i, slot, val, locked){
-  let h = `<select id="sv${i}_party${slot}" ${locked?"disabled":""}
-    data-sk="sv${i}:party${slot}" data-orig="${val}" data-lbl="Party slot ${slot+1}" data-grp="Party">`;
-  h += `<option value="${PARTY_EMPTY}" ${val===PARTY_EMPTY?"selected":""}>— empty —</option>`;
-  for(const id of Object.keys(NAMES.cnames))
-    h += `<option value="${id}" ${String(val)===String(id)?"selected":""}>${id}: ${esc(NAMES.cnames[id])}</option>`;
-  return h + `</select>`;
+/* ---------- save-card field builders ---------- */
+const fmtNum = (n) => Number(n || 0).toLocaleString();
+
+function nameFld(i, key, label, val, folder, ro, hint){
+  return `<div class="fld"><label>${label}</label><div class="in">
+    <input id="sv${i}_${key}" value="${esc(val)}" maxlength="15" ${ro?"disabled":""}
+      data-sk="sv${i}:${key}" data-orig="${esc(val)}" data-lbl="${label}" data-grp="${esc(folder)}">${ro?"":REVERT_BTN_SAVE}</div>
+    <div class="fnote">${hint} · up to 15 characters</div></div>`;
 }
-function partyDisplay(v){ return +v === PARTY_EMPTY ? "empty" : (NAMES.cnames[v] || ("#"+v)); }
+/* Number field with a formatted read-out, its cap, and a one-tap Max.
+   Order matters: the ↺ must sit directly after the input (revertSaveField uses
+   previousElementSibling), so Max goes last. */
+function numFld(i, idk, key, label, val, max, folder, ro){
+  return `<div class="fld"><label>${label}</label><div class="in">
+    <input type="number" id="sv${i}_${idk}" value="${val||0}" min="0" max="${max}" ${ro?"disabled":""}
+      data-sk="sv${i}:${key}" data-orig="${val||0}" data-lbl="${label}" data-grp="${esc(folder)}"
+      data-note="sv${i}_${idk}_note" data-max="${max}">${ro?"":REVERT_BTN_SAVE}
+    ${ro?"":`<button type="button" class="chip mini" title="Set to the game's maximum"
+      onclick="setSaveMax(${i},'${idk}','${key}',${max})">Max</button>`}</div>
+    <div class="fnote" id="sv${i}_${idk}_note">${fmtNum(val)} · max ${fmtNum(max)}</div></div>`;
+}
+function setSaveMax(i, idk, key, max){
+  const el = $(`sv${i}_${idk}`); if(!el) return;
+  el.value = String(max);
+  stageSaveField(i, key, max, el);
+}
+
+/* ---------- active party ---------- */
+const PARTY_EMPTY = 256;
+function partyDisplay(v){ return +v === PARTY_EMPTY ? "— empty —" : (NAMES.cnames[v] || ("#"+v)); }
+
+function partyGroup(i, party, from, to, title){
+  let h = `<div class="fnote" style="margin:8px 16px 0">${title}</div>
+    <div class="grid" style="padding-top:6px">`;
+  for(let k=from;k<to;k++){
+    const val = party[k] == null ? PARTY_EMPTY : party[k];
+    const hero = k === 0;
+    h += `<div class="fld"><label>Slot ${k+1}${hero?" · hero":""}</label><div class="in">
+      <button type="button" class="pickbtn" id="sv${i}_party${k}" ${hero?"disabled":""}
+        data-sk="sv${i}:party${k}" data-orig="${val}" data-lbl="Party slot ${k+1}" data-grp="Party"
+        ${hero?'title="The hero always leads the party"':`onclick="pickParty(${i},${k})"`}>
+        <span class="pickbtn-name">${esc(partyDisplay(val))}</span>
+        <span class="pickbtn-id note">${val===PARTY_EMPTY?"":"#"+val}</span></button>${hero?"":REVERT_BTN_SAVE}</div></div>`;
+  }
+  return h + `</div>`;
+}
+/* Searchable picker (not a 120-entry native dropdown): recruited characters first,
+   already-in-party marked, unrecruited listed last and labelled as unavailable. */
+function partyList(i){
+  const roster = ROSTER[i] || [];
+  const inParty = new Map();
+  for(let k=0;k<10;k++){
+    const el = $(`sv${i}_party${k}`); if(!el) continue;
+    const v = +(el.dataset.cur != null ? el.dataset.cur : el.dataset.orig);
+    if(v !== PARTY_EMPTY) inParty.set(v, k+1);
+  }
+  const list = [{ id: PARTY_EMPTY, name: "— empty —", desc: "leave this slot open" }];
+  const tag = (c) => inParty.has(c.idx) ? `already in slot ${inParty.get(c.idx)}` : "";
+  for(const c of roster) if(c.recruited)
+    list.push({ id: c.idx, name: nameOf(c.idx), desc: tag(c) });
+  for(const c of roster) if(!c.recruited)
+    list.push({ id: c.idx, name: nameOf(c.idx), desc: "not recruited in this save" });
+  if(!roster.length)   // roster unavailable → fall back to every known name
+    for(const id of Object.keys(NAMES.cnames)) list.push({ id: +id, name: NAMES.cnames[id] });
+  return list;
+}
+function pickParty(i, slot){
+  const el = $(`sv${i}_party${slot}`); if(!el) return;
+  const cur = el.dataset.cur != null ? el.dataset.cur : el.dataset.orig;
+  openPicker(`Party slot ${slot+1}`, partyList(i), cur, (id) => {
+    const v = +id;
+    q(".pickbtn-name", el).textContent = partyDisplay(v);
+    q(".pickbtn-id", el).textContent = v === PARTY_EMPTY ? "" : "#" + v;
+    el.dataset.cur = String(v);
+    stageSaveField(i, `party${slot}`, v, el);
+    refreshPartyWarn(i);
+  }, {});
+}
+/* Warn (don't block) when one character occupies two slots — the game expects unique members. */
+function refreshPartyWarn(i){
+  const box = $(`pwarn${i}`); if(!box) return;
+  const seen = new Map(), dupes = new Set();
+  for(let k=0;k<10;k++){
+    const el = $(`sv${i}_party${k}`); if(!el) continue;
+    const v = +(el.dataset.cur != null ? el.dataset.cur : el.dataset.orig);
+    if(v === PARTY_EMPTY) continue;
+    if(seen.has(v)) dupes.add(v); else seen.set(v, k+1);
+  }
+  box.innerHTML = dupes.size
+    ? `<div class="warnbox">⚠ ${[...dupes].map(v=>esc(partyDisplay(v))).join(", ")} appears in more than one slot.
+       The game expects each character once — fix this before saving.</div>`
+    : "";
+}
 
 /* Header field write-through (hero/castle/army/potch/SP/NG+/party). */
 function wireSaveHeaderInputs(){
@@ -558,12 +644,9 @@ function wireSaveHeaderInputs(){
     [["potch","potch"],["psp","partySP"]].forEach(([idk,k]) => {
       const el = $(`sv${i}_${idk}`); if(el) el.onchange = () => stageSaveField(i, k, +el.value, el);
     });
-    for(let k2=0;k2<10;k2++){
-      const el = $(`sv${i}_party${k2}`);
-      if(el && !el.disabled) el.onchange = () => stageSaveField(i, `party${k2}`, +el.value, el);
-    }
     const ngp = $(`sv${i}_ngp`);
     if(ngp) ngp.onchange = () => stageSaveField(i, "newGamePlus", ngp.checked?1:0, ngp);
+    refreshPartyWarn(i);          // party slots are pickers (wired via pickParty)
   });
 }
 const nameOf = (idx) => NAMES.cnames[idx] || ("Character " + idx);
@@ -584,6 +667,11 @@ async function stageSaveField(i, key, value, el){
       sEdits[sk] = { label: el.dataset.lbl, group: el.dataset.grp, to: disp };
       el.classList.add("dirty");
     }else{ delete sEdits[sk]; el.classList.remove("dirty"); }
+    // keep the formatted read-out under number fields in sync
+    if(el.dataset.note){
+      const nEl = $(el.dataset.note);
+      if(nEl) nEl.textContent = `${fmtNum(value)} · max ${fmtNum(+el.dataset.max)}`;
+    }
     // refresh decoded header so re-open baselines stay accurate
     const re = JSON.parse(PY.open(SAVE_PATH));
     if(!re.error){ saves = re.saves; saves.forEach(s => s.card = curFileName); }
@@ -720,10 +808,17 @@ function revertSaveField(btn){
   if(el && el.tagName === "LABEL") el = el.querySelector("input");   // NG+/recruited checkbox
   if(!el || el.dataset.orig == null) return;
   const orig = el.dataset.orig;
-  if(el.dataset.sk && el.dataset.sk.indexOf("sv") === 0){            // header field
+  if(el.dataset.sk && el.dataset.sk.indexOf("sv") === 0){            // header / party field
     const [svk, key] = el.dataset.sk.split(":");
     const i = +svk.slice(2);
-    if(el.type === "checkbox"){ el.checked = (orig === "1" || orig === 1); stageSaveField(i, key, el.checked?1:0, el); }
+    if(el.classList.contains("pickbtn")){                            // party slot
+      q(".pickbtn-name", el).textContent = partyDisplay(+orig);
+      q(".pickbtn-id", el).textContent = +orig === PARTY_EMPTY ? "" : "#" + orig;
+      el.dataset.cur = String(+orig);
+      stageSaveField(i, key, +orig, el);
+      refreshPartyWarn(i);
+    }else if(el.type === "checkbox"){ el.checked = (orig === "1" || orig === 1); stageSaveField(i, key, el.checked?1:0, el); }
+    else if(el.type === "number"){ el.value = orig; stageSaveField(i, key, +orig, el); }
     else { el.value = orig; stageSaveField(i, key, el.value, el); }
     return;
   }
