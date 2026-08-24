@@ -449,6 +449,7 @@ def iso_setgate(idx, enabled, original_word):
 def iso_effecttargets():
     try:
         return json.dumps({"targets": P.set_effect_targets(),
+                           "grades": P.set_grade_names(),
                            "capacity": P.read_custom_set_capacity(),
                            "customHandler": F.SET_CUSTOM_VADDR})
     except Exception as e: return json.dumps({"error": str(e)})

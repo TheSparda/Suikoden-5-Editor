@@ -353,19 +353,23 @@ SET_STRUCT_REG   = 16            # $s0 holds the live character struct in every 
 # Effect targets in the LIVE character struct. verified=True means the offset was pinned
 # by matching a documented set bonus from the Suikosource guide; the rest are inferred
 # from the stat/affinity blocks those verified hits sit inside.
+# (label, char-struct offset, width, verified, kind)
+#   kind "num"   -> a quantity; can be added to or forced
+#   kind "grade" -> an AFFINITY_GRADES tier (0..6, 6 == rank S); only ever forced,
+#                   since "adding" to a tier is meaningless and would overflow the scale
 SET_EFFECT_TARGETS = [
-    ("HP",                 20,  "h", True),
-    ("Attack",             40,  "h", True),
-    ("Stat @+42",          42,  "h", False),
-    ("Stat @+44",          44,  "h", False),
-    ("Magic Defense",      46,  "h", True),
-    ("Stat @+48",          48,  "h", False),
-    ("Stat @+50",          50,  "h", False),
-    ("Stat @+52",          52,  "h", False),
-    ("Speed",              54,  "h", True),
-    ("Stat @+56",          56,  "h", False),
-    ("Critical %",         304, "b", True),
-    ("Double critical %",  305, "b", True),
+    ("HP",                 20,  "h", True,  "num"),
+    ("Attack",             40,  "h", True,  "num"),
+    ("Stat @+42",          42,  "h", False, "num"),
+    ("Stat @+44",          44,  "h", False, "num"),
+    ("Magic Defense",      46,  "h", True,  "num"),
+    ("Stat @+48",          48,  "h", False, "num"),
+    ("Stat @+50",          50,  "h", False, "num"),
+    ("Stat @+52",          52,  "h", False, "num"),
+    ("Speed",              54,  "h", True,  "num"),
+    ("Stat @+56",          56,  "h", False, "num"),
+    ("Critical %",         304, "b", True,  "num"),
+    ("Double critical %",  305, "b", True,  "num"),
 ]
 # Element affinity block: only Water is proven (Fish writes 6 == rank S to +256); the
 # others are inferred by the documented element order around it.
@@ -373,7 +377,7 @@ SET_AFFINITY_BASE = 252
 SET_AFFINITY_ELEMENTS = ARMOR_ELEMENTS      # Sun, Fire, Lightning, Wind, Water, ...
 for _i, _e in enumerate(SET_AFFINITY_ELEMENTS):
     SET_EFFECT_TARGETS.append(("%s affinity" % _e, SET_AFFINITY_BASE + _i, "b",
-                               _e == "Water"))
+                               _e == "Water", "grade"))
 
 # Documented set bonuses (Suikosource) — shown alongside the decoded values so users can
 # see intent vs. what the bytes actually do. Keyed by set index.

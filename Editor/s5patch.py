@@ -1238,8 +1238,12 @@ def write_set_handler(iso, set_index, handler_vaddr):
 
 def set_effect_targets():
     """Catalog of char-struct fields a custom set bonus can touch."""
-    return [{"label": l, "charOff": o, "width": w, "verified": v}
-            for (l, o, w, v) in F.SET_EFFECT_TARGETS]
+    return [{"label": l, "charOff": o, "width": w, "verified": v, "kind": k}
+            for (l, o, w, v, k) in F.SET_EFFECT_TARGETS]
+
+def set_grade_names():
+    """Tier labels for `grade` targets (index == stored byte)."""
+    return list(F.AFFINITY_GRADES)
 
 def read_custom_set_capacity():
     """How many effects fit in the free gap, by op mix. `add` costs 3 instructions
@@ -1259,12 +1263,21 @@ def write_custom_set_bonus(iso, set_index, effects):
     """
     V1, S0 = 3, F.SET_STRUCT_REG
     words, budget = [], F.SET_CUSTOM_LEN // 4
-    valid = {(t[1], t[2]) for t in F.SET_EFFECT_TARGETS}
+    valid = {(t[1], t[2]): t[4] for t in F.SET_EFFECT_TARGETS}
     for e in (effects or []):
         off = int(e["charOff"]); wid = e.get("width", "h")
         op = e.get("op", "add"); val = int(e.get("value", 0))
-        if (off, wid) not in valid:
+        kind = valid.get((off, wid))
+        if kind is None:
             raise ValueError("unknown effect target +%d/%s" % (off, wid))
+        if kind == "grade":
+            # a tier, not a quantity: only ever forced, and only within the grade scale
+            if op != "set":
+                raise ValueError("%s is a rank — it can only be forced to a tier, not added to"
+                                 % dict((t[1], t[0]) for t in F.SET_EFFECT_TARGETS).get(off, "that field"))
+            if not (0 <= val < len(F.AFFINITY_GRADES)):
+                raise ValueError("rank must be 0..%d (%s)" % (len(F.AFFINITY_GRADES) - 1,
+                                 ", ".join("%d=%s" % (i, g) for i, g in enumerate(F.AFFINITY_GRADES))))
         if not (0 <= off <= 0x7FFF): raise ValueError("target offset out of range")
         lim = 0xFF if wid == "b" else 0xFFFF
         if not (-32768 <= val <= lim): raise ValueError("value out of range for that field")

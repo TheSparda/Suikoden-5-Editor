@@ -279,6 +279,20 @@ with P.Iso(tmp, writable=True) as g:
 # ---------------- custom bonus (assembled into free code space) ----------------
 capn = P.read_custom_set_capacity()
 chk("capacity derived from the gap size", capn["words"] == F.SET_CUSTOM_LEN // 4 and capn["maxAdd"] >= 4, str(capn))
+tg = P.set_effect_targets()
+chk("targets carry a kind", all("kind" in t for t in tg) and
+    {t["kind"] for t in tg} == {"num", "grade"}, str({t["kind"] for t in tg}))
+chk("affinities are graded, stats are numeric",
+    all(t["kind"] == "grade" for t in tg if "affinity" in t["label"]) and
+    all(t["kind"] == "num" for t in tg if "affinity" not in t["label"]))
+chk("grade names exposed", P.set_grade_names()[6] == "S" and P.set_grade_names()[0] == "None")
+with P.Iso(tmp, writable=True) as g:
+    chk("a rank cannot be ADDED to", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 256, "width": "b", "op": "add", "value": 1}])))
+    chk("a rank above the scale is rejected", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 256, "width": "b", "op": "set", "value": 9}])))
+    r_ok = P.write_custom_set_bonus(g, 2, [{"charOff": 256, "width": "b", "op": "set", "value": 6}])
+chk("a valid rank is accepted", r_ok["ok"])
 chk("effect catalog exposes verified + inferred targets",
     any(t["verified"] for t in P.set_effect_targets()) and any(not t["verified"] for t in P.set_effect_targets()))
 custom = [{"charOff": 20,  "width": "h", "op": "add", "value": 300},

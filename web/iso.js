@@ -596,9 +596,9 @@ function renderSet(idx){
         <b>adds</b> effects rather than only retuning existing ones. Room for up to
         <b>${cap.maxAdd}</b> "+" effects (or ${cap.maxSet} "=" effects). Targets marked
         <i>inferred</i> sit inside a verified block but aren't individually proven.
-        <br><b>increase by +</b> adds to the character's current value (use it for HP, Attack,
-        Critical % …). <b>force to =</b> overwrites it outright — use it for the element
-        affinities, which are a grade from 0 to 6 where <b>6 = rank S</b>.
+        <br>Numeric fields (HP, Attack, Critical % …) let you <b>increase by +</b> the
+        character's current value or <b>force to =</b> a flat one. Element affinities are
+        <b>ranks</b>, so those rows lock to "force to" and you pick the tier by name.
         ${isCustom ? "<b>This set is currently using a custom bonus.</b> " : ""}Only one set can hold
         a custom bonus at a time — they share the same code space.</div>
       <div id="cbRows" style="padding:0 16px"></div>
@@ -649,6 +649,9 @@ function updateCapNote(el){
 }
 
 /* ---- custom-bonus builder helpers ---- */
+function cbTarget(charOff){
+  return (EFFTARGETS.targets || []).find(t => t.charOff === +charOff) || {};
+}
 function cbAddRow(){
   const cap = (EFFTARGETS && EFFTARGETS.capacity) ? EFFTARGETS.capacity.maxSet : 9;
   if (customRows.length >= cap) { toast(`That's the maximum of ${cap} effects.`, "bad"); return; }
@@ -659,8 +662,13 @@ function cbAddRow(){
 function cbDelRow(i){ customRows.splice(i, 1); cbRender(); }
 function cbSet(i, key, val){
   if (key === "charOff"){
-    const t = EFFTARGETS.targets.find(x => String(x.charOff) === String(val));
+    const t = cbTarget(val);
     customRows[i].charOff = t.charOff; customRows[i].width = t.width;
+    if (t.kind === "grade"){                     // a rank can only be forced, 0..6
+      customRows[i].op = "set";
+      const max = (EFFTARGETS.grades || []).length - 1;
+      customRows[i].value = Math.max(0, Math.min(+customRows[i].value || 0, max));
+    }
   } else if (key === "value"){ customRows[i].value = +val || 0; }
   else { customRows[i][key] = val; }
   cbRender();
@@ -669,23 +677,29 @@ function cbCost(){ return customRows.reduce((n, r) => n + (r.op === "set" ? 2 : 
 function cbRender(){
   const host = $("cbRows"); if (!host) return;
   const cap = (EFFTARGETS && EFFTARGETS.capacity) || { words: 20 };
+  const grades = EFFTARGETS.grades || [];
   host.innerHTML = customRows.map((r, i) => {
-    const opts = EFFTARGETS.targets.map(t =>
-      `<option value="${t.charOff}" ${t.charOff===r.charOff?"selected":""}>${esc(t.label)}${t.verified?"":" (inferred)"}</option>`).join("");
+    const t = cbTarget(r.charOff), isGrade = t.kind === "grade";
+    const opts = EFFTARGETS.targets.map(x =>
+      `<option value="${x.charOff}" ${x.charOff===r.charOff?"selected":""}>${esc(x.label)}${x.verified?"":" (inferred)"}</option>`).join("");
+    // a rank has no "add" mode — lock the row to "force to" and pick a tier by name
+    const opCell = isGrade
+      ? `<span class="pill" style="margin:0" title="a rank can only be forced to a tier">force to =</span>`
+      : `<select onchange="cbSet(${i},'op',this.value)" style="max-width:150px">
+           <option value="add" ${r.op==="add"?"selected":""}>increase by +</option>
+           <option value="set" ${r.op==="set"?"selected":""}>force to =</option></select>`;
+    const valCell = isGrade
+      ? `<select onchange="cbSet(${i},'value',this.value)" style="max-width:150px">${
+          grades.map((g, gi) => `<option value="${gi}" ${gi===+r.value?"selected":""}>rank ${esc(g)}</option>`).join("")
+        }</select>`
+      : `<input type="number" value="${r.value}" min="-32768" max="65535" style="max-width:110px"
+           onchange="cbSet(${i},'value',this.value)">`;
+    const hint = isGrade ? `sets the rank outright`
+                         : (r.op === "set" ? "replaces the value" : "added on top");
     return `<div class="row" style="margin:6px 0">
       <select onchange="cbSet(${i},'charOff',this.value)" style="max-width:230px">${opts}</select>
-      <select onchange="cbSet(${i},'op',this.value)" style="max-width:150px">
-        <option value="add" ${r.op==="add"?"selected":""}>increase by +</option>
-        <option value="set" ${r.op==="set"?"selected":""}>force to =</option></select>
-      <input type="number" value="${r.value}" min="-32768" max="65535" style="max-width:110px"
-        title="${/affinity/.test((EFFTARGETS.targets.find(x=>x.charOff===r.charOff)||{}).label||"")
-          ? "affinity grade 0-6 (6 = rank S)" : "amount"}"
-        onchange="cbSet(${i},'value',this.value)">
-      <span class="fnote" style="min-width:96px">${(() => {
-        const t = EFFTARGETS.targets.find(x=>x.charOff===r.charOff) || {};
-        if (/affinity/.test(t.label||"")) return `grade ${r.value} = ${(isoMAPS.grades||[])[r.value] || "?"}`;
-        return r.op === "set" ? "forced value" : "added on top";
-      })()}</span>
+      ${opCell}${valCell}
+      <span class="fnote" style="min-width:104px">${hint}</span>
       <button class="chip mini" onclick="cbDelRow(${i})" title="Remove">✕</button></div>`;
   }).join("") || `<div class="fnote">No effects yet — add one to build a bonus.</div>`;
   const cnt = $("cbCount");
@@ -698,8 +712,10 @@ function cbRender(){
 function cbApply(setIdx){
   if (!customRows.length){ toast("Add at least one effect first.", "bad"); return; }
   const rows = customRows.map(r => ({ charOff:r.charOff, width:r.width, op:r.op, value:r.value }));
+  const grades = EFFTARGETS.grades || [];
   const names = rows.map(r => {
-    const t = EFFTARGETS.targets.find(x => x.charOff === r.charOff) || {};
+    const t = cbTarget(r.charOff);
+    if (t.kind === "grade") return `${t.label} → rank ${grades[r.value] || r.value}`;
     return `${t.label||("char+"+r.charOff)} ${r.op==="set"?"=":"+"}${r.value}`;
   });
   confirmReview("Custom set bonus",
