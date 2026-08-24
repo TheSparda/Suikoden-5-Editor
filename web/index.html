@@ -37,9 +37,10 @@
 
   <!-- ============================ SAVE EDITOR ============================ -->
   <section class="mode-pane" data-mode="save" hidden>
-    <p class="sub">Full save editor — hero/castle name, New Game Plus, and per-character level,
-      equipment, runes, skills and recruitment. Everything runs in your browser via Python
-      (Pyodide); your save never leaves the device. Works on desktop and Android. A backup is always wise.</p>
+    <p class="sub">Full save editor — hero/castle/army name, potch, party SP, active party,
+      New Game Plus, and per-character level, equipment, runes, skills and recruitment.
+      Everything runs in your browser via Python (Pyodide); your save never leaves the device.
+      Works on desktop and Android. A backup is always wise.</p>
 
     <div id="opencard" class="card" style="display:none">
       <h2>1 · Load save</h2>
@@ -110,7 +111,7 @@
     <button class="tb" data-theme="sun">Sun Rune</button>
     <span class="credit">Made by <b>TheSparda</b> ·
       <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
-      · <span id="ver">v1.5.0</span> ·
+      · <span id="ver">v1.6.0</span> ·
       <button type="button" id="forceRefresh" class="linklike" title="Unregister the service worker, clear caches, and reload — fixes a stuck/stale offline copy">↻ Force refresh</button></span>
     <span class="note">Runs this repo's own <code>Editor/s5save.py</code> + <code>s5patch.py</code> unchanged in
       <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required.

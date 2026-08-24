@@ -494,7 +494,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=scroll id=datapak></div>
  </section>
 </main>
-<footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.5.0</footer>
+<footer>Made by Sparda · <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">github.com/TheSparda/Suikoden-5-Editor</a> · v1.6.0</footer>
 <div id=spin><div class=sun></div></div>
 <div id=toast></div>
 <script>
@@ -917,7 +917,11 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
    `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
-   `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the (upcoming) unit editor, not here."></div></div>`+
+   `<div class=fld><label>Army name</label><div class=in><input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Potch</label><div class=in><input type=number id="sv${i}_potch" value="${fl.potch||0}" min=0 max=99999999 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Party SP</label><div class=in><input type=number id="sv${i}_psp" value="${fl.partySP||0}" min=0 max=999999 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the Characters panel."></div></div>`+
+   `<div class=fld><label>Playtime <span class=note>(display only)</span></label><div class=in><input value="${esc(fl.playtime)}" disabled></div></div>`+
    `<div class=fld><label>New Game Plus</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
    `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div><div id="recruit${i}" style="margin-top:8px"></div></div>`}).join('');}
 let CHARDATA={};
@@ -1031,6 +1035,9 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
 async function saveWrite(i){const sv=window._saves[i];
  const edits={heroName:document.getElementById('sv'+i+'_heroName').value,
   castleName:document.getElementById('sv'+i+'_castleName').value,
+  armyName:document.getElementById('sv'+i+'_armyName').value,
+  potch:parseInt(document.getElementById('sv'+i+'_potch').value)||0,
+  partySP:parseInt(document.getElementById('sv'+i+'_psp').value)||0,
   newGamePlus:document.getElementById('sv'+i+'_ngp').checked?1:0};
  const bakOn=document.getElementById('bakToggle').checked;
  if(!confirm('Write to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;

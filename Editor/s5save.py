@@ -75,7 +75,30 @@ S5_FIELDS = {
     "castleName":  (0x14, 16, "str"),
     "newGamePlus": (0x12, 1,  "num"),   # 1 = New Game Plus / cleared (enables fast-forward)
     "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
+    # ---- Global game-state struct, serialized at save+0xD8 (VERIFIED 2026-08-23 by ELF RE:
+    # live struct 0xA31C10 [potch u32][partySP u32][hero 17B][army 17B][castle 17B] mirrors
+    # into the save via the proven live→save Δ+0xD8 (0xA34310-based mirror; the same shift
+    # that maps the known lead-armor block 0xA3FE90→save+0xBC58). Cross-checked on 6 real
+    # saves: potch values game-plausible (52k mid-game → 89.7M cheated endgame), partySP
+    # always ≤ its 999,999 cap, and the adjacent strings equal each save's hero/castle name.
+    "potch":       (0xBC74, 4, "num"),  # money; game cheat cap = 99,999,999
+    "partySP":     (0xBC78, 4, "num"),  # shared party skill points; cap 999,999
+    "armyName":    (0xBC8D, 16, "str"), # the player-named army/faction ("Royalist", ...)
 }
+# Value caps enforced on write (the game's own cheat devices use these maxima).
+S5_FIELD_MAX = {"potch": 99_999_999, "partySP": 999_999, "newGamePlus": 1, "level": 99}
+# heroName/castleName live in TWO places: the save header (display) and the game-state
+# struct (what actually loads back into play). Write both so renames stick in-game.
+S5_FIELD_MIRRORS = {"heroName": 0xBC7C, "castleName": 0xBC9E}   # 17-byte slots (16+nul)
+
+# ---- Active party (VERIFIED 2026-08-23): 10 u16 slots @0x36 (6 battle + 4 support).
+# Value = character id (s5_characters.json); 0x0100 = empty slot; slot 0 = hero (0).
+# Cross-checked on 6 saves: every member recruited in that save's bitfield, hero always
+# slot 0, Lyon(8) present wherever story allows, sizes 3..10 match save context.
+PARTY_OFF, PARTY_SLOTS, PARTY_EMPTY = 0x36, 10, 0x0100
+# Playtime display copy (header): u16 hours @0x30, minutes @0x32, seconds @0x34.
+# VERIFIED vs icon.sys titles (Sparda 19:16 ✓) — display cache, exposed read-only.
+PLAYTIME_OFF = 0x30
 
 # ---- Per-character record array (VERIFIED by RE + name cross-ref, 2026-08-16).
 # The save stores the roster verbatim in the game's live layout: base 0x2A8, stride 0x160,
@@ -296,13 +319,19 @@ def read_individual_save(path):
             "fields": decode_gamedata(gd), "path": path}
 
 def decode_gamedata(gd):
-    if not gd or len(gd) < 0x2C: return {}
+    if not gd or len(gd) < GAMEDATA_SIZE: return {}
     out = {}
     for k, (off, w, kind) in S5_FIELDS.items():
         if kind == "str":
             out[k] = gd[off:off+w].split(b"\x00")[0].decode("latin1", "replace")
         else:
             out[k] = int.from_bytes(gd[off:off+w], "little")
+    # active party: 10 u16 slots, 0x0100 = empty (slot 0 = hero)
+    out["party"] = [int.from_bytes(gd[PARTY_OFF+2*i:PARTY_OFF+2*i+2], "little")
+                    for i in range(PARTY_SLOTS)]
+    # playtime display copy (read-only): h/m/s u16s
+    h, m, s = (int.from_bytes(gd[PLAYTIME_OFF+2*i:PLAYTIME_OFF+2*i+2], "little") for i in range(3))
+    out["playtime"] = f"{h}:{m:02d}:{s:02d}"
     return out
 
 def apply_gamedata_edits(gd, edits):
@@ -315,9 +344,19 @@ def apply_gamedata_edits(gd, edits):
             if kind == "str":
                 s = str(v).encode("latin1", "replace")[:w-1]
                 b[off:off+w] = s + b"\x00"*(w-len(s))
+                if k in S5_FIELD_MIRRORS:            # game-state struct copy (17B slot):
+                    m = S5_FIELD_MIRRORS[k]          # the game loads THIS one back live,
+                    b[m:m+17] = s + b"\x00"*(17-len(s))   # so renames must land here too
             else:
+                v = max(0, min(int(v), S5_FIELD_MAX.get(k, (1 << 8*w) - 1)))
                 b[off:off+w] = int(v).to_bytes(w, "little")
             changed += 1
+        elif k.startswith("party") and k[5:].isdigit():
+            slot = int(k[5:])
+            v = int(v)
+            if 0 <= slot < PARTY_SLOTS and (0 <= v < NUM_CHARS or v == PARTY_EMPTY):
+                b[PARTY_OFF+2*slot:PARTY_OFF+2*slot+2] = v.to_bytes(2, "little")
+                changed += 1
         elif _apply_char_edit(b, k, v):
             changed += 1
     return bytes(b), changed

@@ -505,12 +505,28 @@ function renderSaves(){
         <div class="fld"><label>Castle name</label><div class="in">
           <input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength="15" ${ro?"disabled":""}
             data-sk="sv${i}:castleName" data-orig="${esc(fl.castleName)}" data-lbl="Castle name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
+        <div class="fld"><label>Army name</label><div class="in">
+          <input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength="15" ${ro?"disabled":""}
+            data-sk="sv${i}:armyName" data-orig="${esc(fl.armyName)}" data-lbl="Army name" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
+        <div class="fld"><label>Potch</label><div class="in">
+          <input type="number" id="sv${i}_potch" value="${fl.potch||0}" min="0" max="99999999" ${ro?"disabled":""}
+            data-sk="sv${i}:potch" data-orig="${fl.potch||0}" data-lbl="Potch" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
+        <div class="fld"><label>Party SP</label><div class="in">
+          <input type="number" id="sv${i}_psp" value="${fl.partySP||0}" min="0" max="999999" ${ro?"disabled":""}
+            data-sk="sv${i}:partySP" data-orig="${fl.partySP||0}" data-lbl="Party SP" data-grp="${esc(sv.folder)}">${ro?"":REVERT_BTN_SAVE}</div></div>
         <div class="fld"><label>Level <span class="note">(display only)</span></label><div class="in">
           <input type="number" value="${fl.level||0}" disabled title="Save-select display level. Edit unit levels in the Characters panel."></div></div>
+        <div class="fld"><label>Playtime <span class="note">(display only)</span></label><div class="in">
+          <input value="${esc(fl.playtime)}" disabled></div></div>
         <div class="fld"><label>New Game Plus</label><div class="in">
           <label class="chk"><input type="checkbox" id="sv${i}_ngp" ${fl.newGamePlus?"checked":""} ${ro?"disabled":""}
             data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}"></label>${ro?"":REVERT_BTN_SAVE}</div></div>
       </div>
+      ${ro?"":`<div class="subhd">Active party <span class="note">— 6 battle + 4 support slots; slot 1 is the hero</span></div>
+      <div class="grid" style="padding-top:8px">${(fl.party||[]).map((pid,k)=>{
+        const lbl = k===0?"Slot 1 · Hero":(k<6?`Slot ${k+1} · battle`:`Slot ${k+1} · support`);
+        return `<div class="fld"><label>${lbl}</label><div class="in">${partySelHTML(i,k,pid,k===0)}${k===0?"":REVERT_BTN_SAVE}</div></div>`;
+      }).join("")}</div>`}
       <div class="card-ft">${foot}</div>
       <div id="chars${i}" class="note" style="margin:0 14px 8px"></div>
       <div id="recruit${i}" style="margin:0 14px 10px"></div>
@@ -520,13 +536,32 @@ function renderSaves(){
   updateSaveToolbar();
 }
 
-/* Header field write-through (hero/castle/NG+). */
+/* Party slot <select>: 0x0100 = empty; slot 0 (hero) locked. */
+const PARTY_EMPTY = 256;
+function partySelHTML(i, slot, val, locked){
+  let h = `<select id="sv${i}_party${slot}" ${locked?"disabled":""}
+    data-sk="sv${i}:party${slot}" data-orig="${val}" data-lbl="Party slot ${slot+1}" data-grp="Party">`;
+  h += `<option value="${PARTY_EMPTY}" ${val===PARTY_EMPTY?"selected":""}>— empty —</option>`;
+  for(const id of Object.keys(NAMES.cnames))
+    h += `<option value="${id}" ${String(val)===String(id)?"selected":""}>${id}: ${esc(NAMES.cnames[id])}</option>`;
+  return h + `</select>`;
+}
+function partyDisplay(v){ return +v === PARTY_EMPTY ? "empty" : (NAMES.cnames[v] || ("#"+v)); }
+
+/* Header field write-through (hero/castle/army/potch/SP/NG+/party). */
 function wireSaveHeaderInputs(){
   saves.forEach((sv, i) => {
     if (sv.editable === false) return;
-    ["heroName","castleName"].forEach(k => {
+    ["heroName","castleName","armyName"].forEach(k => {
       const el = $(`sv${i}_${k}`); if(el) el.onchange = () => stageSaveField(i, k, el.value, el);
     });
+    [["potch","potch"],["psp","partySP"]].forEach(([idk,k]) => {
+      const el = $(`sv${i}_${idk}`); if(el) el.onchange = () => stageSaveField(i, k, +el.value, el);
+    });
+    for(let k2=0;k2<10;k2++){
+      const el = $(`sv${i}_party${k2}`);
+      if(el && !el.disabled) el.onchange = () => stageSaveField(i, `party${k2}`, +el.value, el);
+    }
     const ngp = $(`sv${i}_ngp`);
     if(ngp) ngp.onchange = () => stageSaveField(i, "newGamePlus", ngp.checked?1:0, ngp);
   });
@@ -544,8 +579,9 @@ async function stageSaveField(i, key, value, el){
     const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [key]: value })));
     if(r.error){ toast("Error: " + r.error, "bad"); return; }
     if(changed){
-      sEdits[sk] = { label: el.dataset.lbl, group: el.dataset.grp,
-        to: (key === "newGamePlus") ? (value ? "On" : "Off") : String(value) };
+      const disp = key === "newGamePlus" ? (value ? "On" : "Off")
+        : key.startsWith("party") ? partyDisplay(value) : String(value);
+      sEdits[sk] = { label: el.dataset.lbl, group: el.dataset.grp, to: disp };
       el.classList.add("dirty");
     }else{ delete sEdits[sk]; el.classList.remove("dirty"); }
     // refresh decoded header so re-open baselines stay accurate
