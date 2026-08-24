@@ -125,6 +125,7 @@ function isoGlueHandles(){
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
     setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
+    effecttargets:g("iso_effecttargets"), customsetbonus:g("iso_customsetbonus"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
 }
@@ -444,6 +445,17 @@ def iso_setgate(idx, enabled, original_word):
         with P.Iso(ISO, writable=True) as g:
             return json.dumps(P.write_set_gate(g, int(idx), bool(int(enabled)),
                                                int(original_word) if original_word else None))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_effecttargets():
+    try:
+        return json.dumps({"targets": P.set_effect_targets(),
+                           "capacity": P.read_custom_set_capacity(),
+                           "customHandler": F.SET_CUSTOM_VADDR})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_customsetbonus(idx, effects_json):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(P.write_custom_set_bonus(g, int(idx), json.loads(effects_json)))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_setgatechar(idx, char_id, original_word):
     try:

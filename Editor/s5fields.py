@@ -340,6 +340,41 @@ SET_SLOT_ORDER  = ("head", "body", "arm", "foot", "accessory")
 SET_FIELD_HINT  = {20: "HP", 40: "ATK", 46: "MDEF", 54: "SPD",
                    256: "Water affinity", 304: "Critical %", 305: "Double critical %",
                    42: "stat", 44: "stat", 48: "stat", 50: "stat", 52: "stat", 56: "stat"}
+# ---- CUSTOM set-bonus handlers -------------------------------------------------
+# The stock handlers are packed back-to-back with no slack, so a custom bonus is
+# assembled into a free 80-byte gap and the jump table is pointed at it.
+# The gap at vaddr 0x4484B0 is VERIFIED unreferenced: it follows a function's tail
+# `j`+delay-slot epilogue, nothing branches or jumps into it, and its address is never
+# materialised anywhere in the ELF. 80 bytes = 20 instructions.
+SET_CUSTOM_VADDR = 0x4484B0
+SET_CUSTOM_LEN   = 80
+SET_RETURN_VADDR = 0x2D47C4      # the handlers' shared epilogue (restores $ra, returns)
+SET_STRUCT_REG   = 16            # $s0 holds the live character struct in every handler
+# Effect targets in the LIVE character struct. verified=True means the offset was pinned
+# by matching a documented set bonus from the Suikosource guide; the rest are inferred
+# from the stat/affinity blocks those verified hits sit inside.
+SET_EFFECT_TARGETS = [
+    ("HP",                 20,  "h", True),
+    ("Attack",             40,  "h", True),
+    ("Stat @+42",          42,  "h", False),
+    ("Stat @+44",          44,  "h", False),
+    ("Magic Defense",      46,  "h", True),
+    ("Stat @+48",          48,  "h", False),
+    ("Stat @+50",          50,  "h", False),
+    ("Stat @+52",          52,  "h", False),
+    ("Speed",              54,  "h", True),
+    ("Stat @+56",          56,  "h", False),
+    ("Critical %",         304, "b", True),
+    ("Double critical %",  305, "b", True),
+]
+# Element affinity block: only Water is proven (Fish writes 6 == rank S to +256); the
+# others are inferred by the documented element order around it.
+SET_AFFINITY_BASE = 252
+SET_AFFINITY_ELEMENTS = ARMOR_ELEMENTS      # Sun, Fire, Lightning, Wind, Water, ...
+for _i, _e in enumerate(SET_AFFINITY_ELEMENTS):
+    SET_EFFECT_TARGETS.append(("%s affinity" % _e, SET_AFFINITY_BASE + _i, "b",
+                               _e == "Water"))
+
 # Documented set bonuses (Suikosource) — shown alongside the decoded values so users can
 # see intent vs. what the bytes actually do. Keyed by set index.
 SET_DOC_BONUS = {

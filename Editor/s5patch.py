@@ -1020,7 +1020,7 @@ def _set_effects(iso, handler_vaddr):
                             "width": {0x28: "b", 0x29: "h", 0x2B: "w"}[op],
                             "value": pend["setval"][0], "immOff": pend["setval"][1]})
                 pend = None
-        elif op in (4, 5) and rs == 0 and rt == 0:
+        elif (op in (4, 5) and rs == 0 and rt == 0) or op == 2 or (op == 0 and (w & 0x3F) == 8):
             stop_after = k + 1                              # MIPS: the delay slot still runs
         elif op == 0x11 or (w & 0xFC00003F) == 0x44000000:
             out.append({"kind": "float", "charOff": None, "width": None, "value": None, "immOff": None})
@@ -1235,6 +1235,62 @@ def write_set_handler(iso, set_index, handler_vaddr):
     iso.wu(F.SET_JT_OFF + i * 4, 4, int(handler_vaddr) & 0xFFFFFFFF)
     return {"ok": True, "index": i, "handler": int(handler_vaddr)}
 
+
+def set_effect_targets():
+    """Catalog of char-struct fields a custom set bonus can touch."""
+    return [{"label": l, "charOff": o, "width": w, "verified": v}
+            for (l, o, w, v) in F.SET_EFFECT_TARGETS]
+
+def read_custom_set_capacity():
+    """How many effects fit in the free gap, by op mix. `add` costs 3 instructions
+    (load / addiu / store), `set` costs 2 (li / store); the tail `j`+nop costs 2."""
+    words = F.SET_CUSTOM_LEN // 4
+    return {"words": words, "maxAdd": (words - 2) // 3, "maxSet": (words - 2) // 2}
+
+def write_custom_set_bonus(iso, set_index, effects):
+    """Assemble a CUSTOM bonus handler into the free gap and point a set at it.
+
+    effects: [{"charOff":n, "width":"b"|"h", "op":"add"|"set", "value":v}, ...]
+    Emits, per effect:
+        add ->  lhu/lbu $v1,off($s0) ; addiu $v1,$v1,V ; sh/sb $v1,off($s0)
+        set ->  addiu $v1,$zero,V                      ; sh/sb $v1,off($s0)
+    then `j <shared epilogue>` + nop. The stock handlers are packed with no slack, so
+    this is the only way to ADD effects rather than retune existing ones.
+    """
+    V1, S0 = 3, F.SET_STRUCT_REG
+    words, budget = [], F.SET_CUSTOM_LEN // 4
+    valid = {(t[1], t[2]) for t in F.SET_EFFECT_TARGETS}
+    for e in (effects or []):
+        off = int(e["charOff"]); wid = e.get("width", "h")
+        op = e.get("op", "add"); val = int(e.get("value", 0))
+        if (off, wid) not in valid:
+            raise ValueError("unknown effect target +%d/%s" % (off, wid))
+        if not (0 <= off <= 0x7FFF): raise ValueError("target offset out of range")
+        lim = 0xFF if wid == "b" else 0xFFFF
+        if not (-32768 <= val <= lim): raise ValueError("value out of range for that field")
+        st = (0x28 if wid == "b" else 0x29)                   # sb / sh
+        if op == "set":
+            words += [(0x09 << 26) | (V1 << 16) | (val & 0xFFFF),               # li $v1,V
+                      (st << 26) | (S0 << 21) | (V1 << 16) | (off & 0xFFFF)]
+        elif op == "add":
+            ld = (0x25 if wid == "b" else 0x21)               # lhu / lbu(0x24)->use lbu for b
+            if wid == "b": ld = 0x24
+            words += [(ld << 26) | (S0 << 21) | (V1 << 16) | (off & 0xFFFF),
+                      (0x09 << 26) | (V1 << 21) | (V1 << 16) | (val & 0xFFFF),  # addiu $v1,$v1,V
+                      (st << 26) | (S0 << 21) | (V1 << 16) | (off & 0xFFFF)]
+        else:
+            raise ValueError("op must be 'add' or 'set'")
+    if len(words) + 2 > budget:
+        raise ValueError("too many effects: needs %d instructions, only %d available"
+                         % (len(words) + 2, budget))
+    words.append((0x02 << 26) | ((F.SET_RETURN_VADDR >> 2) & 0x3FFFFFF))        # j epilogue
+    words.append(0)                                                            # nop
+    words += [0] * (budget - len(words))                       # clear the rest of the gap
+    fo = F.SET_CUSTOM_VADDR - F.VADDR_DELTA
+    iso.wr(fo, struct.pack("<%dI" % len(words), *words))
+    iso.wu(F.SET_JT_OFF + int(set_index) * 4, 4, F.SET_CUSTOM_VADDR)
+    return {"ok": True, "handler": F.SET_CUSTOM_VADDR, "instructions": len(words),
+            "effects": len(effects or [])}
 
 def read_mp(iso):
     out = []

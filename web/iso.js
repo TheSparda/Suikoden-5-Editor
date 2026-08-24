@@ -473,13 +473,15 @@ function renderGearItem(slot, id) {
  * member ids (which pieces the set requires), bonus magnitudes, and — via the jump
  * table — which effect a set uses at all. That last one is what makes CUSTOM sets
  * possible: give any set any other set's bonus, with any members you like. */
-let SETS = null, ACCNAMES = null, curSetIdx = null;
+let SETS = null, ACCNAMES = null, curSetIdx = null, EFFTARGETS = null;
+let customRows = [];
 const SET_GATE_WORD = {};   // set index -> original restriction instruction
 VIEW_RENDER.sets = async (body) => {
   const d = JSON.parse(window.PYISO.sets());
   if (d.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(d.error)}</p>`; return; }
   SETS = d;
   if (!ACCNAMES) { try { ACCNAMES = JSON.parse(window.PYISO.accnames()).accessory || {}; } catch(_) { ACCNAMES = {}; } }
+  if (!EFFTARGETS) { try { EFFTARGETS = JSON.parse(window.PYISO.effecttargets()); } catch(_) { EFFTARGETS = null; } }
   body.innerHTML = `<div class="row" style="padding:10px 16px 0"><span class="note">Set</span>
       <select id="isoSetSel">${d.sets.map(s=>`<option value="${s.index}">${esc(s.name)}</option>`).join("")}</select>
       <span class="note">${d.sets.length} sets</span></div>
@@ -504,6 +506,7 @@ function armorSlotList(slot){
 }
 function renderSet(idx){
   const s = (SETS.sets || []).find(x => x.index === idx); if (!s) return;
+  if (curSetIdx !== idx) customRows = [];       // builder rows belong to one set
   curSetIdx = idx;
   const eff = s.effects || [];
   let h = `<div class="subhd">${esc(s.name)} <span class="note">— set #${s.index}</span></div>`;
@@ -582,7 +585,27 @@ function renderSet(idx){
         data-kind="num" data-orig="${s.handler}" data-lbl="${esc(s.name)} · effect"
         data-grp="Sets" onchange="onIsoField(this)">${opts}</select>${REVERT_BTN}</div>
       <div class="fnote">changes which bonus this set grants (jump-table entry — a data edit)</div></div></div>`;
+
+  // ---- custom bonus builder: assemble brand-new effects into free code space ----
+  if (EFFTARGETS && EFFTARGETS.targets) {
+    const cap = EFFTARGETS.capacity || { maxAdd: 6, maxSet: 9, words: 20 };
+    const isCustom = s.handler === EFFTARGETS.customHandler;
+    h += `<div class="subhd">Build a custom bonus
+        <span class="note">— add effects this set doesn't normally have</span></div>
+      <div class="fnote" style="margin:0 16px 4px">Assembled into free space on the disc, so this
+        <b>adds</b> effects rather than only retuning existing ones. Room for up to
+        <b>${cap.maxAdd}</b> "+" effects (or ${cap.maxSet} "=" effects). Targets marked
+        <i>inferred</i> sit inside a verified block but aren't individually proven.
+        ${isCustom ? "<b>This set is currently using a custom bonus.</b> " : ""}Only one set can hold
+        a custom bonus at a time — they share the same code space.</div>
+      <div id="cbRows" style="padding:0 16px"></div>
+      <div class="row" style="padding:0 16px 12px">
+        <button class="chip mini" onclick="cbAddRow()">+ Add effect</button>
+        <button class="primary mini" onclick="cbApply(${s.index})">Apply custom bonus</button>
+        <span class="fnote" id="cbCount"></span></div>`;
+  }
   $("isoSetBody").innerHTML = h;
+  cbRender();
 }
 function charName(id){
   if (id == null) return "— anyone —";
@@ -620,6 +643,67 @@ function updateCapNote(el){
     note.textContent = `${used}/${cap}`;
     note.classList.toggle("at-cap", cap > 0 && used >= cap);
   }
+}
+
+/* ---- custom-bonus builder helpers ---- */
+function cbAddRow(){
+  const cap = (EFFTARGETS && EFFTARGETS.capacity) ? EFFTARGETS.capacity.maxSet : 9;
+  if (customRows.length >= cap) { toast(`That's the maximum of ${cap} effects.`, "bad"); return; }
+  const t = EFFTARGETS.targets[0];
+  customRows.push({ charOff: t.charOff, width: t.width, op: "add", value: 10 });
+  cbRender();
+}
+function cbDelRow(i){ customRows.splice(i, 1); cbRender(); }
+function cbSet(i, key, val){
+  if (key === "charOff"){
+    const t = EFFTARGETS.targets.find(x => String(x.charOff) === String(val));
+    customRows[i].charOff = t.charOff; customRows[i].width = t.width;
+  } else if (key === "value"){ customRows[i].value = +val || 0; }
+  else { customRows[i][key] = val; }
+  cbRender();
+}
+function cbCost(){ return customRows.reduce((n, r) => n + (r.op === "set" ? 2 : 3), 0) + 2; }
+function cbRender(){
+  const host = $("cbRows"); if (!host) return;
+  const cap = (EFFTARGETS && EFFTARGETS.capacity) || { words: 20 };
+  host.innerHTML = customRows.map((r, i) => {
+    const opts = EFFTARGETS.targets.map(t =>
+      `<option value="${t.charOff}" ${t.charOff===r.charOff?"selected":""}>${esc(t.label)}${t.verified?"":" (inferred)"}</option>`).join("");
+    return `<div class="row" style="margin:6px 0">
+      <select onchange="cbSet(${i},'charOff',this.value)" style="max-width:230px">${opts}</select>
+      <select onchange="cbSet(${i},'op',this.value)" style="max-width:110px">
+        <option value="add" ${r.op==="add"?"selected":""}>add +</option>
+        <option value="set" ${r.op==="set"?"selected":""}>set =</option></select>
+      <input type="number" value="${r.value}" min="-32768" max="65535" style="max-width:110px"
+        onchange="cbSet(${i},'value',this.value)">
+      <button class="chip mini" onclick="cbDelRow(${i})" title="Remove">✕</button></div>`;
+  }).join("") || `<div class="fnote">No effects yet — add one to build a bonus.</div>`;
+  const cnt = $("cbCount");
+  if (cnt){
+    const used = cbCost(), room = cap.words || 20;
+    cnt.textContent = `${customRows.length} effect(s) · ${used}/${room} instructions`;
+    cnt.classList.toggle("at-cap", used > room);
+  }
+}
+function cbApply(setIdx){
+  if (!customRows.length){ toast("Add at least one effect first.", "bad"); return; }
+  const rows = customRows.map(r => ({ charOff:r.charOff, width:r.width, op:r.op, value:r.value }));
+  const names = rows.map(r => {
+    const t = EFFTARGETS.targets.find(x => x.charOff === r.charOff) || {};
+    return `${t.label||("char+"+r.charOff)} ${r.op==="set"?"=":"+"}${r.value}`;
+  });
+  confirmReview("Custom set bonus",
+    [{ title: "This set will grant", rows: names.map(n => ({ label:n, from:"", to:"" })) }],
+    "Write custom bonus", () => {
+      const res = JSON.parse(window.PYISO.customsetbonus(setIdx, JSON.stringify(rows)));
+      if (res.error){ toast(res.error, "bad"); return; }
+      isoEdits[`customset:${setIdx}`] = { label: `Custom bonus (${names.join(", ")})`,
+                                          group: "Sets", to: "applied" };
+      updateIsoToolbar(); captureUndoStep();
+      toast(`Custom bonus written (${res.instructions} instructions).`, "ok");
+      try { const fresh = JSON.parse(window.PYISO.sets()); if (!fresh.error) SETS = fresh; } catch(_){}
+      renderSet(setIdx);
+    });
 }
 function pickSetMember(setIdx, slot){
   const el = q(`.pickbtn[data-key="setmem:${setIdx}:${slot}"]`); if(!el) return;

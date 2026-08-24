@@ -276,6 +276,51 @@ chk("record fields untouched by the name write", buy == 0, str(buy))
 with P.Iso(tmp, writable=True) as g:
     chk("naming a nonexistent slot rejected", raises_early(lambda: P.write_armor_name(g, "nope", 3, "x")))
 
+# ---------------- custom bonus (assembled into free code space) ----------------
+capn = P.read_custom_set_capacity()
+chk("capacity derived from the gap size", capn["words"] == F.SET_CUSTOM_LEN // 4 and capn["maxAdd"] >= 4, str(capn))
+chk("effect catalog exposes verified + inferred targets",
+    any(t["verified"] for t in P.set_effect_targets()) and any(not t["verified"] for t in P.set_effect_targets()))
+custom = [{"charOff": 20,  "width": "h", "op": "add", "value": 300},
+          {"charOff": 304, "width": "b", "op": "add", "value": 30},
+          {"charOff": 256, "width": "b", "op": "set", "value": 6}]
+with P.Iso(tmp, writable=True) as g: rc = P.write_custom_set_bonus(g, 2, custom)
+chk("custom bonus assembled", rc["ok"] and rc["handler"] == F.SET_CUSTOM_VADDR, str(rc))
+with P.Iso(tmp) as g: dc = P.read_sets(g)
+sc = next((x for x in dc["sets"] if x["index"] == 2), None)
+if sc is None:   # index 2 isn't in the synthetic fixture -> verify via the table + decode
+    with P.Iso(tmp) as g:
+        jt = struct.unpack("<%dI" % F.SET_COUNT, g.rd(F.SET_JT_OFF, F.SET_COUNT * 4))
+        decoded = P._set_effects(g, F.SET_CUSTOM_VADDR)
+    chk("jump table entry points at the custom handler", jt[2] == F.SET_CUSTOM_VADDR, hex(jt[2]))
+else:
+    decoded = sc["effects"]
+    chk("jump table entry points at the custom handler", sc["handler"] == F.SET_CUSTOM_VADDR)
+chk("all custom effects decode back",
+    [(e["kind"], e["charOff"], e["value"]) for e in decoded] ==
+    [("add", 20, 300), ("add", 304, 30), ("set", 256, 6)], str(decoded))
+with P.Iso(tmp) as g:
+    ws2 = struct.unpack("<%dI" % (F.SET_CUSTOM_LEN // 4), g.rd(F.SET_CUSTOM_VADDR - F.VADDR_DELTA, F.SET_CUSTOM_LEN))
+jidx = [i for i, w in enumerate(ws2) if (w >> 26) == 2]
+chk("tail is a j to the shared epilogue",
+    bool(jidx) and ((ws2[jidx[0]] & 0x3FFFFFF) << 2) == F.SET_RETURN_VADDR)
+chk("delay slot after the j is a nop", ws2[jidx[0] + 1] == 0)
+chk("unused gap bytes are zeroed", all(w == 0 for w in ws2[jidx[0] + 2:]))
+with P.Iso(tmp, writable=True) as g:
+    chk("over-capacity rejected", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 20, "width": "h", "op": "add", "value": 1}] * 12)))
+    chk("unknown target rejected", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 4242, "width": "h", "op": "add", "value": 1}])))
+    chk("bad op rejected", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 20, "width": "h", "op": "multiply", "value": 1}])))
+    chk("out-of-range value rejected", raises_early(lambda: P.write_custom_set_bonus(
+        g, 2, [{"charOff": 304, "width": "b", "op": "set", "value": 5000}])))
+# handing the set back to the stock no-op clears it
+with P.Iso(tmp, writable=True) as g: P.write_set_handler(g, 2, F.SET_NOOP_VADDR)
+with P.Iso(tmp) as g:
+    jt2 = struct.unpack("<%dI" % F.SET_COUNT, g.rd(F.SET_JT_OFF, F.SET_COUNT * 4))
+chk("revertible to no bonus", jt2[2] == F.SET_NOOP_VADDR)
+
 # ---------------- error handling ----------------
 def raises(fn):
     try: fn(); return False

@@ -57,7 +57,7 @@ ok("app.js calls initUpdateCheck", app.includes("initUpdateCheck()"));
 
 // 3c) equipment-set feature wiring + the RE'd constants (real-ISO behaviour is covered by
 // tests/sets_iso.py, which CI skips for lack of a disc — so guard the constants here)
-for (const fn of ["read_sets", "write_set_member", "write_set_bonus", "write_set_handler", "write_armor_summary", "write_set_gate", "write_set_gate_char", "write_armor_name", "armor_name_cap"])
+for (const fn of ["read_sets", "write_set_member", "write_set_bonus", "write_set_handler", "write_armor_summary", "write_set_gate", "write_set_gate_char", "write_armor_name", "armor_name_cap", "write_custom_set_bonus", "set_effect_targets"])
   ok(`s5patch defines ${fn}`, fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def " + fn));
 {
   const fld = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");
@@ -71,6 +71,8 @@ for (const fn of ["read_sets", "write_set_member", "write_set_bonus", "write_set
 ok("iso.js has the Sets view", isoSrc.includes('id: "sets"') && isoSrc.includes("function renderSet"));
 ok("iso.js can reassign a set effect (custom sets)", isoSrc.includes('view === "sethandler"'));
 ok("iso.js can edit piece descriptions", isoSrc.includes('view === "setdesc"'));
+ok("iso.js has the custom bonus builder", isoSrc.includes("function cbApply") && isoSrc.includes("customsetbonus"));
+ok("free code gap is the verified unreferenced one", /SET_CUSTOM_VADDR\s*=\s*0x4484B0/.test(fs.readFileSync(path.join(web,"..","Editor","s5fields.py"),"utf8")));
 ok("iso.js can edit gear names", isoSrc.includes('view === "gearname"'));
 ok("iso.js can edit the per-character restriction", isoSrc.includes('view === "setgate"') && isoSrc.includes("pickSetGateChar"));
 ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Editor","s5patch.py"),"utf8").includes("def armor_summary_cap"));
