@@ -412,8 +412,10 @@ def iso_sets():
                     m["name"] = it.get("name") or ("#%d" % m["id"])
                     m["desc"] = it.get("summaryEn") or ""
                     m["descRaw"] = it.get("summary") or ""
+                    with P.Iso(ISO) as g3:
+                        m["descCap"] = P.armor_summary_cap(g3, slot, sid)
                 except Exception:
-                    m["name"] = "#%d" % m["id"]; m["desc"] = ""; m["descRaw"] = ""
+                    m["name"] = "#%d" % m["id"]; m["desc"] = ""; m["descRaw"] = ""; m["descCap"] = 0
         # distinct handlers available to assign (this is what enables custom set bonuses)
         seen = {}
         for s in d["sets"]:

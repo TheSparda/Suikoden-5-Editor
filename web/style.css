@@ -269,3 +269,6 @@ footer .note{flex-basis:100%;color:var(--mut);font-size:12px}
   .toolbar button.primary{flex:1 1 100%}
   .toolbar button:not(.primary){flex:1 1 auto}
 }
+/* live length counter on fixed-length disc text fields */
+.capnote{font-variant-numeric:tabular-nums}
+.capnote.at-cap{color:var(--warn);font-weight:600}

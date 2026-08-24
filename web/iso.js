@@ -281,7 +281,7 @@ function revertIsoField(btn) {
   const orig = el.dataset.orig;
   // Description fields display our English rendering but store the game's own string,
   // so revert must put the ORIGINAL stored bytes back, not the translation.
-  if (el.dataset.view === "setdesc" && el.dataset.raw != null) {
+  if ((el.dataset.view === "setdesc" || el.dataset.view === "gearname") && el.dataset.raw != null) {
     el.value = orig;
     applyIsoWrite(el, el.dataset.raw).then((ok) => {
       if (ok === false) return;
@@ -439,21 +439,28 @@ function renderGearItem(slot, id) {
   $("isoGpickId").textContent = "#" + id;
   $("isoGname").innerHTML = r.summaryEn ? `<b>${esc(r.summaryEn)}</b>` : "";
   const nm = r.name || ("#" + id);
+  const enName = r.nameEn || r.name || "";     // curated English label, never the JP string
   let h = `<div class="subhd">In-game text</div><div class="grid" style="padding-top:6px">
     <div class="fld"><label>Name <span class="pill">${r.nameCap||0}B</span></label><div class="in">
-      <input type="text" value="${esc(r.nameJp||"")}" ${r.nameCap?"":"disabled"}
+      <input type="text" value="${esc(enName)}" ${r.nameCap?"":"disabled"}
+        maxlength="${r.nameCap||0}" data-cap="${r.nameCap||0}" oninput="updateCapNote(this)"
+        title="${esc(r.nameJp ? "currently stored on the disc: " + r.nameJp : "")}"
         data-key="gearname:${slot}:${id}" data-view="gearname" data-slot="${slot}" data-gid="${id}"
-        data-orig="${esc(r.nameJp||"")}" data-kind="str" data-lbl="${esc(nm)} · name"
-        data-grp="Gear · ${slot}" onchange="onIsoField(this)">${r.nameCap?REVERT_BTN:""}</div>
-      <div class="fnote">the disc's own name string (length-capped) · the editor's English
-        label comes from its name table, so this changes the game, not that label</div></div>
+        data-orig="${esc(enName)}" data-raw="${esc(r.nameJp||"")}" data-kind="str"
+        data-lbl="${esc(nm)} · name" data-grp="Gear · ${slot}"
+        onchange="onIsoField(this)">${r.nameCap?REVERT_BTN:""}</div>
+      <div class="fnote">edit in English · writes the disc's name string
+        · <span class="capnote">${(enName||"").length}/${r.nameCap||0}</span></div></div>
     <div class="fld"><label>Description <span class="pill">${r.descCap||0}B</span></label><div class="in">
       <input type="text" value="${esc(r.summaryEn||"")}" ${r.descCap?"":"disabled"}
+        maxlength="${r.descCap||0}" data-cap="${r.descCap||0}" oninput="updateCapNote(this)"
+        title="${esc(r.summary ? "currently stored on the disc: " + r.summary : "")}"
         data-key="setdesc:${slot}:${id}" data-view="setdesc" data-slot="${slot}" data-statid="${id}"
         data-orig="${esc(r.summaryEn||"")}" data-raw="${esc(r.summary||"")}" data-kind="str"
         data-lbl="${esc(nm)} · description" data-grp="Gear · ${slot}"
         onchange="onIsoField(this)">${r.descCap?REVERT_BTN:""}</div>
-      <div class="fnote">edit in English${r.summary?` · stored now: <span class="dim">${esc(r.summary)}</span>`:""}</div></div>
+      <div class="fnote">edit in English · writes the disc's description string
+        · <span class="capnote">${(r.summaryEn||"").length}/${r.descCap||0}</span></div></div>
     </div><div class="subhd">Stats</div>`;
   h += `<div class="grid" style="padding-top:6px">` + r.fields.map(f =>
     renderField(f, { view: "gear", ident: JSON.stringify({ slot, id }), key: `gear:${slot}:${id}:${f.label}`,
@@ -511,12 +518,14 @@ function renderSet(idx){
         <span class="pickbtn-id note">#${m.id}</span></button>${REVERT_BTN}</div>
       <div class="in" style="margin-top:4px">
         <input type="text" value="${esc(m.desc||"")}" placeholder="(no description slot)"
+          maxlength="${m.descCap||0}" data-cap="${m.descCap||0}" oninput="updateCapNote(this)"
+          title="${esc(m.descRaw ? "currently stored on the disc: " + m.descRaw : "")}"
           data-key="setdesc:${m.slot}:${m.statId}" data-view="setdesc" data-slot="${m.slot}"
           data-statid="${m.statId}" data-orig="${esc(m.desc||"")}" data-raw="${esc(m.descRaw||"")}"
           data-kind="str" data-lbl="${esc(m.name||("#"+m.id))} · description" data-grp="Sets"
           onchange="onIsoField(this)" ${m.descRaw?"":"disabled"}>${m.descRaw?REVERT_BTN:""}</div>
-      <div class="fnote">description — edit in English${m.descRaw
-        ? ` · stored now: <span class="dim">${esc(m.descRaw)}</span>` : ""}</div></div>`).join("");
+      <div class="fnote">description — edit in English
+        · <span class="capnote">${(m.desc||"").length}/${m.descCap||0}</span></div></div>`).join("");
   h += `</div>`;
 
   h += `<div class="subhd">Set bonus</div>`;
@@ -597,6 +606,20 @@ function pickSetGateChar(setIdx){
     trackIso(el, id); updateIsoToolbar(); captureUndoStep();
     toast(`Set bonus now restricted to ${charName(id)}.`, "ok");
   }, {});
+}
+/* Text fields on the disc are fixed-length. These boxes are English (1 byte per char),
+   so the byte cap doubles as a character cap: enforce it with maxlength AND show a live
+   counter, instead of letting the engine silently truncate on write. */
+function updateCapNote(el){
+  const cap = +el.dataset.cap || 0;
+  // maxlength only limits typing — a paste or a script assignment can exceed it, so clamp
+  if (cap > 0 && el.value.length > cap) el.value = el.value.slice(0, cap);
+  const used = el.value.length;
+  const note = el.closest(".fld") && el.closest(".fld").querySelector(".capnote");
+  if (note){
+    note.textContent = `${used}/${cap}`;
+    note.classList.toggle("at-cap", cap > 0 && used >= cap);
+  }
 }
 function pickSetMember(setIdx, slot){
   const el = q(`.pickbtn[data-key="setmem:${setIdx}:${slot}"]`); if(!el) return;
