@@ -1004,6 +1004,115 @@ def _set_effects(iso, handler_vaddr):
         if stop_after is not None and k >= stop_after: break
     return out
 
+def _set_gate(iso, handler_vaddr):
+    """Detect a per-character RESTRICTION at the top of a handler.
+
+    The Sun set is documented "Prince only", and its handler opens with:
+        lbu $v1, 16($s0)          ; a per-character field
+        bne $v1, $zero, <skip>    ; not that character -> skip the whole bonus
+    So the restriction is one conditional branch. Replacing it with a NOP makes the
+    bonus apply to whoever wears the set. Returns None when a handler is unrestricted.
+    """
+    if not handler_vaddr or handler_vaddr == F.SET_NOOP_VADDR: return None
+    fo = handler_vaddr - F.VADDR_DELTA
+    w0, w1, w2 = struct.unpack("<3I", iso.rd(fo, 12))
+    if (w0 >> 26) not in (0x24, 0x20, 0x21, 0x25): return None   # must start with a load
+    base = {"charOff": _s16(w0 & 0xFFFF), "branchOff": fo + 4}
+    if w1 == 0:                                                  # restriction removed (NOP)
+        return dict(base, word=0, restricted=False, kind="nop", charId=None, target=None)
+    op1 = w1 >> 26
+    # re-pointed by us: `addiu $at,$zero,N` then a branch against $at
+    if op1 == 0x09 and ((w1 >> 21) & 31) == 0 and ((w1 >> 16) & 31) == 1 and (w2 >> 26) in (4, 5):
+        return dict(base, word=w1, restricted=True, kind="retargeted",
+                    charId=w1 & 0xFFFF,
+                    target=handler_vaddr + 12 + _s16(w2 & 0xFFFF) * 4)
+    if op1 not in (4, 5): return None                            # otherwise must be beq/bne
+    rs, rt = (w1 >> 21) & 31, (w1 >> 16) & 31
+    if rt != 0 and rs != 0: return None                          # compared against $zero
+    return dict(base, word=w1, restricted=True, kind="bne" if op1 == 5 else "beq",
+                charId=0,                                        # stock gate: character 0
+                target=handler_vaddr + 8 + _s16(w1 & 0xFFFF) * 4)
+
+def write_set_gate(iso, set_index, enabled, original_word=None):
+    """Turn a set's per-character restriction on or off. Disabling writes a NOP over the
+    conditional branch (4 bytes, fully reversible); enabling restores the original
+    instruction word, which the caller supplies from the earlier read."""
+    data = read_sets(iso)
+    s = next((x for x in data["sets"] if x["index"] == int(set_index)), None)
+    if not s: raise KeyError("no set %s" % set_index)
+    gate = s.get("gate")
+    off = gate["branchOff"] if gate else None
+    if off is None:
+        # already NOPed out: the branch sits right after the handler's first load
+        h = s.get("handler")
+        if not h or h == F.SET_NOOP_VADDR: raise ValueError("this set has no restriction to change")
+        off = (h - F.VADDR_DELTA) + 4
+    if enabled:
+        if not original_word: raise ValueError("restoring a restriction needs its original instruction")
+        iso.wu(off, 4, int(original_word) & 0xFFFFFFFF)
+    else:
+        iso.wu(off, 4, 0)                                     # nop
+    return {"ok": True, "restricted": bool(enabled), "off": off}
+
+def write_set_gate_char(iso, set_index, char_id, original_word=None):
+    """Re-point a set's per-character restriction at a DIFFERENT character.
+
+    The stock gate compares against $zero (character 0 = the Prince):
+        lbu   $vX, 16($s0)
+        bne   $vX, $zero, <skip>
+        nop                       <- a free delay slot we can use
+    To gate on character N we use that spare slot:
+        lbu   $vX, 16($s0)
+        addiu $at, $zero, N
+        bne   $vX, $at, <skip>
+    The new branch's delay slot becomes the handler's first real instruction, which is a
+    plain load in every stock handler, so it is harmless either way.
+
+    NOTE the compared field (char+16) is inferred to be the character id: the Sun set is
+    documented "Prince only", the Prince is character 0, and the stock test is "== 0".
+    Consistent, but not independently proven — treat the id mapping as best-effort.
+    """
+    data = read_sets(iso)
+    s = next((x for x in data["sets"] if x["index"] == int(set_index)), None)
+    if not s: raise KeyError("no set %s" % set_index)
+    h = s.get("handler")
+    if not h or h == F.SET_NOOP_VADDR: raise ValueError("this set has no handler to gate")
+    n = int(char_id)
+    if not (0 <= n <= 0xFF): raise ValueError("character id out of range")
+    fo = h - F.VADDR_DELTA
+    w0, w1, w2 = struct.unpack("<3I", iso.rd(fo, 12))
+    if (w0 >> 26) not in (0x24, 0x20, 0x21, 0x25):
+        raise ValueError("handler does not start with a per-character load")
+    reg = (w0 >> 16) & 31
+    AT = 1
+    LI = lambda v: (0x09 << 26) | (AT << 16) | (v & 0xFFFF)      # addiu $at,$zero,v
+    # already re-pointed by us? then just patch the compared value in place
+    if (w1 >> 26) == 0x09 and ((w1 >> 21) & 31) == 0 and ((w1 >> 16) & 31) == AT and (w2 >> 26) in (4, 5):
+        iso.wu(fo + 4, 4, LI(n))
+        return {"ok": True, "charId": n, "off": fo + 4, "mode": "patched"}
+    # otherwise synthesize the two-instruction form, using the stock branch for the target
+    ow = int(original_word) if original_word else w1
+    if (ow >> 26) not in (4, 5):
+        raise ValueError("need the original restriction instruction to know where it skips to")
+    if w2 != 0 and (w2 >> 26) not in (4, 5):
+        raise ValueError("no free delay slot to place the comparison")
+    target = (h + 4) + 4 + _s16(ow & 0xFFFF) * 4                 # stock branch sat at h+4
+    disp = (target - ((h + 8) + 4)) >> 2                         # new branch sits at h+8
+    if not (-32768 <= disp <= 32767): raise ValueError("skip target out of branch range")
+    bne = (0x05 << 26) | (reg << 21) | (AT << 16) | (disp & 0xFFFF)
+    iso.wu(fo + 4, 4, LI(n))
+    iso.wu(fo + 8, 4, bne)
+    return {"ok": True, "charId": n, "off": fo + 4, "mode": "synthesized"}
+
+def read_set_gate_char(iso, handler_vaddr):
+    """If a gate has been re-pointed, return the character id it now compares against."""
+    if not handler_vaddr or handler_vaddr == F.SET_NOOP_VADDR: return None
+    fo = handler_vaddr - F.VADDR_DELTA
+    w0, w1, w2 = struct.unpack("<3I", iso.rd(fo, 12))
+    if (w1 >> 26) == 0x09 and ((w1 >> 21) & 31) == 0 and ((w1 >> 16) & 31) == 1 and (w2 >> 26) in (4, 5):
+        return w1 & 0xFFFF
+    return 0 if (w1 >> 26) in (4, 5) else None                   # stock gate == character 0
+
 def read_sets(iso):
     """All equipment sets: members (with the file offset of each id immediate), the
     jump-table slot, and the decoded bonus effects. Names come from the armor tables
@@ -1047,6 +1156,7 @@ def read_sets(iso):
         out.append({"index": i, "name": _set_name_for(m, names, i), "entry": entry,
                     "members": m, "handler": jt[i], "jtOff": F.SET_JT_OFF + i * 4,
                     "noop": jt[i] == F.SET_NOOP_VADDR,
+                    "gate": _set_gate(iso, jt[i]),
                     "effects": _set_effects(iso, jt[i])})
     return {"sets": out, "jumpTable": jt}
 

@@ -253,7 +253,7 @@ function commitIso(el, value) {
     captureUndoStep();
   });
 }
-function onIsoField(el) { commitIso(el, el.value); }
+function onIsoField(el) { commitIso(el, el.type === "checkbox" ? (el.checked ? 1 : 0) : el.value); }
 function setPickDisplay(el, id) {
   q(".pickbtn-name", el).textContent = nameFor(el.dataset.kind, id);
   q(".pickbtn-id", el).textContent = "#" + id;
@@ -269,8 +269,15 @@ function onIsoPick(el) {
 /* Per-field undo: revert a control to the value it had when this view was rendered.
  * The ↺ button sits right after its control, so previousElementSibling is the field. */
 function revertIsoField(btn) {
-  const el = btn.previousElementSibling;
+  let el = btn.previousElementSibling;
+  if (el && el.tagName === "LABEL") el = el.querySelector("input");   // checkbox in a .chk label
   if (!el || el.dataset.orig == null) return;
+  if (el.type === "checkbox") {
+    const want = el.dataset.orig === "1";
+    el.checked = want;
+    commitIso(el, want ? 1 : 0);
+    return;
+  }
   const orig = el.dataset.orig;
   // Description fields display our English rendering but store the game's own string,
   // so revert must put the ORIGINAL stored bytes back, not the translation.
@@ -292,6 +299,11 @@ function afterIsoWrite(view, ident) {
   if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
   // reassigning a set's effect changes which magnitudes exist -> re-render the panel
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
+  if (view === "setgate") {
+    const cb = q('#isoSetBody input[data-view="setgate"]');
+    const lbl = cb && cb.nextElementSibling;
+    if (lbl) lbl.textContent = cb.checked ? "restricted" : "any character";
+  }
 }
 /* the ↺ button markup placed after a control inside its .in / table cell */
 const REVERT_BTN = `<button type="button" class="revert" title="Undo this change" onclick="revertIsoField(this)" tabindex="-1">↺</button>`;
@@ -316,6 +328,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "setbonus") res = window.PYISO.setbonus(+el.dataset.setidx, +el.dataset.eff, +value);
     else if (view === "sethandler") res = window.PYISO.sethandler(+el.dataset.setidx, +value);
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
+    else if (view === "setgate") res = window.PYISO.setgate(+el.dataset.setidx, value ? 1 : 0, +el.dataset.word || 0);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -424,7 +437,8 @@ function renderGearItem(slot, id) {
  * member ids (which pieces the set requires), bonus magnitudes, and — via the jump
  * table — which effect a set uses at all. That last one is what makes CUSTOM sets
  * possible: give any set any other set's bonus, with any members you like. */
-let SETS = null, ACCNAMES = null;
+let SETS = null, ACCNAMES = null, curSetIdx = null;
+const SET_GATE_WORD = {};   // set index -> original restriction instruction
 VIEW_RENDER.sets = async (body) => {
   const d = JSON.parse(window.PYISO.sets());
   if (d.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(d.error)}</p>`; return; }
@@ -438,7 +452,12 @@ VIEW_RENDER.sets = async (body) => {
       so you can build custom sets. Bonus values were verified against the Suikosource armor-set guide.</div>
     <div id="isoSetBody"></div>`;
   $("isoSetSel").onchange = () => renderSet(+$("isoSetSel").value);
-  renderSet(d.sets.length ? d.sets[0].index : 0);
+  // keep the user on the set they were editing across re-renders (effect / restriction
+  // changes re-render the whole panel)
+  const keep = d.sets.some(x => x.index === curSetIdx) ? curSetIdx
+             : (d.sets.length ? d.sets[0].index : 0);
+  $("isoSetSel").value = String(keep);
+  renderSet(keep);
 };
 function armorSlotList(slot){
   if (slot === "accessory") return mapList(ACCNAMES || {});
@@ -449,6 +468,7 @@ function armorSlotList(slot){
 }
 function renderSet(idx){
   const s = (SETS.sets || []).find(x => x.index === idx); if (!s) return;
+  curSetIdx = idx;
   const eff = s.effects || [];
   let h = `<div class="subhd">${esc(s.name)} <span class="note">— set #${s.index}</span></div>`;
   if (s.docBonus) h += `<div class="fnote" style="margin:0 16px 2px">Documented bonus: <b>${esc(s.docBonus)}</b></div>`;
@@ -489,6 +509,31 @@ function renderSet(idx){
     }).join("") + `</div>`;
   }
 
+  // per-character restriction (e.g. Sun's documented "Prince only")
+  if (s.gate) {
+    const on = s.gate.restricted !== false;
+    if (s.gate.word) SET_GATE_WORD[s.index] = s.gate.word;      // remember it for restores
+    const gword = s.gate.word || SET_GATE_WORD[s.index] || 0;
+    h += `<div class="subhd">Restriction</div>
+      <div class="grid" style="padding-top:6px"><div class="fld"><label>Only one character benefits</label>
+        <div class="in"><label class="chk"><input type="checkbox" ${on?"checked":""}
+          data-key="setgate:${s.index}" data-view="setgate" data-setidx="${s.index}"
+          data-word="${gword}" data-kind="num" data-orig="${on?1:0}"
+          data-lbl="${esc(s.name)} · restriction" data-grp="Sets" onchange="onIsoField(this)">
+          <span class="note">${on ? "restricted" : "any character"}</span></label>${REVERT_BTN}</div>
+        <div class="fnote">unchecking removes the check (a 4-byte NOP) so the bonus applies to
+          whoever wears the full set</div></div>
+      <div class="fld"><label>Restricted to</label><div class="in">
+        <button type="button" class="pickbtn" id="setGateChar" ${on?"":"disabled"}
+          data-key="setgatechar:${s.index}" data-orig="${s.gate.charId==null?0:s.gate.charId}"
+          data-word="${gword}" data-lbl="${esc(s.name)} · restricted to" data-grp="Sets"
+          onclick="pickSetGateChar(${s.index})">
+          <span class="pickbtn-name">${esc(charName(s.gate.charId))}</span>
+          <span class="pickbtn-id note">#${s.gate.charId==null?0:s.gate.charId}</span></button>${REVERT_BTN}</div>
+        <div class="fnote">which character gets the bonus${s.gate.kind==="retargeted"?" (re-pointed)":""}
+          · the compared field is inferred to be the character id</div></div></div>`;
+  }
+
   // effect assignment — the jump table is plain data, so this is a safe way to give any
   // set any other set's bonus (custom sets)
   const opts = (SETS.handlers || []).map(hd =>
@@ -500,6 +545,29 @@ function renderSet(idx){
         data-grp="Sets" onchange="onIsoField(this)">${opts}</select>${REVERT_BTN}</div>
       <div class="fnote">changes which bonus this set grants (jump-table entry — a data edit)</div></div></div>`;
   $("isoSetBody").innerHTML = h;
+}
+function charName(id){
+  if (id == null) return "— anyone —";
+  const roster = (() => { try { return JSON.parse(window.PYISO.chars()).chars || []; } catch(_) { return []; } })();
+  const hit = roster.find(c => c.id === +id);
+  return hit ? hit.name : ("#" + id);
+}
+/* Re-point a set's restriction at a different character. The engine rewrites the gate
+   as `li $at,N` + `bne`, using the branch's own spare delay slot. */
+function pickSetGateChar(setIdx){
+  const el = $("setGateChar"); if(!el) return;
+  let roster = [];
+  try { roster = (JSON.parse(window.PYISO.chars()).chars || []).map(c => ({ id:c.id, name:c.name })); } catch(_){}
+  const cur = el.dataset.cur != null ? el.dataset.cur : el.dataset.orig;
+  openPicker("Restrict the bonus to…", roster, cur, (id) => {
+    const r = JSON.parse(window.PYISO.setgatechar(setIdx, +id, +el.dataset.word || 0));
+    if (r.error) { toast(r.error, "bad"); return; }
+    q(".pickbtn-name", el).textContent = charName(id);
+    q(".pickbtn-id", el).textContent = "#" + id;
+    el.dataset.cur = String(id);
+    trackIso(el, id); updateIsoToolbar(); captureUndoStep();
+    toast(`Set bonus now restricted to ${charName(id)}.`, "ok");
+  }, {});
 }
 function pickSetMember(setIdx, slot){
   const el = q(`.pickbtn[data-key="setmem:${setIdx}:${slot}"]`); if(!el) return;

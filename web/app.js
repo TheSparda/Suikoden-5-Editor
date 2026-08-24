@@ -123,6 +123,7 @@ function isoGlueHandles(){
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
+    setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
 }
@@ -425,6 +426,18 @@ def iso_setmember(idx, slot, equip_id):
 def iso_setbonus(idx, eff, value):
     try:
         with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_set_bonus(g, int(idx), int(eff), int(value)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setgate(idx, enabled, original_word):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(P.write_set_gate(g, int(idx), bool(int(enabled)),
+                                               int(original_word) if original_word else None))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setgatechar(idx, char_id, original_word):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(P.write_set_gate_char(g, int(idx), int(char_id),
+                                                    int(original_word) if original_word else None))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_sethandler(idx, handler):
     try:

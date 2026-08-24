@@ -85,9 +85,14 @@ def build_fixture(path):
     # handlers (outside the detector window) + the jump table
     H_SET = DET_V + 0x4E0       # `li`+delay-slot store  -> "set char+256 = 6"
     H_ADD = DET_V + 0x500       # read-modify-write       -> "add +50 to char+20"
+    H_GATE = DET_V + 0x540      # per-character restriction, then a bonus
     put(H_SET, [li(V1, 6), beq(ZERO, ZERO, H_SET + 4, H_SET + 0x20), sb(V1, 256, S0)])
     put(H_ADD, [lh(V1, 20, S0), _i(0x09, V1, V1, 50), sh(V1, 20, S0),
                 beq(ZERO, ZERO, H_ADD + 12, H_ADD + 0x20)])
+    # gated handler: `lbu $v1,16($s0); bne $v1,$zero,skip` then +7 to char+40
+    put(H_GATE, [lbu(V1, 16, S0), bne(V1, ZERO, H_GATE + 4, H_GATE + 0x20), NOP,
+                 lh(V1, 40, S0), _i(0x09, V1, V1, 7), sh(V1, 40, S0),
+                 beq(ZERO, ZERO, H_GATE + 24, H_GATE + 0x20)])
     jt = [F.SET_NOOP_VADDR] * F.SET_COUNT
     jt[1] = H_SET; jt[4] = H_ADD
     buf[F.SET_JT_OFF:F.SET_JT_OFF + 4 * F.SET_COUNT] = struct.pack("<%dI" % F.SET_COUNT, *jt)
@@ -97,7 +102,7 @@ def build_fixture(path):
     desc = "頭　直防＋１０".encode("cp932")
     buf[rec + F.ARMOR_SUMMARY_OFF:rec + F.ARMOR_SUMMARY_OFF + len(desc)] = desc
     open(path, "wb").write(buf)
-    return {"H_SET": H_SET, "H_ADD": H_ADD}
+    return {"H_SET": H_SET, "H_ADD": H_ADD, "H_GATE": H_GATE}
 
 tmp = os.path.join(tempfile.gettempdir(), "s5_sets_unit.bin")
 P.BACKUPS = False; P.RECORD_MODS = False
@@ -182,6 +187,72 @@ chk("over-long description is truncated to the cap", len(longw.encode("cp932")) 
 with P.Iso(tmp) as g:
     stat_ok = all(f["value"] == 0 for f in P.read_armor_item(g, "head", 3)["fields"] if f["label"] == "DEF")
 chk("adjacent stat block not corrupted by the long write", stat_ok)
+
+def raises_early(fn):
+    try: fn(); return False
+    except Exception: return True
+
+# ---------------- per-character restriction (Sun's "Prince only") ----------------
+with P.Iso(tmp, writable=True) as g: P.write_set_handler(g, 4, H["H_GATE"])
+with P.Iso(tmp) as g: dg = P.read_sets(g)
+sg = next(s for s in dg["sets"] if s["index"] == 4)
+chk("restriction detected on a gated handler",
+    sg["gate"] is not None and sg["gate"]["restricted"] is True and sg["gate"]["charOff"] == 16,
+    str(sg["gate"]))
+chk("the gated bonus still decodes",
+    [(e["kind"], e["charOff"], e["value"]) for e in sg["effects"]] == [("add", 40, 7)], str(sg["effects"]))
+orig_word = sg["gate"]["word"]
+with P.Iso(tmp, writable=True) as g: P.write_set_gate(g, 4, False)
+with P.Iso(tmp) as g: dg2 = P.read_sets(g)
+sg2 = next(s for s in dg2["sets"] if s["index"] == 4)
+chk("removing the restriction NOPs the branch",
+    sg2["gate"]["restricted"] is False and sg2["gate"]["word"] == 0, str(sg2["gate"]))
+chk("the bonus survives removing the restriction",
+    [(e["kind"], e["charOff"], e["value"]) for e in sg2["effects"]] == [("add", 40, 7)], str(sg2["effects"]))
+with P.Iso(tmp, writable=True) as g: P.write_set_gate(g, 4, True, orig_word)
+with P.Iso(tmp) as g: dg3 = P.read_sets(g)
+chk("restoring the restriction round-trips",
+    next(s for s in dg3["sets"] if s["index"] == 4)["gate"]["word"] == orig_word)
+with P.Iso(tmp) as g:
+    chk("ungated handler reports no restriction",
+        next(s for s in dg3["sets"] if s["index"] == 1)["gate"] is None or
+        next(s for s in dg3["sets"] if s["index"] == 1)["gate"].get("restricted") is not True)
+with P.Iso(tmp, writable=True) as g:
+    P.write_set_gate(g, 4, False)          # NOP it out again
+    def _no_word():
+        P.write_set_gate(g, 4, True)       # enabling without the original word must fail
+    chk("restoring without the original word is rejected", raises_early(_no_word))
+# --- re-point the restriction at another character ---
+with P.Iso(tmp, writable=True) as g: P.write_set_gate(g, 4, True, orig_word)   # restore first
+with P.Iso(tmp) as g: g0 = next(s for s in P.read_sets(g)["sets"] if s["index"] == 4)["gate"]
+chk("stock gate reports character 0", g0["charId"] == 0, str(g0))
+with P.Iso(tmp, writable=True) as g:
+    rr = P.write_set_gate_char(g, 4, 8, orig_word)              # restrict to character 8
+chk("retarget synthesizes the two-instruction form", rr["mode"] == "synthesized", str(rr))
+with P.Iso(tmp) as g:
+    dr = P.read_sets(g); sr = next(s for s in dr["sets"] if s["index"] == 4)
+chk("gate now reports character 8", sr["gate"]["charId"] == 8 and sr["gate"]["kind"] == "retargeted", str(sr["gate"]))
+chk("retargeted gate is still 'restricted'", sr["gate"]["restricted"] is True)
+chk("the bonus survives retargeting",
+    [(e["kind"], e["charOff"], e["value"]) for e in sr["effects"]] == [("add", 40, 7)], str(sr["effects"]))
+# the skip target must be preserved across the rewrite
+with P.Iso(tmp) as g: chk("skip target preserved", sr["gate"]["target"] == g0["target"],
+                          f"{hex(sr['gate']['target'])} vs {hex(g0['target'])}")
+# changing it again patches in place (no re-synthesis)
+with P.Iso(tmp, writable=True) as g: rr2 = P.write_set_gate_char(g, 4, 21)
+chk("changing the character again patches in place", rr2["mode"] == "patched", str(rr2))
+with P.Iso(tmp) as g:
+    chk("gate reports character 21",
+        next(s for s in P.read_sets(g)["sets"] if s["index"] == 4)["gate"]["charId"] == 21)
+with P.Iso(tmp, writable=True) as g:
+    chk("out-of-range character rejected", raises_early(lambda: P.write_set_gate_char(g, 4, 999)))
+    chk("gating a no-op set rejected", raises_early(lambda: P.write_set_gate_char(g, 2, 5)))
+# removing the restriction still works after retargeting
+with P.Iso(tmp, writable=True) as g: P.write_set_gate(g, 4, False)
+with P.Iso(tmp) as g:
+    gg = next(s for s in P.read_sets(g)["sets"] if s["index"] == 4)["gate"]
+chk("can still remove a retargeted restriction", gg["restricted"] is False, str(gg))
+with P.Iso(tmp, writable=True) as g: P.write_set_handler(g, 4, H["H_ADD"])
 
 # ---------------- error handling ----------------
 def raises(fn):
