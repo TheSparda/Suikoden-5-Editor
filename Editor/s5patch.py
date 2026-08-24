@@ -16,7 +16,7 @@ Commands:
   peek     <iso> --off 0x.. --len N
   poke     <iso> --off 0x.. --u8/--u16/--hex ..
 """
-import argparse, os, sys, shutil
+import argparse, os, struct, sys, shutil
 import s5fields as F
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -890,12 +890,203 @@ def list_armor(iso, slot):
                     "effect": F.armor_summary_en(_armor_summary(iso, base))})
     return out
 
+def write_armor_summary(iso, slot, i, text):
+    """Edit a gear piece's in-game description (the Shift-JIS summary at record+0x08).
+    The game has NO separate 'set bonus' description string (verified: no such text in the
+    ELF), so this per-piece line is the text a player actually reads for a set piece.
+    Capped to the EXISTING string's byte length — the nominal field is longer than the
+    string but runs into the stat block, so we never write past the current terminator."""
+    base = armor_addr(slot, i) + F.ARMOR_SUMMARY_OFF
+    cur = iso.rd(base, F.ARMOR_SUMMARY_LEN)
+    e = cur.find(b"\x00")
+    cap = e if e >= 0 else len(cur)
+    if cap == 0: raise ValueError("this piece has no description slot to edit")
+    enc = str(text).encode("cp932", "replace")[:cap]
+    iso.wr(base, enc + b"\x00" * (cap - len(enc)))
+    return {"ok": True, "cap": cap, "wrote": len(enc)}
+
+
 def write_armor_field(iso, slot, i, label, value):
     for (l, o, w, s) in F.ARMOR_FIELDS:
         if l == label:
             if s and w == 1: value &= 0xFF          # two's-complement for signed byte
             iso.wu(armor_addr(slot, i) + o, w, value); return True
     raise KeyError(f"no armor field {label!r}")
+
+
+# ---- Equipment SET completion bonuses (see s5fields for the RE notes) ---------
+# The detector is code, so we PARSE it: trace each set's block with light register
+# tracking, recording the file offset of every id/magnitude immediate so the UI can
+# patch them. Fully editable: set membership, bonus magnitude, and (via the jump
+# table) which effect a set uses at all -> custom sets.
+def _s16(x): return x - 0x10000 if x >= 0x8000 else x
+
+def _set_words(iso):
+    raw = iso.rd(F.SET_DETECT_OFF, F.SET_DETECT_LEN)
+    return list(struct.unpack("<%dI" % (F.SET_DETECT_LEN // 4), raw))
+
+def _set_trace(ws, entry, det_v):
+    """Follow fall-through from `entry` (a vaddr), tracking registers, until the set
+    index is returned. Returns (members, index). $v1/$v0 are seeded with the
+    function-wide convention (head/body id) so blocks entered mid-chain resolve."""
+    at = lambda va: ws[(va - det_v) // 4]
+    regs = {}                      # reg -> (value, file offset of the `li`)
+    loaded = {3: 68, 2: 69}        # reg -> live-struct offset it was loaded from
+    members, idx, va = [], None, entry
+    for _ in range(160):
+        if not (det_v <= va < det_v + F.SET_DETECT_LEN): break
+        w = at(va); fo = va - F.VADDR_DELTA
+        op = w >> 26; rs = (w >> 21) & 31; rt = (w >> 16) & 31; imm = w & 0xFFFF; fun = w & 0x3F
+        if op in (0x24, 0x20, 0x21, 0x25):                  # load -> rt holds a struct field
+            loaded[rt] = _s16(imm); regs.pop(rt, None)
+        elif op == 0x09 and rs == 0:                        # li rt, imm
+            regs[rt] = (imm, fo); loaded.pop(rt, None)
+        elif op in (4, 5):                                  # beq / bne
+            if rs == 0 and rt == 0:
+                if va + 4 + _s16(imm) * 4 == F.SET_EXIT_VADDR:
+                    d = at(va + 4)
+                    if (d >> 26) == 0x09 and ((d >> 21) & 31) == 0 and ((d >> 16) & 31) == 2:
+                        idx = d & 0xFFFF
+                    elif 2 in regs: idx = regs[2][0]
+                    return members, idx
+            else:
+                lo = rs if rs in loaded else (rt if rt in loaded else None)
+                ri = rt if lo == rs else rs
+                if lo is not None and ri in regs:
+                    soff = loaded[lo]; val, imoff = regs[ri]
+                    slot = F.SET_STRUCT_SLOT.get(soff, "accessory" if soff == F.SET_ACC_ID_OFF else None)
+                    if slot: members.append({"slot": slot, "id": val, "off": imoff})
+        elif op == 0 and fun == 8:                          # jr $ra (fall-through exit)
+            if 2 in regs: idx = regs[2][0]
+            return members, idx
+        va += 4
+    return members, idx
+
+def _set_effects(iso, handler_vaddr):
+    """Decode a handler into editable effects: read-modify-add, or li+store."""
+    if not handler_vaddr or handler_vaddr == F.SET_NOOP_VADDR: return []
+    fo = handler_vaddr - F.VADDR_DELTA
+    hw = list(struct.unpack("<28I", iso.rd(fo, 112)))
+    out, pend, stop_after = [], None, None
+    for k, w in enumerate(hw):
+        fk = fo + k * 4
+        op = w >> 26; rs = (w >> 21) & 31; rt = (w >> 16) & 31; imm = w & 0xFFFF
+        if op in (0x21, 0x25, 0x24, 0x20):                  # lh/lhu/lbu/lb -> read target
+            pend = {"charOff": _s16(imm), "width": "h" if op in (0x21, 0x25) else "b"}
+        elif op == 0x09 and rs == 0 and rt != 0:            # li -> a "set" style effect
+            pend = {"setval": (imm, fk)}
+        elif op == 0x09 and rs != 0 and pend and "setval" not in pend:
+            pend.update({"kind": "add", "value": _s16(imm), "immOff": fk}); out.append(pend); pend = None
+        elif op in (0x28, 0x29, 0x2B):                      # sb/sh/sw -> commits a li
+            if pend and "setval" in pend:
+                out.append({"kind": "set", "charOff": _s16(imm),
+                            "width": {0x28: "b", 0x29: "h", 0x2B: "w"}[op],
+                            "value": pend["setval"][0], "immOff": pend["setval"][1]})
+                pend = None
+        elif op in (4, 5) and rs == 0 and rt == 0:
+            stop_after = k + 1                              # MIPS: the delay slot still runs
+        elif op == 0x11 or (w & 0xFC00003F) == 0x44000000:
+            out.append({"kind": "float", "charOff": None, "width": None, "value": None, "immOff": None})
+        if stop_after is not None and k >= stop_after: break
+    return out
+
+def read_sets(iso):
+    """All equipment sets: members (with the file offset of each id immediate), the
+    jump-table slot, and the decoded bonus effects. Names come from the armor tables
+    (s5_armor_names tags each piece with its set)."""
+    det_v = F.SET_DETECT_OFF + F.VADDR_DELTA
+    ws = _set_words(iso)
+    at = lambda va: ws[(va - det_v) // 4]
+    # dispatch map: `beq $v1,<li head id>, target`
+    disp, dregs = {}, {}
+    for k in range(F.SET_DETECT_LEN // 4):
+        va = det_v + k * 4; w = ws[k]
+        op = w >> 26; rs = (w >> 21) & 31; rt = (w >> 16) & 31; imm = w & 0xFFFF
+        if op == 0x09 and rs == 0: dregs[rt] = (imm, va - F.VADDR_DELTA)
+        elif op == 4 and (rs == 3 or rt == 3):
+            other = rt if rs == 3 else rs
+            if other in dregs: disp[va + 4 + _s16(imm) * 4] = dregs[other]
+    # candidate block starts: every branch target + every fall-through
+    targets = set()
+    for k in range(F.SET_DETECT_LEN // 4):
+        va = det_v + k * 4; w = ws[k]
+        if (w >> 26) in (4, 5, 6, 7):
+            targets.add(va + 4 + _s16(w & 0xFFFF) * 4); targets.add(va + 8)
+    def score(m):
+        if sum(1 for x in m if x["slot"] == "head") > 1: return -1   # a dispatch chain
+        return len({x["slot"] for x in m}) * 100 + len(m)
+    best = {}
+    for t in sorted(targets):
+        if not (det_v <= t < det_v + F.SET_DETECT_LEN): continue
+        m, i = _set_trace(ws, t, det_v)
+        if i is None or i >= F.SET_COUNT: continue
+        if t in disp and not any(x["slot"] == "head" for x in m):
+            hid, ho = disp[t]; m = [{"slot": "head", "id": hid, "off": ho}] + m
+        sc = score(m)
+        if sc < 200: continue
+        if i not in best or sc > best[i][2]: best[i] = (m, t, sc)
+    jt = list(struct.unpack("<%dI" % F.SET_COUNT, iso.rd(F.SET_JT_OFF, F.SET_COUNT * 4)))
+    names = _set_names()
+    out = []
+    for i in sorted(best):
+        m, entry, _ = best[i]
+        out.append({"index": i, "name": _set_name_for(m, names, i), "entry": entry,
+                    "members": m, "handler": jt[i], "jtOff": F.SET_JT_OFF + i * 4,
+                    "noop": jt[i] == F.SET_NOOP_VADDR,
+                    "effects": _set_effects(iso, jt[i])})
+    return {"sets": out, "jumpTable": jt}
+
+def _set_names():
+    """equip id -> set name, from the '(SetName)' suffix in s5_armor_names.json."""
+    import re
+    try: ar = F.res_json("s5_armor_names.json")
+    except Exception: return {}
+    out = {}
+    for slot, m in ar.items():
+        if not isinstance(m, dict) or slot.startswith("_"): continue
+        for eid, nm in m.items():
+            if not str(eid).isdigit(): continue          # skip metadata keys
+            mt = re.search(r"\(([^)]+)\)\s*$", str(nm))
+            if mt: out[(slot if slot != "glove" else "arm", int(eid))] = mt.group(1).strip()
+    return out
+
+def _set_name_for(members, names, idx):
+    for m in members:
+        nm = names.get((m["slot"], m["id"]))
+        if nm: return nm
+    return "Set %d" % idx
+
+def write_set_member(iso, set_index, slot, equip_id):
+    """Change which item a set requires in one slot (patches the compare immediate)."""
+    data = read_sets(iso)
+    s = next((x for x in data["sets"] if x["index"] == int(set_index)), None)
+    if not s: raise KeyError("no set %s" % set_index)
+    mem = next((m for m in s["members"] if m["slot"] == slot), None)
+    if not mem: raise KeyError("set %s has no %s slot to edit" % (set_index, slot))
+    v = int(equip_id)
+    if not (0 <= v <= 0xFF): raise ValueError("equip id out of range")
+    iso.wu(mem["off"], 2, v)                     # the 16-bit immediate of the compare
+    return {"ok": True, "slot": slot, "id": v, "off": mem["off"]}
+
+def write_set_bonus(iso, set_index, effect_index, value):
+    """Change a set bonus magnitude (patches the handler's immediate)."""
+    data = read_sets(iso)
+    s = next((x for x in data["sets"] if x["index"] == int(set_index)), None)
+    if not s: raise KeyError("no set %s" % set_index)
+    eff = s["effects"][int(effect_index)]
+    if eff.get("immOff") is None: raise ValueError("this effect isn't a simple numeric bonus")
+    v = int(value)
+    if not (-32768 <= v <= 65535): raise ValueError("value out of range")
+    iso.wu(eff["immOff"], 2, v & 0xFFFF)
+    return {"ok": True, "value": v, "off": eff["immOff"]}
+
+def write_set_handler(iso, set_index, handler_vaddr):
+    """Point a set at a different effect handler (pure jump-table data edit) — this is
+    how a set with no bonus (or any set) can be given another set's bonus."""
+    i = int(set_index)
+    if not (0 <= i < F.SET_COUNT): raise KeyError("set index out of range")
+    iso.wu(F.SET_JT_OFF + i * 4, 4, int(handler_vaddr) & 0xFFFFFFFF)
+    return {"ok": True, "index": i, "handler": int(handler_vaddr)}
 
 
 def read_mp(iso):

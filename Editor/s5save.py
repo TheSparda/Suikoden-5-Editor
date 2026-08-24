@@ -112,6 +112,11 @@ CHAR_BASE, CHAR_STRIDE, NUM_CHARS = 0x2A8, 0x160, 120
 CHAR_ARMOR, CHAR_RUNE, CHAR_ACTIVE, CHAR_LEVEL, CHAR_SKILLS = 0xF4, 0xEC, 0x49, 0xC1, 0x119
 SKILL_COUNT = 48                                   # skill ranks @+0x119..+0x148, each 0=None..7=SS
 ARMOR_SLOTS = ("helm", "body", "glove", "foot")   # +0xF4,+0xF5,+0xF6,+0xF7 (VERIFIED vs item tables)
+# 5th equipment slot — ACCESSORY @+0xF9 (VERIFIED 2026-08-24): equip id into the accessory
+# table. 100% of the 28 distinct values across 6 real saves decode to real accessories
+# (Cape, Leather Cape, Sun Badge, Windspun Cape, Prosperity Ring 47, ...), and the range
+# fits the 49-entry table exactly. Needed to complete a 5-piece equipment set.
+CHAR_ACCESSORY = 0xF9
 RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED vs innate runes)
 # CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char max == story-cap level in each save).
 # CHAR_SKILLS @+0x119: 48 skill ranks (ISO skill order), VERIFIED — 100% respect the ISO
@@ -137,6 +142,7 @@ def read_character(gd, idx):
     r = _char_off(idx)
     if r + CHAR_STRIDE > len(gd): return None
     armor = {s: gd[r + CHAR_ARMOR + i] for i, s in enumerate(ARMOR_SLOTS)}
+    armor["accessory"] = gd[r + CHAR_ACCESSORY]        # 5th slot (completes 5-piece sets)
     runes = {s: gd[r + CHAR_RUNE + i] for i, s in enumerate(RUNE_SLOTS)}
     active = any(gd[r + CHAR_ACTIVE:r + CHAR_ACTIVE + 47])
     skills = list(gd[r + CHAR_SKILLS:r + CHAR_SKILLS + SKILL_COUNT])
@@ -173,7 +179,9 @@ def _apply_char_edit(b, key, val):
     idx = int(idx_s)
     if idx >= NUM_CHARS: return False
     r = _char_off(idx)
-    if slot in ARMOR_SLOTS:
+    if slot == "accessory":
+        b[r + CHAR_ACCESSORY] = int(val) & 0xFF
+    elif slot in ARMOR_SLOTS:
         b[r + CHAR_ARMOR + ARMOR_SLOTS.index(slot)] = int(val) & 0xFF
     elif slot in RUNE_SLOTS:
         b[r + CHAR_RUNE + RUNE_SLOTS.index(slot)] = int(val) & 0xFF

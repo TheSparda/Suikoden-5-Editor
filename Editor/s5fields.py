@@ -304,6 +304,56 @@ def armor_summary_en(jp):
         s = s.replace(unicodedata.normalize("NFKC", a), b)
     return re.sub(r"\s+", " ", s).strip()
 
+# ---- Equipment SET completion bonuses (VERIFIED 2026-08-24 by ELF reverse-engineering).
+# Set bonuses are NOT table data — they are inline code — but every value that matters is a
+# byte/halfword immediate, so they are fully editable. Three layers:
+#   1) detector @file 0x281AD0 (vaddr 0x2D41D0): reads the live char struct's equipped ids
+#      (+68 head, +69 body, +70 arm, +71 foot; accessory list at +72 = 4 entries x 8 bytes,
+#      entry+0 = slot type (5=accessory), entry+1 = item id) and compares each against an
+#      inline `addiu rX,$zero,<EQUIP ID>` immediate -> returns a set index in $v0.
+#   2) dispatcher @vaddr 0x2D4660: bounds-checks the index < SET_COUNT then jumps through
+#      SET_JT_OFF (a plain u32 jump table -> repointing a set's effect is a pure data edit).
+#   3) per-set handlers: read-modify-write on the live char struct with an immediate
+#      magnitude (e.g. Destiny +50, Sun +5 x8 stats), or a `li`+store (Fish).
+# PROOF the model is right: Fish = set 1, whose handler stores 6 into char+256; the affinity
+# scale is AFFINITY_GRADES = [None,E,D,C,B,A,S] so 6 == S — exactly the documented
+# "Fish full set raises Water affinity to S". NTSC-U only (PAL offsets unmapped).
+VADDR_DELTA     = 0x52700          # vaddr = file offset + this
+SET_DETECT_OFF  = 0x281AD0         # file offset of the set detector
+SET_DETECT_LEN  = 0x490
+SET_EXIT_VADDR  = 0x2D4650         # shared "return the set index" exit
+SET_JT_OFF      = 0x687B00         # file offset of the 10-entry u32 jump table
+SET_COUNT       = 10
+SET_NOOP_VADDR  = 0x2D47C4         # handler that applies nothing
+SET_STRUCT_SLOT = {68: "head", 69: "body", 70: "arm", 71: "foot"}
+SET_ACC_ID_OFF  = 73               # accessory list entry+1 = item id
+SET_SLOT_ORDER  = ("head", "body", "arm", "foot", "accessory")
+# Live-struct offsets the handlers touch — LABELS VERIFIED against the Suikosource
+# "Armor Sets" guide (every set's decoded effect matched the guide exactly):
+#   Classic  HP+10 / ATK+5        -> +20 = HP, +40 = ATK
+#   Destiny  HP+50                -> +20 = HP (confirmed twice)
+#   Guardian MDEF+10              -> +46 = MDEF
+#   Samurai  Crit+10 / DblCrit+10 -> +304 = Critical %, +305 = Double-critical %
+#   Fish     "Water affinity is S"-> +256 = Water affinity (value 6 == S)
+#   Sun      "Prince only: all stats +5" -> the +40..+56 halfword block is the stat array
+#   Windspun "in other words, SPD+34"    -> the float handler's 34.0f, +54 = SPD
+SET_FIELD_HINT  = {20: "HP", 40: "ATK", 46: "MDEF", 54: "SPD",
+                   256: "Water affinity", 304: "Critical %", 305: "Double critical %",
+                   42: "stat", 44: "stat", 48: "stat", 50: "stat", 52: "stat", 56: "stat"}
+# Documented set bonuses (Suikosource) — shown alongside the decoded values so users can
+# see intent vs. what the bytes actually do. Keyed by set index.
+SET_DOC_BONUS = {
+    1: "Water affinity is S",
+    2: "Potch from battle is doubled (applied on the battle-reward path, not here)",
+    3: "Recover 10% HP each turn (applied elsewhere, not a stat write)",
+    4: "HP +50, plus a 20% chance of revival",
+    5: "MDEF +10",
+    6: "HP +10, ATK +5",
+    7: "Critical Hit +10%, Double Critical +10%",
+    8: "Equipment SPD penalty canceled, SPD +20 (i.e. SPD +34)",
+    9: "Prince only: all stats +5",
+}
+
 # ---- MP growth thresholds (VERIFIED @0x4986C0; this is the old "LADDER" table, now
 # identified via a community-documented MP Growth module + byte-match). 4 groups = magic Levels
 # 1-4; each group is 9 u16 MP-cost thresholds (a 10th u16 = 999 terminator/pad). Content

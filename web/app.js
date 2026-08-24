@@ -121,6 +121,8 @@ function isoGlueHandles(){
     unites:g("iso_unites"), setunite:g("iso_setunite"),
     names:g("iso_names"), setname:g("iso_setname"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
+    sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
+    sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
 }
@@ -134,8 +136,9 @@ async function loadNames(){
   const cnames = {}; for(const c of chars) cnames[c.id] = c.name;
   const armorNames = { helm: armor.head||{}, body: armor.body||{},
                        glove: armor.glove||{}, foot: armor.foot||{} };
+  const accNames = armor.accessory || {};      // 5th slot (may be absent in older tables)
   const runeNames = {}; runes.forEach((n, i) => { runeNames[String(i)] = n; });
-  return { cnames, armorNames, runeNames, skillNames: SKILL_NAMES, rankNames: RANK_NAMES };
+  return { cnames, armorNames, accNames, runeNames, skillNames: SKILL_NAMES, rankNames: RANK_NAMES };
 }
 
 /* ---------------- Python glue (save + iso adapters) ---------------- */
@@ -377,6 +380,69 @@ def iso_setname(index, name):
     try:
         with P.Iso(ISO, writable=True) as g: P.set_name(g, int(index), str(name))
         return json.dumps({"ok": True})
+    except Exception as e: return json.dumps({"error": str(e)})
+
+# ---- Equipment sets (membership + bonus magnitudes + effect assignment + piece text)
+def iso_sets():
+    try:
+        with P.Iso(ISO) as g: d = P.read_sets(g)
+        # attach readable labels + the documented bonus, and per-piece names/descriptions
+        acc = {}
+        for s in d["sets"]:
+            s["docBonus"] = F.SET_DOC_BONUS.get(s["index"], "")
+            for e in s["effects"]:
+                e["field"] = F.SET_FIELD_HINT.get(e.get("charOff"), None)
+            for m in s["members"]:
+                slot = m["slot"]; sid = int(m["id"]) - 1     # equip id -> stat record
+                m["statId"] = sid
+                try:
+                    with P.Iso(ISO) as g2:
+                        it = P.read_armor_item(g2, slot if slot != "arm" else "arm", sid)
+                    m["name"] = it.get("name") or ("#%d" % m["id"])
+                    m["desc"] = it.get("summaryEn") or ""
+                    m["descRaw"] = it.get("summary") or ""
+                except Exception:
+                    m["name"] = "#%d" % m["id"]; m["desc"] = ""; m["descRaw"] = ""
+        # distinct handlers available to assign (this is what enables custom set bonuses)
+        seen = {}
+        for s in d["sets"]:
+            h = s["handler"]
+            if h not in seen:
+                seen[h] = {"handler": h, "from": s["name"],
+                           "summary": ("(no effect)" if s["noop"] else
+                                       ", ".join(("%s %s%s" % (F.SET_FIELD_HINT.get(e.get("charOff"), "char+%s" % e.get("charOff")),
+                                                  "=" if e.get("kind") == "set" else "+", e.get("value")))
+                                                 if e.get("kind") in ("add", "set") else "(float)"
+                                                 for e in s["effects"]))}
+        d["handlers"] = list(seen.values())
+        d["slots"] = list(F.SET_SLOT_ORDER)
+        return json.dumps(d)
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setmember(idx, slot, equip_id):
+    try:
+        with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_set_member(g, int(idx), slot, int(equip_id)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setbonus(idx, eff, value):
+    try:
+        with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_set_bonus(g, int(idx), int(eff), int(value)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_sethandler(idx, handler):
+    try:
+        with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_set_handler(g, int(idx), int(handler)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setdesc(slot, stat_id, text):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(P.write_armor_summary(g, slot, int(stat_id), str(text)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_accnames():
+    try:
+        with P.Iso(ISO) as g:
+            out = {}
+            for i in range(F.ARMOR_TABLES["accessory"][1]):
+                nm, en, jp = P._armor_name(g, "accessory", i, P.armor_addr("accessory", i))
+                out[str(i + 1)] = nm or ("#%d" % i)          # key = equip id
+        return json.dumps({"accessory": out})
     except Exception as e: return json.dumps({"error": str(e)})
 
 def iso_hardmode(factor):
@@ -705,7 +771,7 @@ function pickBtn(sk, cf, curId, curName, onPick){
     <span class="pickbtn-name">${esc(curName)}</span><span class="pickbtn-id note">#${esc(curId)}</span></button>${REVERT_BTN_SAVE}`;
 }
 function armorList(slot){
-  const m = NAMES.armorNames[slot] || {};
+  const m = (slot === "accessory" ? (NAMES.accNames || {}) : NAMES.armorNames[slot]) || {};
   const list = Object.keys(m).map(k => ({ id:k, name:m[k] }));
   list.unshift({ id:"0", name:"— Nothing —" });
   return list;
@@ -724,7 +790,8 @@ function renderChar(i){
   const r = CHARDATA[i], idx = +$(`csel${i}`).value;
   const c = r.chars.find(x => x.idx === idx);
   const RK = NAMES.rankNames;
-  const armorName = (slot,val) => (NAMES.armorNames[slot]||{})[String(val)] || (String(val)==="0"?"— Nothing —":"#"+val);
+  const armorName = (slot,val) => ((slot==="accessory"?(NAMES.accNames||{}):(NAMES.armorNames[slot]||{}))[String(val)])
+    || (String(val)==="0"?"— Nothing —":"#"+val);
   const runeName  = (val) => NAMES.runeNames[String(val)] || (String(val)==="0"?"— Nothing —":"#"+val);
   const slotName  = (val) => { if(!val) return "— empty —"; const n=SKILL_NAMES[val-1]; return n||("#"+val); };
   const sub = (t) => `<div class="subhd">${t}</div>`;
@@ -744,6 +811,8 @@ function renderChar(i){
     + `</div>`
     + sub("Equipment")
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
+    + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot — needed to complete a 5-piece set.</div>`
+    + g(aBtn("accessory","Accessory",c.armor.accessory==null?0:c.armor.accessory))
     + sub("Runes")
     + g(rBtn("rhead","Head",c.runes.rhead)+rBtn("rright","Right hand",c.runes.rright)+rBtn("rleft","Left hand",c.runes.rleft))
     + sub("Equipped skill slots")
@@ -839,6 +908,7 @@ function charFieldLabel(field){
   if(field === "level") return "Level"; if(field === "rec") return "Recruited";
   if(field.startsWith("sk")) return (SKILL_NAMES[+field.slice(2)]||field)+" rank";
   if(field.startsWith("ss")) return "Skill slot "+(+field.slice(2)+1);
+  if(field === "accessory") return "Accessory";
   return { helm:"Helm", body:"Armor", glove:"Gloves", foot:"Boots",
            rhead:"Rune (head)", rright:"Rune (right)", rleft:"Rune (left)" }[field] || field;
 }
@@ -846,6 +916,7 @@ function charFieldDisplay(field, v){
   if(field === "rec") return v ? "Recruited" : "Not recruited";
   if(field.startsWith("sk")) return RANK_NAMES[v] || String(v);
   if(field.startsWith("ss")) return v ? (SKILL_NAMES[v-1]||"#"+v) : "empty";
+  if(field === "accessory") return (NAMES.accNames||{})[String(v)] || (String(v)==="0"?"Nothing":"#"+v);
   if(["helm","body","glove","foot"].includes(field)) return (NAMES.armorNames[field]||{})[String(v)] || (String(v)==="0"?"Nothing":"#"+v);
   if(["rhead","rright","rleft"].includes(field)) return NAMES.runeNames[String(v)] || (String(v)==="0"?"Nothing":"#"+v);
   return String(v);

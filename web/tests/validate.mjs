@@ -55,6 +55,25 @@ for (const fn of ["forceRefresh", "checkVersionBehind", "initUpdateCheck"])
   ok(`common.js defines ${fn}`, commonSrc.includes("function " + fn));
 ok("app.js calls initUpdateCheck", app.includes("initUpdateCheck()"));
 
+// 3c) equipment-set feature wiring + the RE'd constants (real-ISO behaviour is covered by
+// tests/sets_iso.py, which CI skips for lack of a disc — so guard the constants here)
+for (const fn of ["read_sets", "write_set_member", "write_set_bonus", "write_set_handler", "write_armor_summary"])
+  ok(`s5patch defines ${fn}`, fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def " + fn));
+{
+  const fld = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");
+  ok("SET_DETECT_OFF == 0x281AD0", /SET_DETECT_OFF\s*=\s*0x281AD0/.test(fld));
+  ok("SET_JT_OFF == 0x687B00", /SET_JT_OFF\s*=\s*0x687B00/.test(fld));
+  ok("SET_COUNT == 10", /SET_COUNT\s*=\s*10/.test(fld));
+  ok("set field labels verified vs the guide", /20: "HP"/.test(fld) && /46: "MDEF"/.test(fld));
+  ok("save accessory slot @0xF9", /CHAR_ACCESSORY\s*=\s*0xF9/.test(
+      fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8")));
+}
+ok("iso.js has the Sets view", isoSrc.includes('id: "sets"') && isoSrc.includes("function renderSet"));
+ok("iso.js can reassign a set effect (custom sets)", isoSrc.includes('view === "sethandler"'));
+ok("iso.js can edit piece descriptions", isoSrc.includes('view === "setdesc"'));
+ok("armor names table has an accessory list",
+   !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
+
 // 4) ISO slice window covers the highest editable table (name table ~0x699300)
 const iso = read("iso.js");
 const endM = iso.match(/ISO_END\s*=\s*(0x[0-9a-fA-F]+)/);

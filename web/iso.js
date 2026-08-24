@@ -38,6 +38,7 @@ const UNDO_MAX = 300;
 const ISO_VIEWS = [
   { id: "char",     label: "Characters" },
   { id: "gear",     label: "Gear" },
+  { id: "sets",     label: "Sets" },
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
   { id: "price",    label: "Prices" },
@@ -279,6 +280,8 @@ function revertIsoField(btn) {
  * so the per-spell editors below refresh to the new set. */
 function afterIsoWrite(view, ident) {
   if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
+  // reassigning a set's effect changes which magnitudes exist -> re-render the panel
+  if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
 }
 /* the ↺ button markup placed after a control inside its .in / table cell */
 const REVERT_BTN = `<button type="button" class="revert" title="Undo this change" onclick="revertIsoField(this)" tabindex="-1">↺</button>`;
@@ -300,6 +303,9 @@ async function applyIsoWrite(el, value) {
     else if (view === "skillfx") res = window.PYISO.setskillfx(ident.id, ident.rank, +value);
     else if (view === "unite") res = window.PYISO.setunite(ident.id, ident.slot, +value);
     else if (view === "name") res = window.PYISO.setname(ident.index, value);
+    else if (view === "setbonus") res = window.PYISO.setbonus(+el.dataset.setidx, +el.dataset.eff, +value);
+    else if (view === "sethandler") res = window.PYISO.sethandler(+el.dataset.setidx, +value);
+    else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -401,6 +407,103 @@ function renderGearItem(slot, id) {
   $("isoGbody").innerHTML = `<div class="grid" style="padding-top:8px">` + r.fields.map(f =>
     renderField(f, { view: "gear", ident: JSON.stringify({ slot, id }), key: `gear:${slot}:${id}:${f.label}`,
       prefix: `${r.name||("#"+id)} · `, group: `Gear · ${slot}` })).join("") + `</div>`;
+}
+
+/* ---------------- Equipment sets ----------------
+ * Set bonuses live in code, not a table, but every value is an editable immediate:
+ * member ids (which pieces the set requires), bonus magnitudes, and — via the jump
+ * table — which effect a set uses at all. That last one is what makes CUSTOM sets
+ * possible: give any set any other set's bonus, with any members you like. */
+let SETS = null, ACCNAMES = null;
+VIEW_RENDER.sets = async (body) => {
+  const d = JSON.parse(window.PYISO.sets());
+  if (d.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(d.error)}</p>`; return; }
+  SETS = d;
+  if (!ACCNAMES) { try { ACCNAMES = JSON.parse(window.PYISO.accnames()).accessory || {}; } catch(_) { ACCNAMES = {}; } }
+  body.innerHTML = `<div class="row" style="padding:10px 16px 0"><span class="note">Set</span>
+      <select id="isoSetSel">${d.sets.map(s=>`<option value="${s.index}">${esc(s.name)}</option>`).join("")}</select>
+      <span class="note">${d.sets.length} sets</span></div>
+    <div class="fnote" style="margin:6px 16px">Wearing every listed piece on one character grants the
+      set bonus. <b>Members</b>, <b>bonus magnitudes</b> and the <b>effect</b> itself are all editable —
+      so you can build custom sets. Bonus values were verified against the Suikosource armor-set guide.</div>
+    <div id="isoSetBody"></div>`;
+  $("isoSetSel").onchange = () => renderSet(+$("isoSetSel").value);
+  renderSet(d.sets.length ? d.sets[0].index : 0);
+};
+function armorSlotList(slot){
+  if (slot === "accessory") return mapList(ACCNAMES || {});
+  const M = (isoMAPS && isoMAPS.armor) || {};
+  const src = slot === "arm" ? M.glove : M[slot];
+  // the game indexes these tables by EQUIP id (0 = nothing), which is our stat id + 1
+  return mapList(src || {});
+}
+function renderSet(idx){
+  const s = (SETS.sets || []).find(x => x.index === idx); if (!s) return;
+  const eff = s.effects || [];
+  let h = `<div class="subhd">${esc(s.name)} <span class="note">— set #${s.index}</span></div>`;
+  if (s.docBonus) h += `<div class="fnote" style="margin:0 16px 2px">Documented bonus: <b>${esc(s.docBonus)}</b></div>`;
+
+  h += `<div class="subhd">Required pieces</div><div class="grid" style="padding-top:6px">`;
+  h += (s.members || []).map(m => `<div class="fld"><label>${esc(m.slot)}</label><div class="in">
+      <button type="button" class="pickbtn" data-key="setmem:${s.index}:${m.slot}"
+        data-orig="${m.id}" data-lbl="${esc(s.name)} · ${esc(m.slot)}" data-grp="Sets"
+        onclick="pickSetMember(${s.index},'${m.slot}')">
+        <span class="pickbtn-name">${esc(m.name || ("#"+m.id))}</span>
+        <span class="pickbtn-id note">#${m.id}</span></button>${REVERT_BTN}</div>
+      ${m.desc ? `<div class="fnote">${esc(m.desc)}</div>` : ""}
+      <div class="in" style="margin-top:4px">
+        <input type="text" value="${esc(m.descRaw||"")}" placeholder="(no in-game description)"
+          data-key="setdesc:${m.slot}:${m.statId}" data-view="setdesc" data-slot="${m.slot}"
+          data-statid="${m.statId}" data-orig="${esc(m.descRaw||"")}" data-kind="str"
+          data-lbl="${esc(m.name||("#"+m.id))} · in-game text" data-grp="Sets"
+          onchange="onIsoField(this)" ${m.descRaw?"":"disabled"}>${m.descRaw?REVERT_BTN:""}</div>
+      <div class="fnote">in-game description (length-capped)</div></div>`).join("");
+  h += `</div>`;
+
+  h += `<div class="subhd">Set bonus</div>`;
+  if (!eff.length) {
+    h += `<div class="fnote" style="margin:0 16px 6px">${s.noop
+      ? "This set has no stat effect here — the game applies it on another code path (e.g. Prosperity's potch doubling, Pale Moon's per-turn heal), so there's no magnitude to edit. You can still give it a different effect below."
+      : "No editable magnitudes decoded."}</div>`;
+  } else {
+    h += `<div class="grid" style="padding-top:6px">` + eff.map((e,i) => {
+      if (e.kind === "float") return `<div class="fld"><label>effect ${i+1}</label>
+        <div class="in"><input value="floating-point (read-only)" disabled></div>
+        <div class="fnote">this set uses float math — not a simple magnitude</div></div>`;
+      const lbl = e.field || ("char+" + e.charOff);
+      return `<div class="fld"><label>${esc(lbl)} <span class="pill">${e.kind === "set" ? "=" : "+"}</span></label>
+        <div class="in"><input type="number" value="${e.value}" min="-32768" max="65535"
+          data-key="setbonus:${s.index}:${i}" data-view="setbonus" data-setidx="${s.index}" data-eff="${i}"
+          data-kind="num" data-orig="${e.value}" data-lbl="${esc(s.name)} · ${esc(lbl)}" data-grp="Sets"
+          onchange="onIsoField(this)">${REVERT_BTN}</div></div>`;
+    }).join("") + `</div>`;
+  }
+
+  // effect assignment — the jump table is plain data, so this is a safe way to give any
+  // set any other set's bonus (custom sets)
+  const opts = (SETS.handlers || []).map(hd =>
+    `<option value="${hd.handler}" ${hd.handler===s.handler?"selected":""}>${esc(hd.from)} — ${esc(hd.summary||"(no effect)")}</option>`).join("");
+  h += `<div class="subhd">Effect used <span class="note">— assign any set's bonus to this set</span></div>
+    <div class="grid" style="padding-top:6px"><div class="fld"><label>bonus effect</label><div class="in">
+      <select data-key="sethandler:${s.index}" data-view="sethandler" data-setidx="${s.index}"
+        data-kind="num" data-orig="${s.handler}" data-lbl="${esc(s.name)} · effect"
+        data-grp="Sets" onchange="onIsoField(this)">${opts}</select>${REVERT_BTN}</div>
+      <div class="fnote">changes which bonus this set grants (jump-table entry — a data edit)</div></div></div>`;
+  $("isoSetBody").innerHTML = h;
+}
+function pickSetMember(setIdx, slot){
+  const el = q(`.pickbtn[data-key="setmem:${setIdx}:${slot}"]`); if(!el) return;
+  const cur = el.dataset.cur != null ? el.dataset.cur : el.dataset.orig;
+  openPicker(`Set piece — ${slot}`, armorSlotList(slot), cur, (id) => {
+    const list = armorSlotList(slot);
+    const nm = (list.find(x => String(x.id) === String(id)) || {}).name || ("#"+id);
+    q(".pickbtn-name", el).textContent = nm; q(".pickbtn-id", el).textContent = "#"+id;
+    el.dataset.cur = String(id);
+    const r = JSON.parse(window.PYISO.setmember(setIdx, slot, +id));
+    if (r.error) { toast(r.error, "bad"); return; }
+    trackIso(el, id); updateIsoToolbar(); captureUndoStep();
+    renderSet(setIdx);
+  }, {});
 }
 
 VIEW_RENDER.spell = async (body) => {
