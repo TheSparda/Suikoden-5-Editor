@@ -21,11 +21,13 @@ save files.
 
 **At a glance:**
 
-- **ISO editing** — characters, runes & spells, gear, enemies, prices, unites, MP growth,
-  skill effects, text, and a one-click Hard Mode. Edits apply to a *new game*.
-- **Save editing** — full per-character editing (level, armor, runes, battle-skill slots,
-  all 48 skill ranks) plus **recruitment** of the 108 Stars, hero/castle names, and New
-  Game Plus. Works on real saves across every common format.
+- **ISO editing** — characters, runes & spells, gear, **equipment set bonuses**,
+  **always-on passives**, enemies, prices, unites, MP growth, skill effects, text, and a
+  one-click Hard Mode. Edits apply to a *new game*.
+- **Save editing** — full per-character editing (level, armor, accessory, runes,
+  battle-skill slots, all 48 skill ranks) plus **recruitment** of the 108 Stars, the
+  **active party**, Potch, Party SP, hero/castle/army names, and New Game Plus. Works on
+  real saves across every common format.
 - **Asset explorer** — every character portrait rendered to PNG in the browser (battle
   faces + high-res 256×256 portrait sets), a general texture viewer (sprites, effects,
   UI art), and a browser/extractor for all ~7,700 files in the game's DATA.PAK.
@@ -33,6 +35,11 @@ save files.
   standard `.xdelta` patch instead of shipping a 4.5 GB disc image.
 - **Both regions** — NTSC-U (`SLUS-21291`) and PAL (`SLES-54087`), auto-detected from the
   ISO serial (badge in the header). Saves additionally support NTSC-J detection.
+
+> **Web-exclusive:** **Equipment Sets**, **Passives**, and gear name/description editing
+> are in the [web editor](https://thesparda.github.io/Suikoden-5-Editor/web/) only. They
+> use the same `Editor/s5patch.py` engine (which the web app runs unchanged in Pyodide),
+> but the desktop UI doesn't surface them yet.
 
 Every editable field was **reverse-engineered and verified** — against public stat guides,
 the game's own data tables, and (for saves) the game's disassembled save code. Fields that
@@ -78,7 +85,63 @@ Per-character, indexed by the in-game roster, verified byte-for-byte:
 Five slots — Head / Body / Arm / Foot / Accessory — with English item names, verified vs
 the Armor List guide: DEF, buy/sell, weight **Type** + SPD penalty, stat bonuses, proc
 effects (auto-heal / drain / counter / …), and **per-element ATK & DEF** for all 14
-elements. The game's own description text is shown read-only.
+elements.
+
+In the web editor you can also **rename any piece of gear and rewrite its description**
+(English only — the other four languages share a packed pool that can't be relocated
+safely). Both are length-capped to what the disc's record actually has room for, with a
+live character counter; the cap is computed per record rather than assumed, because 15 of
+219 armor records genuinely hold data immediately after the description.
+
+### Equipment Sets *(web editor)*
+The 9 armor sets — Fish, Prosperity, Pale Moon, Destiny, Guardian, Classic, Samurai,
+Windspun, Sun — with their completion bonuses fully editable. Set bonuses live in **code**,
+not a data table, so this panel edits the game's own handlers:
+
+- **Members** — swap any of the five slots (Head / Body / Arm / Foot / **Accessory**) for
+  any other item, so you can build a set out of whatever gear you like.
+- **Bonus effects & magnitudes** — change what a completed set grants and by how much,
+  across **26 targets**: HP, ATK, MDEF, SPD and the other stats, the 14 elemental
+  affinities (as grades, E → S), critical and double-critical rates, and more.
+- **Custom bonuses** — add effects a set never had, assembled into verified unreferenced
+  code space. Numeric fields offer *add* (stack onto the wearer's value); ranks and
+  affinities offer *force to* a tier. Capacity is reported live (currently 6 add-style or
+  9 set-style effects).
+- **Bonus description text** — rewrite what the game says the set does.
+- **Per-character restriction** — the Sun set's "Prince only" check can be **removed**
+  entirely (so anyone wearing the full set benefits) or **retargeted** to another
+  character.
+
+Every set's members and documented bonus are cross-checked against the Suikosource
+Armor Sets guide, which the test suite encodes as ground truth.
+
+Honestly reported limits: Destiny's 20% revival chance is *not* in its handler (separate
+code path), and Prosperity's Potch-doubling and Pale Moon's per-turn heal are jump-table
+no-ops — those three are shown but not editable rather than faked.
+
+### Passives *(web editor)*
+Force a rune's overworld effect to be **permanently active** — nobody has to equip the
+rune, and the slot stays free:
+
+| Rune | Effect |
+|---|---|
+| Champion's Rune | fewer encounters — suppresses weak enemies |
+| Great Firefly Rune | more encounters — increases enemy appearances |
+| Fortune Rune | all party members receive 2× experience |
+| Prosperity Rune | double Potch after every battle |
+| Godspeed Rune | 2× field movement speed, and a 100% escape rate |
+
+These runes gate their effect behind *is it equipped **and** is its flag set*; both checks
+branch to the same target, so replacing the pair with NOPs leaves only the active path.
+That's 8 bytes per call site, and switching a toggle back off restores the disc
+byte-for-byte. Effect wording is read from the disc's own description pool, cross-checked
+against its separate rune-name pool.
+
+**Verified:** the equip check really is bypassed and nothing else on the disc moves.
+**Not verified in-game:** how strongly each effect then behaves — the resolver only selects
+an effect id, so this is an on/off switch, not a rate slider. (The encounter-rate *value*
+lives in map script data rather than the executable. Raven Rune's dungeon evasion would be
+a great addition but has no forceable gate, so it's deliberately excluded.)
 
 ### Enemies
 Level, combat stats, Potch / Skill-Point rewards, per-enemy elemental affinities (E–S),
@@ -118,10 +181,16 @@ image of the game's save RAM, and disassembling the save routines proved there i
 body checksum** (the game validates only three fixed header values), so field edits are
 safe. Every field below is cross-verified against the game's own data tables.
 
-- **Header** — hero name, castle name, **New Game Plus** (fast-forward).
+- **Header** — hero name, castle name, **army name**, **Potch**, **Party SP**, and
+  **New Game Plus** (fast-forward). Playtime is shown for reference. Hero and castle names
+  are each stored twice; the editor writes both copies, since updating only one makes the
+  game disagree with itself about your own name.
+- **Active party** — the 6 battle slots and 4 support slots, picked from that save's own
+  recruited roster (unrecruited characters are listed last and labelled unavailable). The
+  hero slot is locked, because he always leads the party.
 - **Characters panel** — for any of the 120 characters:
   - **Level** (1–99)
-  - **Equipped armor** — Helm / Armor / Gloves / Boots, picked by name
+  - **Equipped armor** — Helm / Armor / Gloves / Boots **and Accessory**, picked by name
   - **Equipped runes** — Head / Right / Left hand, with the full **92-rune name table**
     extracted from the ISO (verified against innate runes: Zerase = Star, Prince = Dawn)
   - **Equipped battle-skill slots** — the two active skill slots

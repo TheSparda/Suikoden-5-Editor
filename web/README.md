@@ -6,11 +6,32 @@ device** (nothing is uploaded):
 - **Save editor** — opens a Suikoden V (PS2) save, edits it, saves the edited copy back.
   Works everywhere, including Android.
 - **ISO / Disc editor** — edits the game disc's data tables (stats, gear, spells, runes,
-  prices, enemies, unites, MP, skill effects, names) and writes only the changed bytes
+  prices, enemies, unites, MP, skill effects, names) **plus equipment-set bonuses,
+  always-on rune passives, and gear name/description text** — and writes only the changed bytes
   back into your ~4 GB ISO in place. Desktop Chromium only (needs the File System Access
   API); the Save editor covers everything else.
 
-**Live:** `https://<your-user>.github.io/Suikoden-5-Editor/web/`
+**Live:** https://thesparda.github.io/Suikoden-5-Editor/web/
+
+## Web-exclusive tabs
+
+Three features exist here and not in the desktop UI. All three edit the game's **code**
+rather than a data table, so they were built against the disassembly and are covered by
+their own test suites:
+
+- **Sets** — the 9 armor sets: swap members (including the accessory slot), change which
+  effects a completed set grants and by how much (26 targets), add effects a set never had
+  (assembled into verified unreferenced code space), rewrite the bonus description, and
+  remove or retarget the Sun set's "Prince only" restriction.
+- **Passives** — force a rune's overworld effect permanently on, no equip needed:
+  Champion's (fewer encounters), Great Firefly (more), Fortune (2x EXP), Prosperity
+  (2x Potch), Godspeed (2x field speed + 100% escape). Each is an 8-byte NOP pair per call
+  site and reverts byte-for-byte.
+- **Gear text** — rename gear and rewrite descriptions (English only), length-capped to
+  what each record actually has room for.
+
+Every write here is reversible and recorded in the same dirty/undo/`.s5mod` machinery as
+the ordinary table edits.
 
 ## How it works (and why it needs almost no new code)
 
@@ -55,6 +76,9 @@ UI never guesses a byte layout.
   remembered baseline (re-applying doesn't compound).
 - **PWA / offline** — installable; a network-first service worker keeps returning users on
   the latest deploy yet still opens offline; the pinned Pyodide runtime is cached once.
+  Same-origin fetches revalidate (`cache: "no-cache"`) and every script/style URL carries a
+  `?v=<release>` stamp, so a deploy can't serve a new `index.html` beside a stale `iso.js`
+  — GitHub Pages' `max-age=600` made exactly that happen once.
 
 ## Install as an app (PWA)
 
