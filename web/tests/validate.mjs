@@ -103,6 +103,18 @@ ok("glue exposes the always-on adapters",
 ok("engine keeps the gate scan inside the resolver",
    /RUNE_GATE_LO\s*=\s*0x253C00/.test(fieldsSrc) && /RUNE_GATE_HI\s*=\s*0x255D00/.test(fieldsSrc));
 
+// 3c) Cache correctness: every versioned asset must carry the displayed release stamp,
+// and same-origin fetches must revalidate (GitHub Pages sends max-age=600).
+const idxSrc = read("index.html"), swSrc = read("sw.js");
+const shown = (idxSrc.match(/id="ver">v([0-9.]+)</) || [])[1];
+ok("index.html shows a version", !!shown, shown);
+const stamps = [...idxSrc.matchAll(/(?:src|href)="(?:[\w.-]+)\?v=([0-9.]+)"/g)].map((m) => m[1]);
+ok("versioned assets are stamped", stamps.length >= 5, `${stamps.length} stamped`);
+ok("every stamp matches the shown version", stamps.every((v) => v === shown),
+   [...new Set(stamps)].join(","));
+ok("sw revalidates same-origin fetches", swSrc.includes('cache: "no-cache"'));
+ok("offline fallback ignores the version query", swSrc.includes("ignoreSearch: true"));
+
 // 4) ISO slice window covers the highest editable table (name table ~0x699300)
 const iso = read("iso.js");
 const endM = iso.match(/ISO_END\s*=\s*(0x[0-9a-fA-F]+)/);

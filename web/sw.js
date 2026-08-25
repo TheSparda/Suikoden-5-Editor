@@ -6,8 +6,14 @@
  *    reinstall — yet the editor still opens with no signal.
  *  - The Pyodide CDN (large, immutable, version-pinned URLs): CACHE-FIRST, so the
  *    ~10 MB runtime downloads once and is instant thereafter.
- * Bump CACHE to purge stale offline copies. */
-const CACHE = "s5editor-v7";
+ * Bump CACHE to purge stale offline copies.
+ *
+ * Same-origin fetches use cache:"no-cache" so they revalidate against the server. Plain
+ * fetch(req) reads the BROWSER HTTP cache first, and GitHub Pages serves assets with
+ * max-age=600 — that shipped a v1.13.0 index.html alongside a stale iso.js for ten
+ * minutes, which looked exactly like a deploy that had silently failed. index.html also
+ * version-stamps its script/link URLs, so a new release can never reuse an old script. */
+const CACHE = "s5editor-v8";
 const SHARE_CACHE = "s5share";   // holds a file shared into the PWA; never purged
 
 const SHELL = [
@@ -77,9 +83,11 @@ self.addEventListener("fetch", (e) => {
   }
   if (sameOrigin) {
     // network-first for the shell so deploys are picked up; cache fallback offline
-    e.respondWith(fetch(req).then((res) => {
+    e.respondWith(fetch(req, { cache: "no-cache" }).then((res) => {
       if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
       return res;
-    }).catch(() => caches.match(req)));
+    }).catch(() => caches.match(req, { ignoreSearch: true })));   // SHELL is precached
+                                                                   // unversioned; the page
+                                                                   // requests ?v=<release>
   }
 });

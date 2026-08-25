@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="S5 Editor">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=1.13.1">
 </head>
 <body>
 <div class="wrap">
@@ -111,7 +111,7 @@
     <button class="tb" data-theme="sun">Sun Rune</button>
     <span class="credit">Made by <b>TheSparda</b> ·
       <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
-      · <span id="ver">v1.13.0</span> ·
+      · <span id="ver">v1.13.1</span> ·
       <button type="button" id="forceRefresh" class="linklike" title="Unregister the service worker, clear caches, and reload — fixes a stuck/stale offline copy">↻ Force refresh</button></span>
     <span class="note">Runs this repo's own <code>Editor/s5save.py</code> + <code>s5patch.py</code> unchanged in
       <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a> — no upload, no install required.
@@ -125,9 +125,9 @@
 <!-- Pyodide runtime (CDN), version pinned. Cached by the service worker after first use. -->
 <script>window.PYODIDE_VERSION = "0.26.4";</script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
-<script src="diff-core.js"></script>
-<script src="common.js"></script>
-<script src="app.js"></script>
-<script src="iso.js"></script>
+<script src="diff-core.js?v=1.13.1"></script>
+<script src="common.js?v=1.13.1"></script>
+<script src="app.js?v=1.13.1"></script>
+<script src="iso.js?v=1.13.1"></script>
 </body>
 </html>
