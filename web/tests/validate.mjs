@@ -80,8 +80,9 @@ ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Edit
 ok("armor names table has an accessory list",
    !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
 
-// 3b) Passive-runes tab: the encounter runes are featured, and no rune is rendered twice
-ok("iso.js registers the Passive runes tab", /id:\s*"passive"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
+// 3b) Encounters tab: exposes exactly the two encounter runes, correctly labelled
+ok("iso.js registers the Encounters tab",
+   /id:\s*"passive",\s*label:\s*"Encounters"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
 ok("iso.js can force a rune always on", isoSrc.includes('view === "runealways"'));
 const encM = isoSrc.match(/const ENCOUNTER = \{([^}]*)\}/);
 // Champion's (79) = fewer, Great Firefly (80) = more, per the disc's own description pool.
@@ -90,7 +91,8 @@ ok("both encounter runes are featured", !!encM && [79, 80].every((id) => encM[1]
 ok("Champion's is labelled as fewer", !!encM && /79:\s*"fewer/.test(encM[1]));
 ok("Great Firefly is labelled as more", !!encM && /80:\s*"more/.test(encM[1]));
 ok("Firefly is not miscategorised as an encounter rune", !!encM && !/\b62\s*:/.test(encM[1]));
-ok("featured runes are excluded from the full list", isoSrc.includes("!(x.runeId in ENCOUNTER)"));
+ok("only the two encounter runes are offered", !!encM && (encM[1].match(/\d+\s*:/g) || []).length === 2, encM && encM[1].trim());
+ok("tab bails out rather than half-render", isoSrc.includes("featured.length !== 2"));
 ok("glue exposes the always-on adapters",
    appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));
 ok("engine keeps the gate scan inside the resolver",
