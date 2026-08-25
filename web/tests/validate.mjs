@@ -80,19 +80,24 @@ ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Edit
 ok("armor names table has an accessory list",
    !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
 
-// 3b) Encounters tab: exposes exactly the two encounter runes, correctly labelled
-ok("iso.js registers the Encounters tab",
-   /id:\s*"passive",\s*label:\s*"Encounters"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
+// 3b) Passives tab: exposes the verified passive runes, correctly labelled
+ok("iso.js registers the Passives tab",
+   /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
 ok("iso.js can force a rune always on", isoSrc.includes('view === "runealways"'));
-const encM = isoSrc.match(/const ENCOUNTER = \{([^}]*)\}/);
-// Champion's (79) = fewer, Great Firefly (80) = more, per the disc's own description pool.
-// Firefly (62) is Bull's Eye, NOT an encounter rune — it must stay out of this section.
-ok("both encounter runes are featured", !!encM && [79, 80].every((id) => encM[1].includes(String(id))), encM && encM[1].trim());
-ok("Champion's is labelled as fewer", !!encM && /79:\s*"fewer/.test(encM[1]));
-ok("Great Firefly is labelled as more", !!encM && /80:\s*"more/.test(encM[1]));
-ok("Firefly is not miscategorised as an encounter rune", !!encM && !/\b62\s*:/.test(encM[1]));
-ok("only the two encounter runes are offered", !!encM && (encM[1].match(/\d+\s*:/g) || []).length === 2, encM && encM[1].trim());
-ok("tab bails out rather than half-render", isoSrc.includes("featured.length !== 2"));
+const grpM = isoSrc.match(/const GROUPS = \[([\s\S]*?)\n  \];/);
+ok("passive groups are defined", !!grpM);
+const gsrc = grpM ? grpM[1] : "";
+// Verified against the disc's own description pool (names cross-checked id 73-92).
+ok("Champion's 79 = fewer encounters", /79:\s*"fewer encounters/.test(gsrc));
+ok("Great Firefly 80 = more encounters", /80:\s*"more encounters/.test(gsrc));
+ok("Fortune 77 = 2x experience", /77:\s*"all party members receive 2x experience/.test(gsrc));
+ok("Prosperity 78 = double Potch", /78:\s*"double Potch/.test(gsrc));
+ok("Godspeed 82 = speed + escape", /82:\s*"2x field movement speed/.test(gsrc));
+ok("Firefly 62 is not offered (it is Bull's Eye, not an encounter rune)", !/\b62\s*:/.test(gsrc));
+ok("Raven 83 is not offered (it has no forceable gate)", !/\b83\s*:/.test(gsrc));
+ok("checkbox caption states the mode, not a requirement",
+   isoSrc.includes("Off — vanilla: only works while equipped") && isoSrc.includes("always active, no rune needed"));
+ok("tab bails out rather than half-render", isoSrc.includes("missing.length"));
 ok("glue exposes the always-on adapters",
    appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));
 ok("engine keeps the gate scan inside the resolver",

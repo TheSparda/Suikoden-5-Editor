@@ -41,7 +41,7 @@ const ISO_VIEWS = [
   { id: "sets",     label: "Sets" },
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
-  { id: "passive",  label: "Encounters" },
+  { id: "passive",  label: "Passives" },
   { id: "price",    label: "Prices" },
   { id: "runeprice",label: "Rune prices" },
   { id: "healprice",label: "Heal prices" },
@@ -302,7 +302,8 @@ function afterIsoWrite(view, ident, el) {
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
   if (view === "runealways") {
     const lbl = el && el.nextElementSibling;   // the specific row's caption, not the first one
-    if (lbl) lbl.textContent = el.checked ? "always on" : "needs the rune equipped";
+    if (lbl) lbl.innerHTML = el.checked ? "<b>On</b> — always active, no rune needed"
+                                        : "Off — vanilla: only works while equipped";
   }
   if (view === "setgate") {
     const cb = q('#isoSetBody input[data-view="setgate"]');
@@ -862,45 +863,55 @@ VIEW_RENDER.passive = async (body) => {
     if (x.allForced) continue;                   // don't overwrite a remembered original with zeros
     RUNE_GATE_WORDS[x.runeId] = Object.fromEntries(x.sites.map(s => [s.vaddr, [s.word1, s.word2]]));
   }
-  /* Wording taken from the disc's own description pool, not from series memory:
-   *   Champion's Orb    0x64E830 "Suppresses appearance of weak enemies"
-   *   Great Firefly Orb 0x64E9C0 "Increases appearance of enemies"
-   * A sweep of every description mentioning enemy appearance confirms these are the only
-   * two encounter-rate runes in the game. The plain Firefly Rune is NOT one of them — it's
-   * "Bull's Eye status: Become target of foes" (0x64D1D0), a battle-targeting effect.
+  /* Blurbs are the disc's own English descriptions, read out of the rune description pool
+   * (0x669000+, five languages per rune, English first) and cross-checked against the rune
+   * name pool (0x664000+) — all 21 names in the id 73-92 band match s5_rune_ids.json exactly,
+   * so the alignment across these ids is solid rather than inferred.
    *
-   * The engine (read/write_rune_always_on) can force any of the 84 runes with a canonical
-   * gate; this tab deliberately exposes only the two that answer a question players ask. */
-  const ENCOUNTER = { 79: "fewer encounters — suppresses weak enemies",
-                      80: "more encounters — increases enemy appearances" };
-  const featured = Object.keys(ENCOUNTER).map(Number)
-    .map(id => runes.find(x => x.runeId === id)).filter(Boolean);
+   * Deliberately NOT here: Raven Rune (83, "100%% evasion of direct attacks in dungeons")
+   * would be a great pick but has no canonical gate, so it can't be forced. Firefly (62) is
+   * "Bull's Eye status: Become target of foes" — a battle effect, not an encounter one. */
+  const GROUPS = [
+    { title: "Random encounters",
+      note: `The game's only two encounter-rate runes. Champion's thins out weak enemies;
+             Great Firefly brings more of them, which is what you want for grinding.`,
+      runes: { 79: "fewer encounters — suppresses weak enemies",
+               80: "more encounters — increases enemy appearances" } },
+    { title: "Party perks",
+      note: `Field and reward passives worth having on permanently.`,
+      runes: { 77: "all party members receive 2x experience",
+               78: "double Potch after every battle",
+               82: "2x field movement speed, and a 100% escape rate" } },
+  ];
+  // The disc's name field is 16 bytes, so rune 80 stores the truncated "Great Firefly Rn".
+  const FULL_NAME = { 80: "Great Firefly Rune" };
 
-  if (featured.length !== 2) {
-    body.innerHTML = `<p class="bad" style="padding:14px">Expected both encounter runes in this
-      disc's rune table, found ${featured.length}. This build only supports NTSC-U.</p>`;
+  const missing = GROUPS.flatMap(g => Object.keys(g.runes).map(Number))
+    .filter(id => !runes.some(x => x.runeId === id));
+  if (missing.length) {
+    body.innerHTML = `<p class="bad" style="padding:14px">Expected runes ${missing.join(", ")} in
+      this disc's rune table and didn't find them. This build only supports NTSC-U.</p>`;
     return;
   }
 
-  body.innerHTML = `<div class="subhd">Random encounters</div>
-    <div class="note" style="margin:0 14px 4px">The game's only two encounter-rate runes.
-      Champion's thins out weak enemies; Great Firefly brings more of them, which is what you
-      want for grinding. Turn one on and it applies <b>party-wide and permanently</b> — nobody
-      has to equip the rune and the slot stays free.</div>
-    <div class="fnote" style="margin:0 14px 10px">Each toggle replaces the rune's equip check
-      with two NOPs (8 bytes per call site) and is fully reversible. It's an on/off switch, not a
-      rate slider: the encounter-rate <i>value</i> lives in map script data rather than the
-      executable. <b>Verified:</b> the equip check really is bypassed and nothing else on the disc
-      moves. <b>Not verified in-game:</b> how strongly each effect then behaves.</div>
-    <div class="grid" style="padding-top:0">` + featured.map(x => `
-      <div class="fld"><label>${esc(x.name)}</label><div class="in">
+  body.innerHTML = GROUPS.map(g => `<div class="subhd">${g.title}</div>
+    <div class="note" style="margin:0 14px 6px">${g.note}</div>
+    <div class="grid" style="padding-top:0">` + Object.keys(g.runes).map(Number).map(id => {
+      const x = runes.find(v => v.runeId === id);
+      return `<div class="fld"><label>${esc(FULL_NAME[id] || x.name)}</label><div class="in">
         <label class="chk"><input type="checkbox" ${x.allForced ? "checked" : ""}
-          data-key="runealways:${x.runeId}" data-view="runealways" data-rid="${x.runeId}"
+          data-key="runealways:${id}" data-view="runealways" data-rid="${id}"
           data-kind="num" data-orig="${x.allForced ? 1 : 0}"
-          data-lbl="${esc(x.name)} · always on" data-grp="Encounters" onchange="onIsoField(this)">
-          <span class="note">${x.allForced ? "always on" : "needs the rune equipped"}</span></label>${REVERT_BTN}</div>
-        <div class="fnote">${ENCOUNTER[x.runeId]} · rune #${x.runeId}</div></div>`).join("")
-    + `</div>`;
+          data-lbl="${esc(FULL_NAME[id] || x.name)} · always on" data-grp="Passives"
+          onchange="onIsoField(this)">
+          <span class="note">${x.allForced ? "<b>On</b> — always active, no rune needed"
+                                           : "Off — vanilla: only works while equipped"}</span></label>${REVERT_BTN}</div>
+        <div class="fnote">${g.runes[id]} · rune #${id}</div></div>`;
+    }).join("") + `</div>`).join("")
+    + `<div class="fnote" style="margin:10px 14px 0">Each toggle replaces the rune's equip check
+      with two NOPs (8 bytes per call site) and is fully reversible — switch it back off and the
+      disc is byte-identical. <b>Verified:</b> the equip check really is bypassed and nothing else
+      on the disc moves. <b>Not verified in-game:</b> how strongly each effect then behaves.</div>`;
 };
 
 VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",

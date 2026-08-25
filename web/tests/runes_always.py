@@ -47,10 +47,14 @@ chk("84 distinct runes", len(runes) == 84, "got %d" % len(runes))
 chk("hasRune fn matches the mapped address", d["hasRuneFn"] == 0x34DC20, hex(d["hasRuneFn"]))
 chk("nothing is forced on a pristine disc", not any(r["allForced"] for r in d["runes"]))
 
-# The encounter-rate runes the feature exists for, by name from s5_rune_ids.json.
-for rid, want in ((79, "Champion"), (80, "Great Firefly"), (62, "Firefly")):
+# Every rune the Passives tab offers must be forceable, by name from s5_rune_ids.json.
+for rid, want in ((79, "Champion"), (80, "Great Firefly"), (77, "Fortune"),
+                  (78, "Prosperity"), (82, "Godspeed")):
     chk("rune %d is forceable and named %r" % (rid, want),
         rid in runes and want in runes[rid]["name"], runes.get(rid, {}).get("name", "MISSING"))
+# Raven (83) reads well on paper — "100%% evasion of direct attacks in dungeons" — but has
+# no canonical gate. Assert that, so nobody adds it to the UI expecting it to work.
+chk("Raven (83) has no forceable gate", 83 not in runes)
 
 # Every gate must be a real beq $?,$zero,<off> pair, never already-zero on a clean disc.
 ok = all((s["word1"] >> 26) == 4 and (s["word2"] >> 26) == 4
