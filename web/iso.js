@@ -41,6 +41,7 @@ const ISO_VIEWS = [
   { id: "sets",     label: "Sets" },
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
+  { id: "passive",  label: "Passive runes" },
   { id: "price",    label: "Prices" },
   { id: "runeprice",label: "Rune prices" },
   { id: "healprice",label: "Heal prices" },
@@ -249,7 +250,7 @@ function commitIso(el, value) {
   return applyIsoWrite(el, value).then((ok) => {
     if (ok === false) return;
     trackIso(el, value);
-    afterIsoWrite(el.dataset.view, el.dataset.ident);
+    afterIsoWrite(el.dataset.view, el.dataset.ident, el);
     captureUndoStep();
   });
 }
@@ -295,10 +296,14 @@ function revertIsoField(btn) {
 }
 /* Changing a rune's spell set (start/count) changes which spells it teaches → re-render
  * so the per-spell editors below refresh to the new set. */
-function afterIsoWrite(view, ident) {
+function afterIsoWrite(view, ident, el) {
   if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
   // reassigning a set's effect changes which magnitudes exist -> re-render the panel
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
+  if (view === "runealways") {
+    const lbl = el && el.nextElementSibling;   // the specific row's caption, not the first one
+    if (lbl) lbl.textContent = el.checked ? "always on" : "needs the rune equipped";
+  }
   if (view === "setgate") {
     const cb = q('#isoSetBody input[data-view="setgate"]');
     const lbl = cb && cb.nextElementSibling;
@@ -330,6 +335,8 @@ async function applyIsoWrite(el, value) {
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
     else if (view === "gearname") res = window.PYISO.setgearname(el.dataset.slot, +el.dataset.gid, value);
     else if (view === "setgate") res = window.PYISO.setgate(+el.dataset.setidx, value ? 1 : 0, +el.dataset.word || 0);
+    else if (view === "runealways") res = window.PYISO.setrunealways(+el.dataset.rid, value ? 1 : 0,
+      JSON.stringify(RUNE_GATE_WORDS[el.dataset.rid] || {}));
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -841,6 +848,43 @@ function rowFor(view, p, cols) {
       data-field="${c.field}" data-kind="num" data-orig="${p[c.field]}" data-lbl="${esc(nm+" "+c.label)}" data-grp="${esc(c.group)}"
       onchange="onIsoField(this)" style="width:100px">${REVERT_BTN}</td>`).join("") + `</tr>`;
 }
+/* ---- Passive runes: force a rune's field effect on without equipping it ----------
+ * Each of these runes gates its effect behind "is it equipped AND is its flag set".
+ * Both checks branch to the same "inactive" label, so NOPing the pair leaves only the
+ * active path — the effect applies permanently, party-wide, with the rune slot free.
+ * RUNE_GATE_WORDS remembers the original instructions so ↺ / disable can put them back. */
+const RUNE_GATE_WORDS = {};
+VIEW_RENDER.passive = async (body) => {
+  const r = JSON.parse(window.PYISO.runealways());
+  if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
+  const runes = r.runes || [];
+  for (const x of runes) {
+    if (x.allForced) continue;                   // don't overwrite a remembered original with zeros
+    RUNE_GATE_WORDS[x.runeId] = Object.fromEntries(x.sites.map(s => [s.vaddr, [s.word1, s.word2]]));
+  }
+  const known = runes.filter(x => !/^Rune \d+$/.test(x.name));
+  const on = runes.filter(x => x.allForced).length;
+  body.innerHTML = `<div class="subhd">Always-on rune effects</div>
+    <div class="note" style="margin:0 14px 4px">Switch a rune on here and its field effect applies
+      <b>permanently</b> — no one has to equip it, and the rune slot stays free. Useful for the
+      encounter-rate runes (Champion's / Great Firefly cut encounters, Firefly raises them) and the
+      other exploration passives.</div>
+    <div class="fnote" style="margin:0 14px 10px">${runes.length} runes (${known.length} named)
+      have the two-branch equip check this can bypass; ${on} currently forced on. Each toggle is an
+      8-byte patch per call site and is fully reversible. <b>Verified:</b> the equip check really is
+      bypassed. <b>Not verified in-game:</b> how strongly each effect then behaves — the code only
+      selects the effect, and the encounter-rate multiplier itself is still unmapped.</div>
+    <div class="grid" style="padding-top:0">` + runes.map(x => `
+      <div class="fld"><label>${esc(x.name)}</label><div class="in">
+        <label class="chk"><input type="checkbox" ${x.allForced ? "checked" : ""}
+          data-key="runealways:${x.runeId}" data-view="runealways" data-rid="${x.runeId}"
+          data-kind="num" data-orig="${x.allForced ? 1 : 0}"
+          data-lbl="${esc(x.name)} · always on" data-grp="Passive runes" onchange="onIsoField(this)">
+          <span class="note">${x.allForced ? "always on" : "needs the rune equipped"}</span></label>${REVERT_BTN}</div>
+        <div class="fnote">rune #${x.runeId} · ${x.siteCount} call site${x.siteCount === 1 ? "" : "s"}</div></div>`).join("")
+    + `</div>`;
+};
+
 VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",
   [{ field: "buy", label: "Buy", group: "Item prices" }, { field: "sell", label: "Sell", group: "Item prices" }]);
 VIEW_RENDER.runeprice = priceView(() => window.PYISO.runeprices(), "runeprice",

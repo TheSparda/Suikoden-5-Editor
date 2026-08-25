@@ -7,7 +7,7 @@
  *  - The Pyodide CDN (large, immutable, version-pinned URLs): CACHE-FIRST, so the
  *    ~10 MB runtime downloads once and is instant thereafter.
  * Bump CACHE to purge stale offline copies. */
-const CACHE = "s5editor-v2";
+const CACHE = "s5editor-v3";
 const SHARE_CACHE = "s5share";   // holds a file shared into the PWA; never purged
 
 const SHELL = [

@@ -1236,6 +1236,82 @@ def write_set_handler(iso, set_index, handler_vaddr):
     return {"ok": True, "index": i, "handler": int(handler_vaddr)}
 
 
+def _rune_gate_sites(iso):
+    """Every hasRune() call whose gate matches the canonical two-branch shape, so it can
+    be forced permanently on. Returns [{runeId, vaddr, off1, off2, word1, word2, forced}]."""
+    lo, hi = F.RUNE_GATE_LO, F.RUNE_GATE_HI
+    blob = iso.rd(lo - F.VADDR_DELTA, hi - lo)
+    cnt = len(blob) // 4
+    ws = struct.unpack("<%dI" % cnt, blob[:cnt * 4])
+    target = (F.RUNE_HAS_FN & 0x0FFFFFFF) >> 2
+    out = []
+    for i, w in enumerate(ws):
+        if (w >> 26) != 3 or (w & 0x3FFFFFF) != target: continue
+        rid = None
+        for k in range(max(0, i - 8), i + 2):
+            u = ws[k]
+            if (u >> 26) == 0x09 and ((u >> 21) & 31) == 0 and ((u >> 16) & 31) == 5:
+                rid = u & 0xFFFF
+        if rid is None or i + 8 >= cnt: continue
+        b1, andi, b2 = ws[i + 2], ws[i + 6], ws[i + 7]
+        ok1 = (b1 >> 26) == 4 and ((b1 >> 21) & 31) == 2 and ((b1 >> 16) & 31) == 0
+        ok2 = ((andi >> 26) == 0x0C and (andi & 0xFFFF) == 2
+               and (b2 >> 26) == 4 and ((b2 >> 16) & 31) == 0)
+        forced = b1 == 0 and b2 == 0 and (andi >> 26) == 0x0C and (andi & 0xFFFF) == 2
+        if not (ok1 and ok2):
+            if not forced: continue
+        if ok1 and ok2:
+            t1 = (lo + (i + 2) * 4) + 4 + _s16(b1 & 0xFFFF) * 4
+            t2 = (lo + (i + 7) * 4) + 4 + _s16(b2 & 0xFFFF) * 4
+            if t1 != t2: continue
+        out.append({"runeId": rid, "vaddr": lo + i * 4,
+                    "off1": (lo + (i + 2) * 4) - F.VADDR_DELTA,
+                    "off2": (lo + (i + 7) * 4) - F.VADDR_DELTA,
+                    "word1": b1, "word2": b2, "forced": forced})
+    return out
+
+def read_rune_always_on(iso):
+    """Runes whose effect can be forced permanently on, grouped by rune."""
+    try: names = F.res_json("s5_rune_ids.json")
+    except Exception: names = []
+    by = {}
+    for g in _rune_gate_sites(iso):
+        rid = g["runeId"]
+        e = by.setdefault(rid, {"runeId": rid,
+                                "name": names[rid] if rid < len(names) else "Rune %d" % rid,
+                                "sites": [], "forced": 0})
+        e["sites"].append(g)
+        if g["forced"]: e["forced"] += 1
+    out = []
+    for rid in sorted(by):
+        e = by[rid]
+        e["siteCount"] = len(e["sites"])
+        e["allForced"] = e["forced"] == len(e["sites"])
+        out.append(e)
+    return {"runes": out, "hasRuneFn": F.RUNE_HAS_FN}
+
+def write_rune_always_on(iso, rune_id, enabled, originals=None):
+    """Force (or restore) a rune's effect so it applies without the rune equipped.
+    Enabling NOPs both gate branches at every canonical site for that rune; disabling
+    restores the original instruction words supplied by the caller."""
+    sites = [g for g in _rune_gate_sites(iso) if g["runeId"] == int(rune_id)]
+    if not sites: raise KeyError("rune %s has no forceable gate" % rune_id)
+    if enabled:
+        for g in sites:
+            iso.wu(g["off1"], 4, 0); iso.wu(g["off2"], 4, 0)
+        return {"ok": True, "runeId": int(rune_id), "sites": len(sites), "forced": True}
+    if not originals: raise ValueError("restoring needs the original instruction words")
+    orig = {int(k): v for k, v in (originals or {}).items()}
+    n = 0
+    for g in sites:
+        pair = orig.get(g["vaddr"])
+        if not pair: continue
+        iso.wu(g["off1"], 4, int(pair[0]) & 0xFFFFFFFF)
+        iso.wu(g["off2"], 4, int(pair[1]) & 0xFFFFFFFF)
+        n += 1
+    if not n: raise ValueError("no original instructions matched this rune's sites")
+    return {"ok": True, "runeId": int(rune_id), "sites": n, "forced": False}
+
 def set_effect_targets():
     """Catalog of char-struct fields a custom set bonus can touch."""
     return [{"label": l, "charOff": o, "width": w, "verified": v, "kind": k}

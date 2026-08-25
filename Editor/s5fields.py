@@ -340,6 +340,25 @@ SET_SLOT_ORDER  = ("head", "body", "arm", "foot", "accessory")
 SET_FIELD_HINT  = {20: "HP", 40: "ATK", 46: "MDEF", 54: "SPD",
                    256: "Water affinity", 304: "Critical %", 305: "Double critical %",
                    42: "stat", 44: "stat", 48: "stat", 50: "stat", 52: "stat", 56: "stat"}
+# ---- "Always-on" rune effects -------------------------------------------------
+# hasRune(charStruct, runeId) lives at vaddr 0x34DC20; callers pass
+# $a0 = RUNE_PARTY_BASE + partyIndex*RUNE_PARTY_STRIDE and $a1 = the equip rune id.
+# 85 of the 173 call sites use one canonical gate shape:
+#     jal  hasRune ; <delay>
+#     beq  $v0,$zero,INACTIVE     <- rune not equipped
+#     nop ; lui ; lbu <flag> ; andi 0x2
+#     beq  $v1,$zero,INACTIVE     <- the rune's own enable flag is clear
+# Both branches target the SAME "inactive" label, so NOPing the pair makes the block
+# fall through to its "active" path unconditionally — i.e. the effect is always on,
+# with no rune equipped. 8 bytes, fully reversible.
+RUNE_HAS_FN      = 0x34DC20
+RUNE_PARTY_BASE  = 0xA319C0
+RUNE_PARTY_STRIDE = 31
+# All 85 canonical gates live inside the rune-effect resolver; scanning only this
+# window keeps the read fast enough to run on every panel open in Pyodide.
+RUNE_GATE_LO = 0x253C00
+RUNE_GATE_HI = 0x255D00
+
 # ---- CUSTOM set-bonus handlers -------------------------------------------------
 # The stock handlers are packed back-to-back with no slack, so a custom bonus is
 # assembled into a free 80-byte gap and the jump table is pointed at it.
