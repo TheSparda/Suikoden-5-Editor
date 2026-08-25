@@ -862,27 +862,41 @@ VIEW_RENDER.passive = async (body) => {
     if (x.allForced) continue;                   // don't overwrite a remembered original with zeros
     RUNE_GATE_WORDS[x.runeId] = Object.fromEntries(x.sites.map(s => [s.vaddr, [s.word1, s.word2]]));
   }
-  const known = runes.filter(x => !/^Rune \d+$/.test(x.name));
+  /* One row builder for both sections, so the featured toggles and the full list can
+   * never drift apart. Each rune appears in exactly one section — two controls sharing
+   * a data-key would desync the dirty list and the ↺ button. */
+  const row = (x, blurb) => `
+    <div class="fld"><label>${esc(x.name)}</label><div class="in">
+      <label class="chk"><input type="checkbox" ${x.allForced ? "checked" : ""}
+        data-key="runealways:${x.runeId}" data-view="runealways" data-rid="${x.runeId}"
+        data-kind="num" data-orig="${x.allForced ? 1 : 0}"
+        data-lbl="${esc(x.name)} · always on" data-grp="Passive runes" onchange="onIsoField(this)">
+        <span class="note">${x.allForced ? "always on" : "needs the rune equipped"}</span></label>${REVERT_BTN}</div>
+      <div class="fnote">${blurb ? blurb + " · " : ""}rune #${x.runeId} · ${x.siteCount} call site${x.siteCount === 1 ? "" : "s"}</div></div>`;
+
+  const ENCOUNTER = { 79: "fewer random encounters", 80: "fewer random encounters", 62: "more random encounters" };
+  const featured = Object.keys(ENCOUNTER).map(Number)
+    .map(id => runes.find(x => x.runeId === id)).filter(Boolean);
+  const rest = runes.filter(x => !(x.runeId in ENCOUNTER));
+  const known = rest.filter(x => !/^Rune \d+$/.test(x.name));
   const on = runes.filter(x => x.allForced).length;
-  body.innerHTML = `<div class="subhd">Always-on rune effects</div>
-    <div class="note" style="margin:0 14px 4px">Switch a rune on here and its field effect applies
-      <b>permanently</b> — no one has to equip it, and the rune slot stays free. Useful for the
-      encounter-rate runes (Champion's / Great Firefly cut encounters, Firefly raises them) and the
-      other exploration passives.</div>
-    <div class="fnote" style="margin:0 14px 10px">${runes.length} runes (${known.length} named)
+
+  body.innerHTML = `<div class="subhd">Random encounters</div>
+    <div class="note" style="margin:0 14px 4px">Turn one of these on and the effect applies
+      <b>party-wide and permanently</b> — nobody has to equip the rune and the slot stays free.
+      This is an on/off switch, not a rate slider: the encounter-rate <i>value</i> lives in map
+      script data, not in the executable, so it can't be dialled from here.</div>
+    <div class="grid" style="padding-top:6px">` + featured.map(x => row(x, ENCOUNTER[x.runeId])).join("") + `</div>
+
+    <div class="subhd">Every other always-on rune</div>
+    <div class="note" style="margin:0 14px 4px">The same patch, applied to the rest of the
+      exploration passives.</div>
+    <div class="fnote" style="margin:0 14px 10px">${runes.length} runes (${known.length + featured.length} named)
       have the two-branch equip check this can bypass; ${on} currently forced on. Each toggle is an
       8-byte patch per call site and is fully reversible. <b>Verified:</b> the equip check really is
       bypassed. <b>Not verified in-game:</b> how strongly each effect then behaves — the code only
-      selects the effect, and the encounter-rate multiplier itself is still unmapped.</div>
-    <div class="grid" style="padding-top:0">` + runes.map(x => `
-      <div class="fld"><label>${esc(x.name)}</label><div class="in">
-        <label class="chk"><input type="checkbox" ${x.allForced ? "checked" : ""}
-          data-key="runealways:${x.runeId}" data-view="runealways" data-rid="${x.runeId}"
-          data-kind="num" data-orig="${x.allForced ? 1 : 0}"
-          data-lbl="${esc(x.name)} · always on" data-grp="Passive runes" onchange="onIsoField(this)">
-          <span class="note">${x.allForced ? "always on" : "needs the rune equipped"}</span></label>${REVERT_BTN}</div>
-        <div class="fnote">rune #${x.runeId} · ${x.siteCount} call site${x.siteCount === 1 ? "" : "s"}</div></div>`).join("")
-    + `</div>`;
+      selects the effect.</div>
+    <div class="grid" style="padding-top:0">` + rest.map(x => row(x, "")).join("") + `</div>`;
 };
 
 VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",

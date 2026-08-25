@@ -47,7 +47,8 @@ if (m) {
 }
 
 // 3b) new-feature wiring guards (behavioral coverage for undo/redo is in e2e/manual)
-const isoSrc = read("iso.js"), commonSrc = read("common.js");
+const isoSrc = read("iso.js"), commonSrc = read("common.js"), appSrc = read("app.js");
+const fieldsSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");
 for (const fn of ["captureUndoStep", "isoUndo", "isoRedo", "charSkillPreset"])
   ok(`iso.js defines ${fn}`, isoSrc.includes("function " + fn));
 ok("iso.js opens without FS Access (file input fallback)", /type = "file"/.test(isoSrc) && isoSrc.includes("isHandle"));
@@ -78,6 +79,17 @@ ok("iso.js can edit the per-character restriction", isoSrc.includes('view === "s
 ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Editor","s5patch.py"),"utf8").includes("def armor_summary_cap"));
 ok("armor names table has an accessory list",
    !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
+
+// 3b) Passive-runes tab: the encounter runes are featured, and no rune is rendered twice
+ok("iso.js registers the Passive runes tab", /id:\s*"passive"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
+ok("iso.js can force a rune always on", isoSrc.includes('view === "runealways"'));
+const encM = isoSrc.match(/const ENCOUNTER = \{([^}]*)\}/);
+ok("encounter runes are featured", !!encM && [79, 80, 62].every((id) => encM[1].includes(String(id))), encM && encM[1].trim());
+ok("featured runes are excluded from the full list", isoSrc.includes("!(x.runeId in ENCOUNTER)"));
+ok("glue exposes the always-on adapters",
+   appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));
+ok("engine keeps the gate scan inside the resolver",
+   /RUNE_GATE_LO\s*=\s*0x253C00/.test(fieldsSrc) && /RUNE_GATE_HI\s*=\s*0x255D00/.test(fieldsSrc));
 
 // 4) ISO slice window covers the highest editable table (name table ~0x699300)
 const iso = read("iso.js");
