@@ -84,7 +84,12 @@ ok("armor names table has an accessory list",
 ok("iso.js registers the Passive runes tab", /id:\s*"passive"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
 ok("iso.js can force a rune always on", isoSrc.includes('view === "runealways"'));
 const encM = isoSrc.match(/const ENCOUNTER = \{([^}]*)\}/);
-ok("encounter runes are featured", !!encM && [79, 80, 62].every((id) => encM[1].includes(String(id))), encM && encM[1].trim());
+// Champion's (79) = fewer, Great Firefly (80) = more, per the disc's own description pool.
+// Firefly (62) is Bull's Eye, NOT an encounter rune — it must stay out of this section.
+ok("both encounter runes are featured", !!encM && [79, 80].every((id) => encM[1].includes(String(id))), encM && encM[1].trim());
+ok("Champion's is labelled as fewer", !!encM && /79:\s*"fewer/.test(encM[1]));
+ok("Great Firefly is labelled as more", !!encM && /80:\s*"more/.test(encM[1]));
+ok("Firefly is not miscategorised as an encounter rune", !!encM && !/\b62\s*:/.test(encM[1]));
 ok("featured runes are excluded from the full list", isoSrc.includes("!(x.runeId in ENCOUNTER)"));
 ok("glue exposes the always-on adapters",
    appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));

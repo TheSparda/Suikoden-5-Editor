@@ -874,7 +874,14 @@ VIEW_RENDER.passive = async (body) => {
         <span class="note">${x.allForced ? "always on" : "needs the rune equipped"}</span></label>${REVERT_BTN}</div>
       <div class="fnote">${blurb ? blurb + " · " : ""}rune #${x.runeId} · ${x.siteCount} call site${x.siteCount === 1 ? "" : "s"}</div></div>`;
 
-  const ENCOUNTER = { 79: "fewer random encounters", 80: "fewer random encounters", 62: "more random encounters" };
+  /* Wording taken from the disc's own description pool, not from series memory:
+   *   Champion's Orb    0x64E830 "Suppresses appearance of weak enemies"
+   *   Great Firefly Orb 0x64E9C0 "Increases appearance of enemies"
+   * Those are the only two encounter-rate runes in the game. The plain Firefly Rune is
+   * NOT one of them — its description is "Bull's Eye status: Become target of foes"
+   * (0x64D1D0), a battle-targeting effect, so it belongs in the general list below. */
+  const ENCOUNTER = { 79: "fewer encounters — suppresses weak enemies",
+                      80: "more encounters — increases enemy appearances" };
   const featured = Object.keys(ENCOUNTER).map(Number)
     .map(id => runes.find(x => x.runeId === id)).filter(Boolean);
   const rest = runes.filter(x => !(x.runeId in ENCOUNTER));
@@ -882,10 +889,11 @@ VIEW_RENDER.passive = async (body) => {
   const on = runes.filter(x => x.allForced).length;
 
   body.innerHTML = `<div class="subhd">Random encounters</div>
-    <div class="note" style="margin:0 14px 4px">Turn one of these on and the effect applies
-      <b>party-wide and permanently</b> — nobody has to equip the rune and the slot stays free.
-      This is an on/off switch, not a rate slider: the encounter-rate <i>value</i> lives in map
-      script data, not in the executable, so it can't be dialled from here.</div>
+    <div class="note" style="margin:0 14px 4px">These are the game's only two encounter-rate
+      runes — Champion's thins out weak enemies, Great Firefly brings more of them (handy for
+      grinding). Turn one on and it applies <b>party-wide and permanently</b>: nobody has to equip
+      the rune and the slot stays free. It's an on/off switch, not a rate slider — the encounter-rate
+      <i>value</i> lives in map script data, not in the executable, so it can't be dialled from here.</div>
     <div class="grid" style="padding-top:6px">` + featured.map(x => row(x, ENCOUNTER[x.runeId])).join("") + `</div>
 
     <div class="subhd">Every other always-on rune</div>
