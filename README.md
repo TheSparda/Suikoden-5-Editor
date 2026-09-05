@@ -178,9 +178,19 @@ Model ids are **character id + 2** (the Prince is #2 → `pc001c.rom`). Files nu
 2xx/3xx/4xx are **extra looks for the same person** — `pc401c` is 1+400, the Prince's
 4th model — which the game's own scripts switch to for particular scenes; that is how
 the cast changes appearance as the story moves. Eight characters have one: the **Prince**
-and **Georg** have two each, plus Lyon, Kyle, Zegai, Cathari, Gunde and Miakis. So
-changing a character's row re-skins their everyday look, while a scene that explicitly
-asks for an alternate keeps using it until you change that row too.
+and **Georg** have two extra each, plus Lyon, Kyle, Zegai, Cathari, Gunde and Miakis.
+
+Because the scripts reach for those by themselves, **a character's looks move together by
+default**: pick a file on the Prince's row and all three of his rows follow, so he stays
+re-skinned through the scenes that ask for an alternate. Untick *keep a character's looks
+together* (or pass `--one` on the CLI) to set a single row on its own. Reset is grouped the
+same way and restores each row to its own factory model.
+
+Who owns which alternate is the disc's own answer, not a guess: the ELF carries an identity
+table (NTSC `0x211250`–`0x211330`) that folds a character's model ids onto one entry —
+grouping `{2, 119, 128}` as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle, `{22, 122}`
+Georg — and the four it omits match their base model's 256-colour palette almost exactly
+(Cathari, Georg, Gunde, Miakis). Only `pc314c` (Zegai) rests on the numbering alone.
 
 **Info** reads a model's skeleton straight off the disc (bones, mesh sizes, animation
 count) — same bone count plus matching mesh sizes means the same character redressed.
@@ -328,6 +338,7 @@ python3 s5patch.py dump   "/path/to/Suikoden V.iso" --id 0
 python3 s5patch.py set    "/path/to/Suikoden V.iso" --id 0 --table stats --field HP --value 200
 python3 s5patch.py models "/path/to/Suikoden V.iso"        # field-model table: id -> file, who
 python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --slot 127   # Prince -> pc401c
+python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --slot 127 --one   # that row only
 python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --reset
 ```
 

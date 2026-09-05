@@ -108,7 +108,9 @@ ok("engine keeps the gate scan inside the resolver",
 // the invariant that pins the bases, since the real-disc check needs a disc CI hasn't got.
 ok("iso.js registers the Field models tab",
    /id:\s*"model",\s*label:\s*"Field models"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.model"));
-ok("iso.js can repoint a model", isoSrc.includes('view === "model"') && isoSrc.includes("PYISO.setmodel"));
+ok("iso.js can repoint a model", isoSrc.includes("onModelPick") && isoSrc.includes("PYISO.setmodel"));
+ok("iso.js keeps a character's looks together", /MODEL_LINK\s*=\s*true/.test(isoSrc) && isoSrc.includes("modelLink"));
+ok("s5patch groups a character's model ids", fs.readFileSync(path.join(web,"..","Editor","s5patch.py"),"utf8").includes("def model_group"));
 ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && appSrc.includes("def iso_setmodel"));
 {
   const fsrc = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");

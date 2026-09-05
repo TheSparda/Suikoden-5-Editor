@@ -13,12 +13,14 @@ Commands:
   names    <iso> [--limit N]             dump 0x691600 name table
   set-name <iso> --index I --name X      rename in the name table
   models   <iso>                         list the field-model table (id -> file, who)
-  set-model <iso> --id N (--slot S | --reset)   point a model id at another model file
+  set-model <iso> --id N (--slot S | --reset) [--one]
+                                         point a model id at another model file; by default
+                                         the character's other looks follow (--one to skip)
   ladder   <iso>                         dump the 0x4986C0 ladder
   peek     <iso> --off 0x.. --len N
   poke     <iso> --off 0x.. --u8/--u16/--hex ..
 """
-import argparse, os, re, struct, sys, shutil
+import argparse, collections, os, re, struct, sys, shutil
 import s5fields as F
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1600,7 +1602,30 @@ def read_models(iso):
                     "char": who, "variant": variant, "alternate": variant > 1,
                     "placeholder": home is None,
                     "changed": slot != base})
+    _number_looks(out)
     return out
+
+def _number_looks(rows):
+    """Label each row "look N of M" within its character. The ordinal counts the rows in
+    id order rather than reusing the 2xx/3xx/4xx series number, because a character's
+    series aren't consecutive — the Prince's are 1, 2 and 4, which would read "4 of 3"."""
+    byname = collections.defaultdict(list)
+    for r in rows:
+        if r.get("char"): byname[r["char"]].append(r)
+    for group in byname.values():
+        for n, r in enumerate(group, 1): r["look"], r["looks"] = n, len(group)
+    for r in rows: r.setdefault("look", 1); r.setdefault("looks", 1)
+
+def model_group(iso, model_id):
+    """Every model id that belongs to the same character as this one. Someone with more
+    than one look — the Prince ships three — is normally re-skinned as a set, because the
+    scripts switch to the alternates by themselves for particular scenes; changing only
+    the everyday model leaves those scenes looking like the old one."""
+    rows = read_models(iso)
+    if not 0 <= model_id < len(rows):
+        raise ValueError(f"model id must be 0..{len(rows) - 1}")
+    who = rows[model_id]["char"]
+    return [r["id"] for r in rows if r["char"] == who] if who else [model_id]
 
 def model_targets(iso):
     """Resource slots that are safe swap targets: the /COMMON character models. VOL_USR
@@ -1617,6 +1642,7 @@ def model_targets(iso):
         who, variant = _model_owner(n["file"], chars)
         out.append({"slot": n["slot"], "file": n["file"], "char": who, "variant": variant,
                     "group": "Story alternates" if variant > 1 else group})
+    _number_looks(out)
     return out
 
 def set_model(iso, model_id, slot):
@@ -1888,14 +1914,18 @@ def _models(a):
     return 0
 
 def _setmodel(a):
+    if a.slot is None and not a.reset:
+        raise SystemExit("give --slot N (see `models`) or --reset")
+    with Iso(a.iso) as g:
+        ids = [a.id] if a.one else model_group(g, a.id)
     backup(a.iso)
     with Iso(a.iso, writable=True) as g:
-        if a.reset: reset_model(g, a.id)
-        else:
-            if a.slot is None: raise SystemExit("give --slot N (see `models`) or --reset")
-            set_model(g, a.id, a.slot)
-    with Iso(a.iso) as g: m = read_models(g)[a.id]
-    print(f"model #{a.id} -> {m['file']}"); return 0
+        for i in ids:
+            if a.reset: reset_model(g, i)
+            else: set_model(g, i, a.slot)
+    with Iso(a.iso) as g: rows = read_models(g)
+    for i in ids: print(f"model #{i} -> {rows[i]['file']}")
+    return 0
 
 def _ladder(a):
     with Iso(a.iso) as g:
@@ -1978,7 +2008,8 @@ def main(argv=None):
     add("set-name", _setname, [(("--index",), dict(type=int, required=True)), (("--name",), dict(required=True))])
     add("models", _models)
     add("set-model", _setmodel, [(("--id",), dict(type=int, required=True)),
-        (("--slot",), dict(type=int)), (("--reset",), dict(action="store_true"))])
+        (("--slot",), dict(type=int)), (("--reset",), dict(action="store_true")),
+        (("--one",), dict(action="store_true", help="just this id, not the character's other looks"))])
     add("ladder", _ladder)
     add("find-bytes", _findbytes, [(("--hex",), dict(required=True)), (("--max",), dict(type=int, default=16))])
     add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])

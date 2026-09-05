@@ -469,11 +469,12 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
   <h2 style="margin-top:14px">Field models — swap table</h2>
   <p class=sub>Every field/town model the engine can load, and which file each one actually reads. Pick a different file for a row and that character walks around as that model instead. The swap is a single 4-byte pointer — nothing in <code>DATA.PAK</code> is touched, and <b>Reset</b> puts it back exactly.</p>
-  <p class=sub>Model ids run <b>character&nbsp;id&nbsp;+&nbsp;2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are <b>extra looks for the same person</b> — <code>pc401c</code> is 1+400, the Prince's 4th model — and the game's own scripts switch to them for particular scenes, which is how the cast changes appearance as the story moves. Eight characters have one: the <b>Prince</b> and <b>Georg</b> have two each, then Lyon, Kyle, Zegai, Cathari, Gunde and Miakis. So changing a character's row re-skins their <i>everyday</i> look; scenes that explicitly ask for an alternate keep using it until you change that row too.</p>
+  <p class=sub>Model ids run <b>character&nbsp;id&nbsp;+&nbsp;2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are <b>extra looks for the same person</b> — <code>pc401c</code> is 1+400, the Prince's 4th model — and the game's own scripts switch to them for particular scenes, which is how the cast changes appearance as the story moves. Eight characters have one: the <b>Prince</b> and <b>Georg</b> have two extra looks each, then Lyon, Kyle, Zegai, Cathari, Gunde and Miakis with one. Because the scripts reach for those by themselves, <b>a character's looks move together by default</b> — change the Prince's row and all three of his follow, so he stays re-skinned through the scenes that ask for an alternate. Untick <i>keep a character's looks together</i> to set a single row on its own.</p>
   <p class=sub><b>Info</b> reads a model's skeleton straight off the disc — same bone count plus matching mesh sizes means the same character redressed. Cutscenes ship their own baked copies of the cast, so a swap shows up while you walk around, not in pre-rendered story scenes.</p>
   <div class=row>
    <button onclick=loadModels()>Load model table</button>
    <input id=modelfilter size=18 placeholder="filter character or file…" oninput=renderModels()>
+   <label class=note><input type=checkbox id=modellink checked> keep a character's looks together</label>
    <label class=note><input type=checkbox id=modelonly onchange=renderModels()> only changed rows</label>
    <span id=modelnote class=note></span>
   </div>
@@ -1171,7 +1172,7 @@ function renderModels(){
  if(only)rows=rows.filter(m=>m.changed);
  if(filt)rows=rows.filter(m=>(m.char+' '+m.default_file+' '+m.file).toLowerCase().includes(filt));
  const groups=[...new Set(MODELTARGETS.map(t=>t.group))];
- const label=t=>t.file+(t.char?(' — '+t.char+(t.variant>1?(' · look '+t.variant):'')):'');
+ const label=t=>t.file+(t.char?(' — '+t.char+(t.looks>1?(' · look '+t.look+' of '+t.looks):'')):'');
  // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
  const opts=m=>(MODELTARGETS.some(t=>t.slot==m.slot)?'':'<option value='+m.slot+' selected>'+m.file+'</option>')
   +groups.map(g=>'<optgroup label="'+g+'">'+MODELTARGETS.filter(t=>t.group==g).map(t=>
@@ -1179,7 +1180,7 @@ function renderModels(){
  let h='<table><thead><tr><th>#</th><th>Character</th><th>Ships&nbsp;as</th><th>Loads</th><th></th></tr></thead><tbody>';
  rows.forEach(m=>{h+='<tr'+(m.changed?' style="background:#1b2a1b"':'')+'>'
   +'<td class=note>'+m.id+'</td>'
-  +'<td>'+(m.char?(m.char+(m.alternate?' <span class=note>· look '+m.variant+'</span>':''))
+  +'<td>'+(m.char?(m.char+(m.looks>1?' <span class=note>· look '+m.look+' of '+m.looks+'</span>':''))
                 :'<span class=note>—</span>')+'</td>'
   +'<td class=note>'+m.default_file+'</td>'
   +'<td><select onchange="setModel('+m.id+',this.value)">'+opts(m)+'</select></td>'
@@ -1189,10 +1190,15 @@ function renderModels(){
  document.getElementById('modelnote').innerHTML=rows.length+' of '+MODELS.length+' models'
   +(changed?(' · <b>'+changed+' swapped</b>'):' · all stock');}
 async function setModel(id,slot){if(!needIso())return;
- const r=await j('/api/setmodel',{iso:iso(),id:+id,slot:+slot});
+ // a character's looks move together by default — the scripts switch to the alternates
+ // on their own, so re-skinning only the everyday model leaves those scenes unchanged
+ const grouped=document.getElementById('modellink').checked;
+ const r=await j('/api/setmodel',{iso:iso(),id:+id,slot:+slot,group:grouped});
  if(r.error){toast(r.error,'bad');loadModels();return}
- const m=MODELS.find(x=>x.id==+id);if(m){m.slot=r.slot;m.file=r.file;m.changed=r.changed}
- renderModels();toast('Model #'+id+' → '+r.file,'ok');}
+ (r.rows||[]).forEach(row=>{const m=MODELS.find(x=>x.id==row.id);if(m)Object.assign(m,row)});
+ renderModels();
+ const who=(r.rows[0]||{}).char, n=r.rows.length;
+ toast(n>1?(who+"'s "+n+' looks → '+r.rows[0].file):('Model #'+id+' → '+r.rows[0].file),'ok');}
 async function modelInfo(id){if(!needIso())return;
  const m=MODELS.find(x=>x.id==+id);if(!m)return;
  document.getElementById('modelnote').textContent='reading '+m.file+' from DATA.PAK…';
@@ -1597,12 +1603,15 @@ class H(http.server.BaseHTTPRequestHandler):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
                 mid = int(d["id"]); slot = int(d["slot"])
                 try:
+                    with P.Iso(iso) as g:
+                        ids = P.model_group(g, mid) if d.get("group") else [mid]
                     P.backup(iso)
                     with P.Iso(iso, writable=True) as g:
-                        if slot < 0: P.reset_model(g, mid)
-                        else: P.set_model(g, mid, slot)
-                    with P.Iso(iso) as g: row = P.read_models(g)[mid]
-                    return self._send(200, json.dumps(row))
+                        for i in ids:
+                            if slot < 0: P.reset_model(g, i)
+                            else: P.set_model(g, i, slot)
+                    with P.Iso(iso) as g: rows = P.read_models(g)
+                    return self._send(200, json.dumps({"rows": [rows[i] for i in ids]}))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/modelinfo":

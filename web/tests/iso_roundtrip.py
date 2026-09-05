@@ -104,6 +104,16 @@ def main():
     chk("reset restores the pointer table byte-for-byte", after == before)
     chk("out-of-range slot rejected", "error" in json.loads(g["iso_setmodel"](2, 9999)))
     chk("out-of-range model rejected", "error" in json.loads(g["iso_setmodel"](999, 1)))
+    # a character's looks move together: in the fabricated slice every model is its own
+    # character, so grouping is a no-op there — drive it through the engine directly.
+    import s5patch as P
+    with P.Iso(slice_path) as h: solo = P.model_group(h, 2)
+    chk("group of a lone model is just itself", solo == [2], str(solo))
+    grouped = json.loads(g["iso_setmodel"](2, 50, 1))
+    chk("grouped write reports the ids it touched", grouped.get("ids") == [2], str(grouped.get("ids")))
+    json.loads(g["iso_setmodel"](2, -1, 1))
+    after2 = open(slice_path, "rb").read()[F.MODEL_PTR_BASE:F.MODEL_PTR_BASE + 4 * F.MODEL_PTR_COUNT]
+    chk("grouped reset restores the pointer table too", after2 == before)
 
     print("\n%d/%d passed" % (n[0] - bad[0], n[0]))
     return 1 if bad[0] else 0

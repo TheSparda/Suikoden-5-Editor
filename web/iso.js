@@ -332,7 +332,6 @@ async function applyIsoWrite(el, value) {
     else if (view === "skillfx") res = window.PYISO.setskillfx(ident.id, ident.rank, +value);
     else if (view === "unite") res = window.PYISO.setunite(ident.id, ident.slot, +value);
     else if (view === "name") res = window.PYISO.setname(ident.index, value);
-    else if (view === "model") res = window.PYISO.setmodel(ident.id, +value);
     else if (view === "setbonus") res = window.PYISO.setbonus(+el.dataset.setidx, +el.dataset.eff, +value);
     else if (view === "sethandler") res = window.PYISO.sethandler(+el.dataset.setidx, +value);
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
@@ -1056,27 +1055,56 @@ VIEW_RENDER.model = async (body) => {
   if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
   const rows = (r.models || []).filter(m => !m.placeholder), targets = r.targets || [];
   const groups = [...new Set(targets.map(t => t.group))];
-  const label = t => `${t.file}${t.char ? " — " + t.char + (t.variant > 1 ? " · look " + t.variant : "") : ""}`;
+  const label = t => `${t.file}${t.char ? " — " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
   // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
   const opts = m => (targets.some(t => t.slot === m.slot) ? ""
       : `<option value="${m.slot}" selected>${esc(m.file)}</option>`)
     + groups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
     .map(t => `<option value="${t.slot}" ${t.slot === m.slot ? "selected" : ""}>${esc(label(t))}</option>`).join("")
     + `</optgroup>`).join("");
+  const linked = MODEL_LINK ? "checked" : "";
   body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field/town model the engine can load, and
       which file each one reads. Pick a different file and that character walks around as that model — a single
       4-byte pointer, nothing in <code>DATA.PAK</code> is touched. Model ids are <b>character id + 2</b>
       (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are extra looks for the
-      <b>same person</b> that the game's own scripts switch to for particular scenes; the Prince and Georg have
-      two each, and Lyon, Kyle, Zegai, Cathari, Gunde and Miakis one. Cutscenes carry their own baked copies of
-      the cast, so a swap shows while you walk around rather than in pre-rendered story scenes.</div>
+      <b>same person</b> that the game's own scripts switch to for particular scenes — the Prince and Georg have
+      two extra each, and Lyon, Kyle, Zegai, Cathari, Gunde and Miakis one. Because the scripts reach for those
+      by themselves, a character's looks move together by default. Cutscenes carry their own baked copies of the
+      cast, so a swap shows while you walk around rather than in pre-rendered story scenes.</div>
+    <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
+      onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>
     <div class="grid" style="padding:0 16px 14px">` + rows.map(m => `<div class="fld">
-      <label>#${m.id} ${esc(m.char || "—")}${m.variant > 1 ? " · look " + m.variant : ""}</label><div class="in">
-      <select data-key="model:${m.id}" data-view="model" data-ident='${esc(JSON.stringify({ id: m.id }))}'
-        data-field="slot" data-kind="num" data-orig="${m.default_slot}"
-        data-lbl="Model #${m.id} (${esc(m.default_file)})" data-grp="Field models"
-        onchange="onIsoField(this)">${opts(m)}</select>${REVERT_BTN}</div></div>`).join("") + `</div>`;
+      <label>#${m.id} ${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
+      <div class="in"><select data-mid="${m.id}" onchange="onModelPick(this)">${opts(m)}</select>
+      ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
+        onclick="onModelReset(${m.id})" tabindex="-1">↺</button>` : ""}</div></div>`).join("") + `</div>`;
 };
+let MODEL_LINK = true;
+/* The model view commits on its own: one pick can rewrite several pointers, so it writes,
+ * mirrors every touched row into the edit list, then re-renders so the siblings show it.
+ * Undo is byte-diffed against the previous snapshot, so the whole group is one step. */
+async function writeModels(id, slot) {
+  spin(true);
+  try {
+    const res = JSON.parse(window.PYISO.setmodel(id, slot, MODEL_LINK ? 1 : 0));
+    if (res.error) { toast("Write rejected: " + res.error, "bad"); return; }
+    const rows = (JSON.parse(window.PYISO.models()).models) || [];
+    (res.ids || []).forEach(i => {
+      const m = rows[i], key = "model:" + i;
+      if (m && m.changed) isoEdits[key] = { label: `Model #${i} (${m.default_file})`,
+                                            group: "Field models", to: m.file };
+      else delete isoEdits[key];
+    });
+    updateIsoToolbar();
+    captureUndoStep();
+    await VIEW_RENDER.model($("isoBody"));
+    const n = (res.ids || []).length, who = rows[id] && rows[id].char;
+    toast(n > 1 ? `${who}'s ${n} looks → ${rows[id].file}` : `Model #${id} → ${rows[id].file}`, "ok");
+  } catch (e) { toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
+  finally { spin(false); }
+}
+function onModelPick(el) { return writeModels(+el.dataset.mid, +el.value); }
+function onModelReset(id) { return writeModels(id, -1); }
 
 VIEW_RENDER.ref = async (body) => {
   const ref = JSON.parse(window.PYISO.reference());

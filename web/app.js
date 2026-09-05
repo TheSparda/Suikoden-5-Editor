@@ -402,12 +402,16 @@ def iso_models():
         with P.Iso(ISO) as g:
             return json.dumps({"models": P.read_models(g), "targets": P.model_targets(g)})
     except Exception as e: return json.dumps({"error": str(e)})
-def iso_setmodel(mid, slot):
+def iso_setmodel(mid, slot, group=0):
     try:
+        mid = int(mid); slot = int(slot)
+        with P.Iso(ISO) as g:
+            ids = P.model_group(g, mid) if int(group) else [mid]
         with P.Iso(ISO, writable=True) as g:
-            if int(slot) < 0: P.reset_model(g, int(mid))
-            else: P.set_model(g, int(mid), int(slot))
-        return json.dumps({"ok": True})
+            for i in ids:
+                if slot < 0: P.reset_model(g, i)
+                else: P.set_model(g, i, slot)
+        return json.dumps({"ok": True, "ids": ids})
     except Exception as e: return json.dumps({"error": str(e)})
 
 # ---- Equipment sets (membership + bonus magnitudes + effect assignment + piece text)
