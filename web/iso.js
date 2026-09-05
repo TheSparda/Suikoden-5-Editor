@@ -1066,6 +1066,12 @@ VIEW_RENDER.model = async (body) => {
     .map(t => `<option value="${t.slot}" ${t.slot === m.slot ? "selected" : ""}>${esc(label(t))}</option>`).join("")
     + `</optgroup>`).join("");
   const linked = MODEL_LINK ? "checked" : "";
+  // The hero's looks sit at ids 2, 119 and 128 — far apart in id order — so they get their own
+  // block at the top instead of the player hunting three rows down a 128-row list.
+  const hero = (rows.find(m => m.id === 2) || {}).char;
+  const heroRows = hero ? rows.filter(m => m.char === hero) : [];
+  const otherRows = hero ? rows.filter(m => m.char !== hero) : rows;
+  const grid = (rs) => modelGrid(rs, opts);
   body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field/town model the engine can load, and
       which file each one reads. Pick a different file and that character walks around as that model — a single
       4-byte pointer, nothing in <code>DATA.PAK</code> is touched. Model ids are <b>character id + 2</b>
@@ -1075,16 +1081,25 @@ VIEW_RENDER.model = async (body) => {
       by themselves, a character's looks move together by default. Cutscenes carry their own baked copies of the
       cast, so a swap shows while you walk around rather than in pre-rendered story scenes.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
-      onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>
-    <div class="grid" style="padding:0 16px 14px">` + rows.map(m => `<div class="fld">
+      onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`
+    + `<div class="subhd">${esc(hero || "Hero")} — all ${heroRows.length} looks</div>`
+    + `<div class="fnote" style="margin:0 16px 4px">He's the one you actually watch walk around, and the game
+       switches between these three by itself as the story moves — so they're kept together here rather than
+       scattered down the list by model id.</div>`
+    + grid(heroRows)
+    + `<div class="subhd">Everyone else</div>` + grid(otherRows)
+    + `<div class="fnote" id="modelInfoOut" style="margin:0 16px 14px"></div>`;
+};
+/* One row per model id. Split out so the hero's block and the rest render identically. */
+function modelGrid(rows, opts) {
+  return `<div class="grid" style="padding:0 16px 14px">` + rows.map(m => `<div class="fld">
       <label>#${m.id} ${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
       <div class="in"><select data-mid="${m.id}" onchange="onModelPick(this)">${opts(m)}</select>
       ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
         onclick="onModelReset(${m.id})" tabindex="-1">↺</button>` : ""}
       <button type="button" class="ghost mini" onclick="modelInfo('${esc(m.file)}')"
-        title="read this model's skeleton off the disc">i</button></div></div>`).join("")
-    + `<div class="fnote" id="modelInfoOut" style="grid-column:1/-1"></div></div>`;
-};
+        title="read this model's skeleton off the disc">i</button></div></div>`).join("") + `</div>`;
+}
 let MODEL_LINK = true;
 /* The model view commits on its own: one pick can rewrite several pointers, so it writes,
  * mirrors every touched row into the edit list, then re-renders so the siblings show it.
