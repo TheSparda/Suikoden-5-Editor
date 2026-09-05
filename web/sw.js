@@ -13,7 +13,7 @@
  * max-age=600 — that shipped a v1.13.0 index.html alongside a stale iso.js for ten
  * minutes, which looked exactly like a deploy that had silently failed. index.html also
  * version-stamps its script/link URLs, so a new release can never reuse an old script. */
-const CACHE = "s5editor-v9";
+const CACHE = "s5editor-v10";
 const SHARE_CACHE = "s5share";   // holds a file shared into the PWA; never purged
 
 const SHELL = [
