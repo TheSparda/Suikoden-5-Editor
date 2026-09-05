@@ -12,11 +12,13 @@ Commands:
   set      <iso> --id N --table T --field K --value V   write one field (.bak first)
   names    <iso> [--limit N]             dump 0x691600 name table
   set-name <iso> --index I --name X      rename in the name table
+  models   <iso>                         list the field-model table (id -> file, who)
+  set-model <iso> --id N (--slot S | --reset)   point a model id at another model file
   ladder   <iso>                         dump the 0x4986C0 ladder
   peek     <iso> --off 0x.. --len N
   poke     <iso> --off 0x.. --u8/--u16/--hex ..
 """
-import argparse, os, struct, sys, shutil
+import argparse, os, re, struct, sys, shutil
 import s5fields as F
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1526,6 +1528,151 @@ def set_name(iso, index, name):
            name.encode("ascii").ljust(F.NAME_ENTRY_SIZE, b"\x00"))
 
 
+# ---- Field models: the swap table (see s5fields RESOURCE_NAME_BASE / MODEL_PTR_BASE) ----
+# A model id is redirected by rewriting its one pointer, so a swap is 4 bytes, reversible,
+# and never touches the shared resource-path strings (which other ids may also name).
+
+def _resource_off(slot): return F.RESOURCE_NAME_BASE + slot * F.RESOURCE_NAME_STRIDE
+
+def _resource_slot_of(vaddr):
+    """Which name-table slot a model pointer targets, or -1 if it lands outside the table
+    (the factory value for model 0 is a 'hogehoge' placeholder just before the table)."""
+    off = vaddr - F.MODEL_VADDR_DELTA - F.RESOURCE_NAME_BASE
+    if off < 0 or off % F.RESOURCE_NAME_STRIDE: return -1
+    slot = off // F.RESOURCE_NAME_STRIDE
+    return slot if slot < F.RESOURCE_NAME_COUNT else -1
+
+def read_resource_names(iso):
+    """The engine's flat resource-path table: [{slot, off, path, file, vol}]. `vol` is
+    VOL_COM (always-resident /COMMON assets) or VOL_USR (per-field assets)."""
+    out = []
+    for i in range(F.RESOURCE_NAME_COUNT):
+        path = iso.rd(_resource_off(i), F.RESOURCE_NAME_STRIDE).split(b"\x00")[0].decode("latin1")
+        vol, _, fn = path.partition(":")
+        out.append({"slot": i, "off": _resource_off(i), "path": path, "file": fn or path, "vol": vol})
+    return out
+
+_MODEL_RE = re.compile(r"^pc(\d{3})c\.rom$", re.I)
+
+def _model_owner(file, chars):
+    """Who a pcNNNc.rom model belongs to, as (character name, variant).
+
+    NNN is the character id + 1, so pc001c is the Prince (id 0) and pc009c is Lyon (id 8).
+    Files numbered 2xx/3xx/4xx are extra looks for the SAME character — pc401c is
+    1 + 400, i.e. the Prince's 4th model — which is how the cast changes appearance as
+    the story moves. variant is 1 for the everyday model, 2/3/4 for an alternate.
+
+    The +200/+300/+400 reading is inferred from the numbering, and two alternates back it
+    up independently: pc213c is the only same-skeleton match for Kyle's pc013c (2 meshes
+    the same size), and pc321c is the only model sharing a mesh size with Georg's pc021c."""
+    m = _MODEL_RE.match(file or "")
+    if not m: return "", 0
+    n = int(m.group(1))
+    # pc000c..pc124c are the everyday models (the number IS the character); only 2xx and up
+    # split into variant + character, so pc101c stays Faylen rather than reading as 1+100.
+    variant, base = divmod(n, 100) if n >= 200 else (1, n)
+    return chars.get(base - 1, ""), variant
+
+def read_models(iso):
+    """The 129-entry field-model table. One row per model id the engine can be asked to
+    load; `slot` is the resource slot it currently points at, `default_slot` the factory
+    one (model k ships pointing at name slot k-1)."""
+    names = read_resource_names(iso)
+    chars = {c["id"]: c["name"] for c in F.load_characters()}
+    out = []
+    for i in range(F.MODEL_PTR_COUNT):
+        off = F.MODEL_PTR_BASE + i * 4
+        slot = _resource_slot_of(iso.ru(off, 4))
+        base = i - 1
+        home = names[base] if 0 <= base < len(names) else None
+        cur = names[slot] if 0 <= slot < len(names) else None
+        who, variant = _model_owner(home["file"], chars) if home else ("", 0)
+        out.append({"id": i, "off": off, "slot": slot,
+                    "file": cur["file"] if cur else "(off-table)",
+                    "path": cur["path"] if cur else "",
+                    "default_slot": base if home else -1,
+                    "default_file": home["file"] if home else "(placeholder)",
+                    "char": who, "variant": variant, "alternate": variant > 1,
+                    "placeholder": home is None,
+                    "changed": slot != base})
+    return out
+
+def model_targets(iso):
+    """Resource slots that are safe swap targets: the /COMMON character models. VOL_USR
+    entries are per-field files that aren't resident during normal play, so they're left
+    out of the picker (set_model still accepts any slot for scripted use)."""
+    chars = {c["id"]: c["name"] for c in F.load_characters()}
+    out = []
+    for n in read_resource_names(iso):
+        if n["vol"] != "VOL_COM": continue
+        f = n["file"].lower()
+        if re.match(r"^pc\d{3}c\.rom$", f): group = "Cast"
+        elif re.match(r"^ec\d{3}c\.rom$", f): group = "Other characters"
+        else: continue
+        who, variant = _model_owner(n["file"], chars)
+        out.append({"slot": n["slot"], "file": n["file"], "char": who, "variant": variant,
+                    "group": "Story alternates" if variant > 1 else group})
+    return out
+
+def set_model(iso, model_id, slot):
+    """Point one model id at another resource slot. 4-byte write; reset_model undoes it."""
+    if not 0 <= model_id < F.MODEL_PTR_COUNT:
+        raise ValueError(f"model id must be 0..{F.MODEL_PTR_COUNT - 1}")
+    if not 0 <= slot < F.RESOURCE_NAME_COUNT:
+        raise ValueError(f"resource slot must be 0..{F.RESOURCE_NAME_COUNT - 1}")
+    iso.wu(F.MODEL_PTR_BASE + model_id * 4, 4, _resource_off(slot) + F.MODEL_VADDR_DELTA)
+
+def reset_model(iso, model_id):
+    """Restore a model id's factory pointer (name slot id-1)."""
+    if model_id < 1: raise ValueError("model 0 is a placeholder with no factory model")
+    set_model(iso, model_id, model_id - 1)
+
+def model_info(iso_path, file):
+    """Structure summary of a field model in DATA.PAK — bone count, geometry sizes and
+    animation count, read straight out of its RenderWare clump. Two models with the same
+    bone count and matching geometry sizes are almost always the same character redressed,
+    which is how you tell a story alternate (pc401c) from an unrelated model."""
+    name = file.split(":")[-1].upper()
+    if not name.endswith(".ROM"): name += ".ROM"
+    _, data, codec = _datapak_read(iso_path, name)
+    if data[:4] != b"\x00swr":
+        raise ValueError(f"{name} is not a model (tag {data[:4].hex()}, codec {codec})")
+    bones, geos, anims = 0, [], 0
+    for start, end in _rws_blocks(data):
+        off = start
+        while off + 12 <= end:
+            t, sz, _v = struct.unpack_from("<III", data, off)
+            if off + 12 + sz > end: break
+            if t == 0x1B: anims += 1                        # animation
+            elif t == 0x10:                                 # clump: struct, framelist, geometrylist
+                c = off + 12
+                _t, s, _v = struct.unpack_from("<III", data, c); c += 12 + s
+                _t, s, _v = struct.unpack_from("<III", data, c)          # frame list
+                bones = struct.unpack_from("<I", data, c + 24)[0]        # its struct's count
+                c += 12 + s
+                _t, sg, _v = struct.unpack_from("<III", data, c)         # geometry list
+                g = c + 12
+                _t, s, _v = struct.unpack_from("<III", data, g); g += 12 + s   # count struct
+                while g < c + 12 + sg:
+                    _t, s, _v = struct.unpack_from("<III", data, g)
+                    geos.append(s); g += 12 + s
+            off += 12 + sz
+    return {"file": name, "size": len(data), "bones": bones,
+            "geometries": len(geos), "geometry_sizes": geos, "animations": anims}
+
+def _rws_blocks(data):
+    """(start, end) of each RenderWare chunk stream in a model file. A .ROM holds several
+    back-to-back 'rws' sub-blocks (clump first, then the animation banks); each has its own
+    little header whose size sits at +8, with the payload 8 bytes past that."""
+    heads = []
+    for i in range(0, len(data) - 12, 4):
+        if data[i:i+4] != b"\x00swr": continue
+        hdr = struct.unpack_from("<I", data, i + 8)[0]
+        if 0x20 <= hdr <= 0x100 and i + hdr + 20 <= len(data): heads.append((i, i + hdr + 8))
+    return [(p, heads[k+1][0] if k + 1 < len(heads) else len(data))
+            for k, (_h, p) in enumerate(heads)]
+
+
 # When False, no .bak copies are made before writes (toggle in the UI / persisted state).
 BACKUPS = True
 
@@ -1726,6 +1873,25 @@ def _setname(a):
     with Iso(a.iso, writable=True) as g: set_name(g, a.index, a.name)
     print(f"renamed #{a.index} -> {a.name!r}"); return 0
 
+def _models(a):
+    with Iso(a.iso) as g:
+        for m in read_models(g):
+            if m["placeholder"]: continue
+            who = m["char"] + (f" (look {m['variant']})" if m["alternate"] else "")
+            mark = "  <- " + m["file"] if m["changed"] else ""
+            print(f"  #{m['id']:>3} {m['default_file']:<14} {who}{mark}")
+    return 0
+
+def _setmodel(a):
+    backup(a.iso)
+    with Iso(a.iso, writable=True) as g:
+        if a.reset: reset_model(g, a.id)
+        else:
+            if a.slot is None: raise SystemExit("give --slot N (see `models`) or --reset")
+            set_model(g, a.id, a.slot)
+    with Iso(a.iso) as g: m = read_models(g)[a.id]
+    print(f"model #{a.id} -> {m['file']}"); return 0
+
 def _ladder(a):
     with Iso(a.iso) as g:
         print("extra @0x%X:" % F.LADDER_EXTRA_OFF, g.ru(F.LADDER_EXTRA_OFF, 2))
@@ -1805,6 +1971,9 @@ def main(argv=None):
                       (("--field",), dict(required=True)), (("--value",), dict(type=int, required=True))])
     add("names", _names, [(("--limit",), dict(type=int, default=0))])
     add("set-name", _setname, [(("--index",), dict(type=int, required=True)), (("--name",), dict(required=True))])
+    add("models", _models)
+    add("set-model", _setmodel, [(("--id",), dict(type=int, required=True)),
+        (("--slot",), dict(type=int)), (("--reset",), dict(action="store_true"))])
     add("ladder", _ladder)
     add("find-bytes", _findbytes, [(("--hex",), dict(required=True)), (("--max",), dict(type=int, default=16))])
     add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])

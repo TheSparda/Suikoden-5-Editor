@@ -231,7 +231,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <button data-tab=price onclick=showTab('price')>Prices</button>
    <button data-tab=hard onclick=showTab('hard')>Hard Mode</button>
    <button data-tab=ref onclick=showTab('ref')>Reference / Text</button>
-   <button data-tab=assets onclick=showTab('assets')>Assets / Portraits</button>
+   <button data-tab=assets onclick=showTab('assets')>Assets / Models</button>
    <button data-tab=tools onclick=showTab('tools')>Tools</button>
   </div>
  </div>
@@ -464,10 +464,22 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
   <div class=scroll id=overlaytext></div>
  </section>
  <section class=panel id=p-assets>
-  <h2>Assets &amp; Portraits</h2>
+  <h2>Assets, Models &amp; Portraits</h2>
   <p class=sub>Character art and every other asset packed into <code>DATA.PAK</code> — the game's 2.3&nbsp;GB CRI ROFS volume (~7,700 files). Portraits render straight to PNG in your browser; any file can be extracted to <code>datapak_extracted/</code>.</p>
 
-  <h2 style="margin-top:14px">Portraits</h2>
+  <h2 style="margin-top:14px">Field models — swap table</h2>
+  <p class=sub>Every field/town model the engine can load, and which file each one actually reads. Pick a different file for a row and that character walks around as that model instead. The swap is a single 4-byte pointer — nothing in <code>DATA.PAK</code> is touched, and <b>Reset</b> puts it back exactly.</p>
+  <p class=sub>Model ids run <b>character&nbsp;id&nbsp;+&nbsp;2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are <b>extra looks for the same person</b> — <code>pc401c</code> is 1+400, the Prince's 4th model — and the game's own scripts switch to them for particular scenes, which is how the cast changes appearance as the story moves. Eight characters have one: the <b>Prince</b> and <b>Georg</b> have two each, then Lyon, Kyle, Zegai, Cathari, Gunde and Miakis. So changing a character's row re-skins their <i>everyday</i> look; scenes that explicitly ask for an alternate keep using it until you change that row too.</p>
+  <p class=sub><b>Info</b> reads a model's skeleton straight off the disc — same bone count plus matching mesh sizes means the same character redressed. Cutscenes ship their own baked copies of the cast, so a swap shows up while you walk around, not in pre-rendered story scenes.</p>
+  <div class=row>
+   <button onclick=loadModels()>Load model table</button>
+   <input id=modelfilter size=18 placeholder="filter character or file…" oninput=renderModels()>
+   <label class=note><input type=checkbox id=modelonly onchange=renderModels()> only changed rows</label>
+   <span id=modelnote class=note></span>
+  </div>
+  <div class=scroll id=models></div>
+
+  <h2 style="margin-top:20px">Portraits</h2>
   <p class=sub>Pick a portrait set and view every expression/pose. <b>Battle faces</b> (<code>BTL_FACE</code>) hold the whole main cast at 128×64; the <b>character portraits</b> (<code>FACE_PC*</code> / <code>FACE_EC*</code>) are one file per character at 256×256 with all their expressions. Click any face to download it, or grab the whole set as one sprite sheet.</p>
   <div class=row>
    <span class=note>Portrait set</span>
@@ -1144,6 +1156,50 @@ async function loadDatapak(){if(!needIso())return;
   (isface?`<button class="ghost mini" onclick="viewPortraits('${e.name}')">Portraits</button>`
         :(istex?`<button class="ghost mini" onclick="viewTextures('${e.name}')">Textures</button>`:''))+`</td></tr>`});
  document.getElementById('datapak').innerHTML=h+'</tbody></table>'+(PAKFILES.length>800?'<p class=note>showing first 800 — filter to narrow</p>':'');}
+let MODELS=[],MODELTARGETS=[];
+async function loadModels(){if(!needIso())return;
+ document.getElementById('modelnote').textContent='reading the model table…';
+ const r=await j('/api/models',{iso:iso()});
+ if(r.error){document.getElementById('modelnote').textContent='';toast(r.error,'bad');return}
+ MODELS=r.models||[];MODELTARGETS=r.targets||[];renderModels();}
+function renderModels(){
+ const filt=(document.getElementById('modelfilter').value||'').trim().toLowerCase();
+ const only=document.getElementById('modelonly').checked;
+ // slot 0 is a "hogehoge" placeholder the engine never loads — nothing to swap there
+ let rows=MODELS.filter(m=>!m.placeholder);
+ const changed=rows.filter(m=>m.changed).length;
+ if(only)rows=rows.filter(m=>m.changed);
+ if(filt)rows=rows.filter(m=>(m.char+' '+m.default_file+' '+m.file).toLowerCase().includes(filt));
+ const groups=[...new Set(MODELTARGETS.map(t=>t.group))];
+ const label=t=>t.file+(t.char?(' — '+t.char+(t.variant>1?(' · look '+t.variant):'')):'');
+ // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
+ const opts=m=>(MODELTARGETS.some(t=>t.slot==m.slot)?'':'<option value='+m.slot+' selected>'+m.file+'</option>')
+  +groups.map(g=>'<optgroup label="'+g+'">'+MODELTARGETS.filter(t=>t.group==g).map(t=>
+   '<option value='+t.slot+(t.slot==m.slot?' selected':'')+'>'+label(t)+'</option>').join('')+'</optgroup>').join('');
+ let h='<table><thead><tr><th>#</th><th>Character</th><th>Ships&nbsp;as</th><th>Loads</th><th></th></tr></thead><tbody>';
+ rows.forEach(m=>{h+='<tr'+(m.changed?' style="background:#1b2a1b"':'')+'>'
+  +'<td class=note>'+m.id+'</td>'
+  +'<td>'+(m.char?(m.char+(m.alternate?' <span class=note>· look '+m.variant+'</span>':''))
+                :'<span class=note>—</span>')+'</td>'
+  +'<td class=note>'+m.default_file+'</td>'
+  +'<td><select onchange="setModel('+m.id+',this.value)">'+opts(m)+'</select></td>'
+  +'<td><button class="ghost mini" onclick="modelInfo('+m.id+')">Info</button>'
+  +(m.changed?'<button class="ghost mini" onclick="setModel('+m.id+',-1)">Reset</button>':'')+'</td></tr>'});
+ document.getElementById('models').innerHTML=h+'</tbody></table>';
+ document.getElementById('modelnote').innerHTML=rows.length+' of '+MODELS.length+' models'
+  +(changed?(' · <b>'+changed+' swapped</b>'):' · all stock');}
+async function setModel(id,slot){if(!needIso())return;
+ const r=await j('/api/setmodel',{iso:iso(),id:+id,slot:+slot});
+ if(r.error){toast(r.error,'bad');loadModels();return}
+ const m=MODELS.find(x=>x.id==+id);if(m){m.slot=r.slot;m.file=r.file;m.changed=r.changed}
+ renderModels();toast('Model #'+id+' → '+r.file,'ok');}
+async function modelInfo(id){if(!needIso())return;
+ const m=MODELS.find(x=>x.id==+id);if(!m)return;
+ document.getElementById('modelnote').textContent='reading '+m.file+' from DATA.PAK…';
+ const r=await j('/api/modelinfo',{iso:iso(),file:m.file});
+ if(r.error){document.getElementById('modelnote').textContent='';toast(r.error,'bad');return}
+ document.getElementById('modelnote').innerHTML='<b>'+r.file+'</b> · '+r.bones+' bones · '+r.geometries
+  +' meshes ('+r.geometry_sizes.join(', ')+' B) · '+r.animations+' animations · '+r.size.toLocaleString()+' B';}
 async function viewPortraits(name){if(!needIso()||!name)return;
  const fn=document.getElementById('facenote'), pn=document.getElementById('paknote');
  const note=(fn&&document.getElementById('p-assets').classList.contains('on'))?fn:pn;
@@ -1528,6 +1584,32 @@ class H(http.server.BaseHTTPRequestHandler):
                     with P.Iso(iso, writable=True) as g:
                         res = P.reinsert_overlay(g, nm, bin_path)
                     return self._send(200, json.dumps(res))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/models":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                with P.Iso(iso) as g:
+                    return self._send(200, json.dumps({"models": P.read_models(g),
+                                                       "targets": P.model_targets(g)}))
+            if self.path == "/api/setmodel":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                mid = int(d["id"]); slot = int(d["slot"])
+                try:
+                    P.backup(iso)
+                    with P.Iso(iso, writable=True) as g:
+                        if slot < 0: P.reset_model(g, mid)
+                        else: P.set_model(g, mid, slot)
+                    with P.Iso(iso) as g: row = P.read_models(g)[mid]
+                    return self._send(200, json.dumps(row))
+                except (ValueError, KeyError) as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/modelinfo":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    return self._send(200, json.dumps(P.model_info(iso, d.get("file", ""))))
                 except (ValueError, KeyError) as e:
                     return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/datapak":

@@ -51,6 +51,7 @@ const ISO_VIEWS = [
   { id: "skillfx",  label: "Skill effects" },
   { id: "balance",  label: "Balance" },
   { id: "name",     label: "Char names" },
+  { id: "model",    label: "Field models" },
   { id: "ref",      label: "Reference" },
 ];
 
@@ -331,6 +332,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "skillfx") res = window.PYISO.setskillfx(ident.id, ident.rank, +value);
     else if (view === "unite") res = window.PYISO.setunite(ident.id, ident.slot, +value);
     else if (view === "name") res = window.PYISO.setname(ident.index, value);
+    else if (view === "model") res = window.PYISO.setmodel(ident.id, +value);
     else if (view === "setbonus") res = window.PYISO.setbonus(+el.dataset.setidx, +el.dataset.eff, +value);
     else if (view === "sethandler") res = window.PYISO.sethandler(+el.dataset.setidx, +value);
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
@@ -1047,6 +1049,33 @@ VIEW_RENDER.name = async (body) => {
         data-ident='${esc(JSON.stringify({index:n.index}))}' data-field="name" data-kind="str"
         data-orig="${esc(n.name)}" data-lbl="Name #${n.index}" data-grp="Names" onchange="onIsoField(this)">${REVERT_BTN}</div></div>`).join("");
   body.innerHTML = h + `</div>`;
+};
+
+VIEW_RENDER.model = async (body) => {
+  const r = JSON.parse(window.PYISO.models());
+  if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
+  const rows = (r.models || []).filter(m => !m.placeholder), targets = r.targets || [];
+  const groups = [...new Set(targets.map(t => t.group))];
+  const label = t => `${t.file}${t.char ? " — " + t.char + (t.variant > 1 ? " · look " + t.variant : "") : ""}`;
+  // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
+  const opts = m => (targets.some(t => t.slot === m.slot) ? ""
+      : `<option value="${m.slot}" selected>${esc(m.file)}</option>`)
+    + groups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
+    .map(t => `<option value="${t.slot}" ${t.slot === m.slot ? "selected" : ""}>${esc(label(t))}</option>`).join("")
+    + `</optgroup>`).join("");
+  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field/town model the engine can load, and
+      which file each one reads. Pick a different file and that character walks around as that model — a single
+      4-byte pointer, nothing in <code>DATA.PAK</code> is touched. Model ids are <b>character id + 2</b>
+      (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are extra looks for the
+      <b>same person</b> that the game's own scripts switch to for particular scenes; the Prince and Georg have
+      two each, and Lyon, Kyle, Zegai, Cathari, Gunde and Miakis one. Cutscenes carry their own baked copies of
+      the cast, so a swap shows while you walk around rather than in pre-rendered story scenes.</div>
+    <div class="grid" style="padding:0 16px 14px">` + rows.map(m => `<div class="fld">
+      <label>#${m.id} ${esc(m.char || "—")}${m.variant > 1 ? " · look " + m.variant : ""}</label><div class="in">
+      <select data-key="model:${m.id}" data-view="model" data-ident='${esc(JSON.stringify({ id: m.id }))}'
+        data-field="slot" data-kind="num" data-orig="${m.default_slot}"
+        data-lbl="Model #${m.id} (${esc(m.default_file)})" data-grp="Field models"
+        onchange="onIsoField(this)">${opts(m)}</select>${REVERT_BTN}</div></div>`).join("") + `</div>`;
 };
 
 VIEW_RENDER.ref = async (body) => {

@@ -177,6 +177,26 @@ NAME_TABLE_BASE = 0x691600
 NAME_ENTRY_SIZE = 8
 NAME_MAX_CHARS  = 7
 
+# ---- Field character models (VERIFIED both regions) --------------------------
+# Field/town models live in DATA.PAK as /COMMON/PCnnnC.ROM — Konami "rws" containers
+# holding a RenderWare 3.7 clump (skeleton + geometry) plus its animations. The ELF
+# picks one through two tables:
+#   * RESOURCE_NAME_BASE: a flat 0x20-stride table of resource paths ("VOL_COM:pc001c.rom"),
+#     761 slots covering every model/texture file the engine can ask for by id.
+#   * MODEL_PTR_BASE: 129 pointers into that table. Slot 0 is a "hogehoge" placeholder;
+#     slot k (k>=1) points at RESOURCE_NAME_BASE + (k-1)*0x20, so modelId = characterId + 2
+#     (Prince id 0 -> pc001c, Lyon id 8 -> pc009c).
+# The loader is literally `name = *(char**)(MODEL_PTR + id*4)` (8 call sites), and the id
+# comes from a runtime actor struct — event scripts pass it, which is how a character's
+# look changes between scenes. So repointing one pointer redirects every load of that id.
+# Addresses are ISO file offsets; the ELF vaddr is offset + MODEL_VADDR_DELTA.
+RESOURCE_NAME_BASE   = 0x432C00
+RESOURCE_NAME_STRIDE = 0x20
+RESOURCE_NAME_COUNT  = 761
+MODEL_PTR_BASE       = 0x438B20
+MODEL_PTR_COUNT      = 129
+MODEL_VADDR_DELTA    = 0x52700
+
 # ---- Rune (orb) price table (VERIFIED @0x4E24FC vs the rune guide: Fire Orb
 # 6000/3000, Shield Orb 35000/17500; sell = buy/2; event-only orbs have buy=0).
 # From a community-documented Rune Price module (NTSC-U), byte-matched into the ISO. 70 records,
@@ -539,6 +559,9 @@ _PAL = {
     # Phase 3: unite table (packed; byte-identical layout, Δ+0x59B0). scan-end keeps the
     # same window span as NTSC (0x4D6000-0x4D3420 = 0x2BE0).
     "unite": 0x4D8DD0, "unite_end": 0x4D8DD0 + 0x2BE0,
+    # Field models: same 761-slot name table + 129-pointer array, same 0x52700 vaddr delta;
+    # in both regions the pointer array starts exactly where the name table ends.
+    "resource_names": 0x436E80, "model_ptr": 0x43CDA0,
 }
 
 def _snapshot_bases():
@@ -550,6 +573,7 @@ def _snapshot_bases():
         "healprice": HEALPRICE_BASE, "mp": MP_BASE, "skillfx": SKILLFX_BASE, "enemy": ENEMY_BASE,
         "runegrant": RUNE_GRANT_BASE, "price": PRICE_BASE,
         "unite": UNITE_BASE, "unite_end": UNITE_SCAN_END,
+        "resource_names": RESOURCE_NAME_BASE, "model_ptr": MODEL_PTR_BASE,
         "armor_head": ARMOR_TABLES["head"][0], "armor_body": ARMOR_TABLES["body"][0],
         "armor_arm": ARMOR_TABLES["arm"][0], "armor_foot": ARMOR_TABLES["foot"][0],
         "armor_accessory": ARMOR_TABLES["accessory"][0],
@@ -561,7 +585,7 @@ def set_region(region):
     """Rebind all region-variable table bases in place. No-op if unknown."""
     global REGION, SPELL_BASE, RUNEPRICE_BASE, RUNEPRICE_STRIDE, HEALPRICE_BASE
     global MP_BASE, SKILLFX_BASE, ENEMY_BASE, RUNE_GRANT_BASE, PRICE_BASE
-    global UNITE_BASE, UNITE_SCAN_END
+    global UNITE_BASE, UNITE_SCAN_END, RESOURCE_NAME_BASE, MODEL_PTR_BASE
     b = {"ntsc-u": _NTSC, "pal": _PAL}.get(region)
     if not b:
         return REGION
@@ -579,4 +603,5 @@ def set_region(region):
     MP_BASE = b["mp"]; SKILLFX_BASE = b["skillfx"]; ENEMY_BASE = b["enemy"]
     RUNE_GRANT_BASE = b["runegrant"]; PRICE_BASE = b["price"]
     UNITE_BASE = b["unite"]; UNITE_SCAN_END = b["unite_end"]
+    RESOURCE_NAME_BASE = b["resource_names"]; MODEL_PTR_BASE = b["model_ptr"]
     return REGION

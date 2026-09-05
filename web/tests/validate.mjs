@@ -103,6 +103,27 @@ ok("glue exposes the always-on adapters",
 ok("engine keeps the gate scan inside the resolver",
    /RUNE_GATE_LO\s*=\s*0x253C00/.test(fieldsSrc) && /RUNE_GATE_HI\s*=\s*0x255D00/.test(fieldsSrc));
 
+// 3d) Field-models tab: registered in both editors, and the two ELF tables it patches sit
+// back-to-back on the disc (the pointer array starts exactly where the name table ends) —
+// the invariant that pins the bases, since the real-disc check needs a disc CI hasn't got.
+ok("iso.js registers the Field models tab",
+   /id:\s*"model",\s*label:\s*"Field models"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.model"));
+ok("iso.js can repoint a model", isoSrc.includes('view === "model"') && isoSrc.includes("PYISO.setmodel"));
+ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && appSrc.includes("def iso_setmodel"));
+{
+  const fsrc = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");
+  const num = (k) => { const m = fsrc.match(new RegExp(k + "\\s*=\\s*(0x[0-9A-Fa-f]+|\\d+)")); return m ? Number(m[1]) : NaN; };
+  const nameBase = num("RESOURCE_NAME_BASE"), stride = num("RESOURCE_NAME_STRIDE");
+  const count = num("RESOURCE_NAME_COUNT"), ptrBase = num("MODEL_PTR_BASE");
+  ok("NTSC name table runs straight into the pointer array",
+     nameBase + stride * count === ptrBase, "0x" + (nameBase + stride * count).toString(16) + " vs 0x" + ptrBase.toString(16));
+  const pal = fsrc.match(/"resource_names":\s*(0x[0-9A-Fa-f]+),\s*"model_ptr":\s*(0x[0-9A-Fa-f]+)/);
+  ok("PAL bases are mapped", !!pal);
+  if (pal) ok("PAL name table runs straight into its pointer array",
+     Number(pal[1]) + stride * count === Number(pal[2]), pal[1] + " + " + stride * count);
+  ok("model ids stay inside the slice", ptrBase + 4 * num("MODEL_PTR_COUNT") < 0x6A0000);
+}
+
 // 3c) Cache correctness: every versioned asset must carry the displayed release stamp,
 // and same-origin fetches must revalidate (GitHub Pages sends max-age=600).
 const idxSrc = read("index.html"), swSrc = read("sw.js");

@@ -35,6 +35,16 @@ def main():
     buf[F.SERIAL_OFF:F.SERIAL_OFF + len(F.SERIAL_STR)] = F.SERIAL_STR
     sb = F.TABLES["stats"][0] + 11 * F.TABLES["stats"][1]
     buf[sb:sb + 9] = bytes([50, 30, 5, 5, 5, 1, 5, 10, 5])
+    # ...and the field-model tables, laid out the way the disc does it: a 0x20-stride table
+    # of resource paths, then one pointer per model id aiming at its own slot (id-1).
+    for i in range(F.RESOURCE_NAME_COUNT):
+        path = (b"VOL_COM:pc%03dc.rom" % i) if i < 128 else (b"VOL_USR:other%03d.rom" % i)
+        o = F.RESOURCE_NAME_BASE + i * F.RESOURCE_NAME_STRIDE
+        buf[o:o + F.RESOURCE_NAME_STRIDE] = path.ljust(F.RESOURCE_NAME_STRIDE, b"\x00")
+    for i in range(F.MODEL_PTR_COUNT):
+        target = F.RESOURCE_NAME_BASE + (i - 1) * F.RESOURCE_NAME_STRIDE if i else F.RESOURCE_NAME_BASE - 0x18
+        o = F.MODEL_PTR_BASE + i * 4
+        buf[o:o + 4] = (target + F.MODEL_VADDR_DELTA).to_bytes(4, "little")
     open(slice_path, "wb").write(buf)
 
     n = [0]; bad = [0]
@@ -76,6 +86,24 @@ def main():
     off_hp = F.TABLES["stats"][0] + 11 * F.TABLES["stats"][1]  # + 0 (HP)
     offs = {p["off"] for p in em["mod"]["patches"]}
     chk("recipe includes Dinn HP offset", off_hp in offs, hex(off_hp))
+
+    # ---- field models: the swap is a pointer repoint, and Reset must restore it exactly
+    mods = json.loads(g["iso_models"]())
+    rows = mods["models"]
+    chk("iso_models row count", len(rows) == F.MODEL_PTR_COUNT, str(len(rows)))
+    chk("model id 2 is pc001c", rows[2]["file"] == "pc001c.rom", rows[2]["file"])
+    chk("stock table reports no swaps", not any(r["changed"] for r in rows))
+    chk("targets skip VOL_USR slots", all(t["file"].startswith("pc") for t in mods["targets"]),
+        str(len(mods["targets"])))
+    before = open(slice_path, "rb").read()[F.MODEL_PTR_BASE:F.MODEL_PTR_BASE + 4 * F.MODEL_PTR_COUNT]
+    chk("iso_setmodel ok", json.loads(g["iso_setmodel"](2, 127)).get("ok") is True)
+    swapped = json.loads(g["iso_models"]())["models"][2]
+    chk("swap took", swapped["file"] == "pc127c.rom" and swapped["changed"], swapped["file"])
+    chk("iso_setmodel reset ok", json.loads(g["iso_setmodel"](2, -1)).get("ok") is True)
+    after = open(slice_path, "rb").read()[F.MODEL_PTR_BASE:F.MODEL_PTR_BASE + 4 * F.MODEL_PTR_COUNT]
+    chk("reset restores the pointer table byte-for-byte", after == before)
+    chk("out-of-range slot rejected", "error" in json.loads(g["iso_setmodel"](2, 9999)))
+    chk("out-of-range model rejected", "error" in json.loads(g["iso_setmodel"](999, 1)))
 
     print("\n%d/%d passed" % (n[0] - bad[0], n[0]))
     return 1 if bad[0] else 0

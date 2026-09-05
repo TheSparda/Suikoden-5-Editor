@@ -166,6 +166,27 @@ Gear slots) for lookup, plus — on NTSC-U — the raw boot-ELF strings (all lan
 editable in place (byte-capped). PAL shows the read-only lists (its 5-language string
 layout can't be relocated safely).
 
+### Field Models
+Swap the 3D model a character walks around as. The disc keeps 129 field models in
+`DATA.PAK` (`PCnnnC.ROM` — RenderWare clumps, skeleton + meshes + animations) and the
+boot ELF picks one through a table of pointers into its resource-path list, so
+**changing a model is a single 4-byte pointer** — nothing in `DATA.PAK` is touched and
+**Reset** puts it back byte-for-byte. Available in both editors (**Other → Assets /
+Models** on the desktop, the **Field models** tab on the web).
+
+Model ids are **character id + 2** (the Prince is #2 → `pc001c.rom`). Files numbered
+2xx/3xx/4xx are **extra looks for the same person** — `pc401c` is 1+400, the Prince's
+4th model — which the game's own scripts switch to for particular scenes; that is how
+the cast changes appearance as the story moves. Eight characters have one: the **Prince**
+and **Georg** have two each, plus Lyon, Kyle, Zegai, Cathari, Gunde and Miakis. So
+changing a character's row re-skins their everyday look, while a scene that explicitly
+asks for an alternate keeps using it until you change that row too.
+
+**Info** reads a model's skeleton straight off the disc (bones, mesh sizes, animation
+count) — same bone count plus matching mesh sizes means the same character redressed.
+Cutscenes ship their own baked copies of the cast, so a swap shows while you walk around
+rather than in pre-rendered story scenes.
+
 ### Hard Mode
 Scale every character's growth rates down by a factor — idempotent and fully restorable.
 
@@ -208,7 +229,7 @@ round-trips of every field on every supported format (79 checks, NTSC-U + PAL).
 
 ## Assets & Portraits
 
-Its own tab (under **Other → Assets / Portraits**), backed by decoders for the game's
+Shares a tab with the model swapper (under **Other → Assets / Models**), backed by decoders for the game's
 CRI ROFS volume, Konami's LZSS and `bpe` compression, and its `dxt` texture container —
 all reverse-engineered for this editor.
 
@@ -305,6 +326,9 @@ cd Editor
 python3 s5patch.py verify "/path/to/Suikoden V.iso"        # prints detected region
 python3 s5patch.py dump   "/path/to/Suikoden V.iso" --id 0
 python3 s5patch.py set    "/path/to/Suikoden V.iso" --id 0 --table stats --field HP --value 200
+python3 s5patch.py models "/path/to/Suikoden V.iso"        # field-model table: id -> file, who
+python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --slot 127   # Prince -> pc401c
+python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --reset
 ```
 
 ## Project layout

@@ -121,6 +121,7 @@ function isoGlueHandles(){
     mp:g("iso_mp"), setmp:g("iso_setmp"), skillfx:g("iso_skillfx"), setskillfx:g("iso_setskillfx"),
     unites:g("iso_unites"), setunite:g("iso_setunite"),
     names:g("iso_names"), setname:g("iso_setname"),
+    models:g("iso_models"), setmodel:g("iso_setmodel"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
@@ -392,6 +393,20 @@ def iso_names(limit):
 def iso_setname(index, name):
     try:
         with P.Iso(ISO, writable=True) as g: P.set_name(g, int(index), str(name))
+        return json.dumps({"ok": True})
+    except Exception as e: return json.dumps({"error": str(e)})
+
+# ---- Field models: which file each model id loads (pointer swap, see s5patch.set_model)
+def iso_models():
+    try:
+        with P.Iso(ISO) as g:
+            return json.dumps({"models": P.read_models(g), "targets": P.model_targets(g)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setmodel(mid, slot):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            if int(slot) < 0: P.reset_model(g, int(mid))
+            else: P.set_model(g, int(mid), int(slot))
         return json.dumps({"ok": True})
     except Exception as e: return json.dumps({"error": str(e)})
 
