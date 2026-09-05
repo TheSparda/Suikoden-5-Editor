@@ -1562,9 +1562,14 @@ def _model_owner(file, chars):
     1 + 400, i.e. the Prince's 4th model — which is how the cast changes appearance as
     the story moves. variant is 1 for the everyday model, 2/3/4 for an alternate.
 
-    The +200/+300/+400 reading is inferred from the numbering, and two alternates back it
-    up independently: pc213c is the only same-skeleton match for Kyle's pc013c (2 meshes
-    the same size), and pc321c is the only model sharing a mesh size with Georg's pc021c."""
+    The +200/+300/+400 reading is confirmed by the game itself. The ELF carries a table
+    (NTSC 0x211250..0x211330) that folds a character's alternate ids back onto one entry —
+    it groups {2, 119, 128} (the Prince's three), {10, 120} (Lyon), {14, 121} (Kyle) and
+    {22, 122} (Georg). The four it doesn't list are confirmed by palette instead: each
+    alternate's 256-colour CLUT is a near-exact match for its base model's (pc320c/pc020c
+    Cathari, pc321c/pc221c Georg, pc346c/pc046c Gunde, pc373c/pc073c Miakis, all within
+    0.6/768 mean RGB). Only pc314c (Zegai) rests on the numbering alone — it ships no
+    palette to compare and the ELF table doesn't mention it."""
     m = _MODEL_RE.match(file or "")
     if not m: return "", 0
     n = int(m.group(1))
