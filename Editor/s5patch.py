@@ -179,20 +179,66 @@ def apply_xdelta(pristine, patch, out):
 # payload at fileStart+0x40. Compression is classic LZSS (4096-byte window, zero-init,
 # r=N-18, flag bit 1=literal else [lo | (hi&0xF0)<<4 offset, (hi&0x0F)+3 length]).
 _SECT = 2048
-def _iso_listdir(f, lba, size):
-    f.seek(lba * _SECT); d = f.read(size); out = []; i = 0
-    while i < len(d):
-        ln = d[i]
-        if ln == 0:
+
+# ---- Byte-oriented disc access ------------------------------------------------
+# The web editor can't hand Python a file object. It holds an async File in the browser
+# and DATA.PAK sits ~2 GB into the disc, far past the front slice it keeps in memory. So
+# the locating half of every disc walk is a pure function over the bytes of one extent,
+# and the browser does the reading. It stays cheap: DATA.PAK's embedded volume descriptor
+# is at +0x9800, and its whole directory tree is ~600 KB across 126 extents, so a full
+# asset listing costs well under a megabyte of range reads.
+
+def dir_entries(data):
+    """Parse one ISO9660 directory extent -> [{name, lba, size, dir}]. The disc's own
+    filesystem and DATA.PAK's embedded ROFS volume share this record layout. The '.' and
+    '..' records (single 0x00/0x01 name bytes) are dropped."""
+    out = []; i = 0
+    while i < len(data):
+        ln = data[i]
+        if ln == 0:                                   # padding to the next sector
             i = (i // _SECT + 1) * _SECT
-            if i >= len(d): break
+            if i >= len(data): break
             continue
-        rec = d[i:i + ln]
-        flba = int.from_bytes(rec[2:6], "little"); fsz = int.from_bytes(rec[10:14], "little")
-        nl = rec[32]; name = rec[33:33 + nl].decode("latin1"); flags = rec[25]
-        out.append({"name": name.split(";")[0], "lba": flba, "size": fsz, "dir": bool(flags & 2)})
+        rec = data[i:i + ln]
+        nl = rec[32]; nm = rec[33:33 + nl].decode("latin1").split(";")[0]
+        if nm not in ("\x00", "\x01"):
+            out.append({"name": nm, "lba": int.from_bytes(rec[2:6], "little"),
+                        "size": int.from_bytes(rec[10:14], "little"),
+                        "dir": bool(rec[25] & 2)})
         i += ln
     return out
+
+def rofs_volume_at(window, window_off):
+    """Locate DATA.PAK's embedded ISO9660 volume from a window of bytes read at
+    `window_off` on the disc -> {vol_start, root_lba, root_size}. LBAs inside the volume
+    are relative to vol_start, which is 16 sectors before the embedded PVD."""
+    p = window.find(b"\x01CD001\x01")
+    if p < 0: raise ValueError("no embedded ISO9660 volume in DATA.PAK")
+    root = window[p + 156:p + 156 + 34]
+    return {"vol_start": window_off + p - 16 * _SECT,
+            "root_lba": int.from_bytes(root[2:6], "little"),
+            "root_size": int.from_bytes(root[10:14], "little")}
+
+ROM_CODECS = {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe", b"\x00ffh": "ffh",
+              b"\x00mor": "mor"}
+
+def rom_codec(head):
+    """Codec name from a .ROM container's first 12 bytes."""
+    return ROM_CODECS.get(bytes(head[8:12]), bytes(head[8:12]).hex())
+
+def rom_decode(blob):
+    """Decode one .ROM container from its raw bytes -> (codec, data, decoded). non/szl/bpe
+    are unpacked; any other codec comes back as the raw container with decoded=False."""
+    codec = rom_codec(blob)
+    dec = int.from_bytes(blob[0x0C:0x10], "little")
+    comp = int.from_bytes(blob[0x10:0x14], "little")
+    if codec == "non": return codec, blob[0x40:0x40 + dec] if dec else blob[0x40:], True
+    if codec == "szl": return codec, _lzss_decompress(blob[0x40:0x40 + comp], dec), True
+    if codec == "bpe": return codec, _bpe_decompress(blob[0x40:0x40 + comp], dec), True
+    return codec, blob, False
+
+def _iso_listdir(f, lba, size):
+    f.seek(lba * _SECT); return dir_entries(f.read(size))
 
 def iso_root(iso_path):
     f = open(iso_path, "rb")
@@ -369,27 +415,10 @@ def _rofs_volume(iso_path):
     return f, vol_start, int.from_bytes(root[2:6], "little"), int.from_bytes(root[10:14], "little")
 
 def _rofs_listdir(f, vol_start, lba, size):
-    f.seek(vol_start + lba * _SECT); d = f.read(size); out = []; i = 0
-    while i < len(d):
-        ln = d[i]
-        if ln == 0:
-            i = (i // _SECT + 1) * _SECT
-            if i >= len(d): break
-            continue
-        rec = d[i:i + ln]
-        flba = int.from_bytes(rec[2:6], "little"); fsz = int.from_bytes(rec[10:14], "little")
-        nl = rec[32]; nm = rec[33:33 + nl].decode("latin1"); flags = rec[25]
-        base = nm.split(";")[0]
-        if base not in ("\x00", "\x01"):
-            out.append({"name": base, "lba": flba, "size": fsz, "dir": bool(flags & 2)})
-        i += ln
-    return out
+    f.seek(vol_start + lba * _SECT); return dir_entries(f.read(size))
 
 def _rofs_codec(f, vol_start, lba):
-    f.seek(vol_start + lba * _SECT); h = f.read(12)
-    tag = h[8:12]
-    return {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
-            b"\x00ffh": "ffh", b"\x00mor": "mor"}.get(tag, tag.hex())
+    f.seek(vol_start + lba * _SECT); return rom_codec(f.read(12))
 
 def datapak_list(iso_path, filt="", limit=9000):
     """Walk DATA.PAK's ROFS and return internal files [{path,name,size,codec,lba}].
@@ -464,13 +493,7 @@ def _datapak_read(iso_path, name):
     if not hit: find_loose(rlba, rsz)
     if not hit: f.close(); raise KeyError(f"{name} not found in DATA.PAK")
     f.seek(vol_start + hit["lba"] * _SECT); blob = f.read(hit["size"]); f.close()
-    codec = {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
-             b"\x00ffh": "ffh"}.get(blob[8:12], blob[8:12].hex())
-    decSize = int.from_bytes(blob[0x0C:0x10], "little"); compSize = int.from_bytes(blob[0x10:0x14], "little")
-    if codec == "non": data = blob[0x40:0x40 + decSize] if decSize else blob[0x40:]
-    elif codec == "szl": data = _lzss_decompress(blob[0x40:0x40 + compSize], decSize)
-    elif codec == "bpe": data = _bpe_decompress(blob[0x40:0x40 + compSize], decSize)
-    else: data = blob
+    codec, data, _ok = rom_decode(blob)
     return hit["name"], data, codec
 
 
@@ -550,18 +573,31 @@ def _texture_records(body):
                 rgba[p] = min(255, rgba[p] * 2)
             yield bytes(rgba), W, H
 
-def _texture_bodies(iso_path, name):
-    """Return the decompressed dxt bodies of a texture file (a single dxt body, or the
-    nested epb chunk list). Raises ValueError if it isn't a dxt-style texture."""
-    _, data, codec = _datapak_read(iso_path, name)
+def _texture_bodies_data(data, label="file"):
+    """The decompressed dxt bodies of an already-decoded texture file (a single dxt body,
+    or the nested epb chunk list). Raises ValueError if it isn't a dxt-style texture."""
     if data[:4] == b"\x00dxt": return [data[0x40:]]
     if data[:4] == b"\x00epb": return _bpe_chunks(data)
-    raise ValueError(f"{name} is not a dxt texture (tag {data[:4].hex()}, codec {codec})")
+    raise ValueError(f"{label} is not a dxt texture (tag {data[:4].hex()})")
+
+def _texture_bodies(iso_path, name):
+    _, data, codec = _datapak_read(iso_path, name)
+    try: return _texture_bodies_data(data, name)
+    except ValueError: raise ValueError(f"{name} is not a dxt texture "
+                                        f"(tag {data[:4].hex()}, codec {codec})")
+
+def render_textures_data(data, label="file"):
+    """Every texture image in an already-decoded dxt/epb file as (png_bytes, W, H) at
+    native size — any dimensions, 8bpp (indexed) or 32bpp (direct). Works for sprites
+    (SR_CHR*), effect textures (*_TEX*), UI skins (TLK_WIN/GMF*) and portraits alike."""
+    out = []
+    for body in _texture_bodies_data(data, label):
+        for rgba, W, H in _texture_records(body):
+            out.append((_png(W, H, rgba), W, H))
+    if not out: raise ValueError(f"{label} has no decodable textures")
+    return out
 
 def render_textures(iso_path, name):
-    """Every texture image in a dxt/epb file as (png_bytes, W, H) at native size — any
-    dimensions, 8bpp (indexed) or 32bpp (direct). Works for sprites (SR_CHR*), effect
-    textures (*_TEX*), UI skins (TLK_WIN/GMF*) and portraits alike."""
     out = []
     for body in _texture_bodies(iso_path, name):
         for rgba, W, H in _texture_records(body):
@@ -577,6 +613,20 @@ def _double_rows(rgba, W, H):
         r = rgba[y*row:(y+1)*row]
         out[(y*2)*row:(y*2+1)*row] = r; out[(y*2+1)*row:(y*2+2)*row] = r
     return bytes(out), H * 2
+
+def decode_faces_data(data, label="file"):
+    """Portrait view over already-decoded bytes. Wide-short battle faces (H*2 < W, i.e.
+    BTL_FACE 128x32) are stretched 2x vertically; faces of a non-matching size are dropped
+    so the gallery/sheet grid stays uniform. Returns (faces, W, H)."""
+    faces = []; W = H = None
+    for body in _texture_bodies_data(data, label):
+        for rgba, w, h in _texture_records(body):
+            if h * 2 < w: rgba, h = _double_rows(rgba, w, h)
+            if W is None: W, H = w, h
+            if (w, h) != (W, H): continue
+            faces.append(rgba)
+    if not faces: raise ValueError(f"no pixel records found in {label}")
+    return faces, W, H
 
 def _decode_faces(iso_path, name):
     """Portrait view: decode a FACE file to same-size RGBA faces. Wide-short battle faces
@@ -597,6 +647,33 @@ def render_portraits(iso_path, name):
     """List of PNG portraits (RGBA, 128x64) for a FACE/BTL_FACE dxt texture file."""
     faces, W, H = _decode_faces(iso_path, name)
     return [_png(W, H, f) for f in faces]
+
+def _compose_sheet(faces, W, H, cols=8):
+    """Tile same-size RGBA faces into one sprite sheet -> (png_bytes, count)."""
+    if not faces: raise ValueError("no portraits to compose")
+    cols = max(1, min(cols, len(faces))); rows = (len(faces) + cols - 1) // cols
+    SW, SH = cols * W, rows * H
+    sheet = bytearray(SW * SH * 4)
+    for fi, f in enumerate(faces):
+        ox, oy = (fi % cols) * W, (fi // cols) * H
+        for y in range(H):
+            dst = ((oy + y) * SW + ox) * 4
+            sheet[dst:dst + W * 4] = f[y * W * 4:(y + 1) * W * 4]
+    return _png(SW, SH, sheet), len(faces)
+
+def render_portrait_sheet_data(data, label="file", cols=8):
+    faces, W, H = decode_faces_data(data, label)
+    return _compose_sheet(faces, W, H, cols)
+
+def render_portrait_zip_data(data, label, cols=8):
+    """Zip every portrait of an already-decoded FACE file. Returns (zip_bytes, count)."""
+    import io, zipfile
+    faces, W, H = decode_faces_data(data, label)
+    base = label.split(".")[0]; mem = io.BytesIO()
+    with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
+        for i, f in enumerate(faces):
+            z.writestr("%s_%02d.png" % (base, i), _png(W, H, f))
+    return mem.getvalue(), len(faces)
 
 def render_portrait_sheet(iso_path, name, cols=8):
     """Compose all portraits into a single RGBA sprite-sheet PNG. Returns (png_bytes, count)."""
@@ -669,19 +746,7 @@ def datapak_extract(iso_path, name, out_dir):
     if not hit: walk(rlba, rsz)
     if not hit: f.close(); raise KeyError(f"{name} not found in DATA.PAK")
     f.seek(vol_start + hit["lba"] * _SECT); blob = f.read(hit["size"]); f.close()
-    codec = {b"\x00non": "non", b"\x00szl": "szl", b"\x00epb": "bpe",
-             b"\x00ffh": "ffh"}.get(blob[8:12], blob[8:12].hex())
-    decSize = int.from_bytes(blob[0x0C:0x10], "little")
-    compSize = int.from_bytes(blob[0x10:0x14], "little")
-    decoded = True
-    if codec == "non":
-        data = blob[0x40:0x40 + decSize] if decSize else blob[0x40:]
-    elif codec == "szl":
-        data = _lzss_decompress(blob[0x40:0x40 + compSize], decSize)
-    elif codec == "bpe":
-        data = _bpe_decompress(blob[0x40:0x40 + compSize], decSize)
-    else:
-        data = blob; decoded = False   # ffh: dump the raw container (codec not decoded yet)
+    codec, data, decoded = rom_decode(blob)
     os.makedirs(out_dir, exist_ok=True)
     ext = ".bin" if decoded else "." + codec + ".rom"
     out = os.path.join(out_dir, hit["name"].split(".")[0] + ext)
@@ -1666,8 +1731,14 @@ def model_info(iso_path, file):
     name = file.split(":")[-1].upper()
     if not name.endswith(".ROM"): name += ".ROM"
     _, data, codec = _datapak_read(iso_path, name)
+    try: return model_info_data(data, name)
+    except ValueError: raise ValueError(f"{name} is not a model "
+                                        f"(tag {data[:4].hex()}, codec {codec})")
+
+def model_info_data(data, name="model"):
+    """model_info over already-decoded bytes."""
     if data[:4] != b"\x00swr":
-        raise ValueError(f"{name} is not a model (tag {data[:4].hex()}, codec {codec})")
+        raise ValueError(f"{name} is not a model (tag {data[:4].hex()})")
     bones, geos, anims = 0, [], 0
     for start, end in _rws_blocks(data):
         off = start

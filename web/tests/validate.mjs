@@ -111,6 +111,22 @@ ok("iso.js registers the Field models tab",
 ok("iso.js can repoint a model", isoSrc.includes("onModelPick") && isoSrc.includes("PYISO.setmodel"));
 ok("iso.js keeps a character's looks together", /MODEL_LINK\s*=\s*true/.test(isoSrc) && isoSrc.includes("modelLink"));
 ok("s5patch groups a character's model ids", fs.readFileSync(path.join(web,"..","Editor","s5patch.py"),"utf8").includes("def model_group"));
+
+// 3e) DATA.PAK asset tools: the engine's byte-oriented half (the browser does the reading,
+// since the asset volume sits ~2 GB past the front slice the editor keeps in memory)
+{
+  const psrc = fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8");
+  for (const fn of ["def dir_entries", "def rofs_volume_at", "def rom_decode", "def rom_codec",
+                    "def render_textures_data", "def decode_faces_data", "def model_info_data",
+                    "def render_portrait_sheet_data", "def render_portrait_zip_data"])
+    ok("s5patch exposes " + fn.slice(4), psrc.includes(fn));
+  ok("iso.js registers the Assets tab",
+     /id:\s*"assets",\s*label:\s*"Assets"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.assets"));
+  ok("iso.js reads the disc in ranges", isoSrc.includes("function readRange") && isoSrc.includes("pakIndex"));
+  for (const a of ["pakvolume", "pakdirents", "pakdecode", "paktextures", "pakfaces",
+                   "paksheet", "pakzip", "pakmodelinfo"])
+    ok("app.js exposes iso_" + a, appSrc.includes("def iso_" + a));
+}
 ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && appSrc.includes("def iso_setmodel"));
 {
   const fsrc = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");

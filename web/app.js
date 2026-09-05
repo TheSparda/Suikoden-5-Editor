@@ -122,6 +122,9 @@ function isoGlueHandles(){
     unites:g("iso_unites"), setunite:g("iso_setunite"),
     names:g("iso_names"), setname:g("iso_setname"),
     models:g("iso_models"), setmodel:g("iso_setmodel"),
+    pakvolume:g("iso_pakvolume"), pakdirents:g("iso_pakdirents"), pakcodec:g("iso_pakcodec"),
+    pakdecode:g("iso_pakdecode"), paktextures:g("iso_paktextures"), pakfaces:g("iso_pakfaces"),
+    paksheet:g("iso_paksheet"), pakzip:g("iso_pakzip"), pakmodelinfo:g("iso_pakmodelinfo"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
@@ -394,6 +397,67 @@ def iso_setname(index, name):
     try:
         with P.Iso(ISO, writable=True) as g: P.set_name(g, int(index), str(name))
         return json.dumps({"ok": True})
+    except Exception as e: return json.dumps({"error": str(e)})
+
+# ---- DATA.PAK assets (full disc) =============================================
+# The editor only keeps the disc's front slice in memory, and DATA.PAK sits ~2 GB in, so
+# the browser reads byte ranges out of the File and these adapters do the parsing and
+# decoding. Nothing here writes: the asset tools are read-only.
+import base64
+def _buf(b):
+    """Bytes from whatever the browser handed us (JS Uint8Array, memoryview, bytes)."""
+    if isinstance(b, (bytes, bytearray, memoryview)): return bytes(b)
+    try: return bytes(b.to_py())
+    except Exception: return bytes(b)
+def _b64(x): return base64.b64encode(x).decode()
+
+def iso_pakvolume(buf, off):
+    """Root directory of an ISO9660 volume from a window containing its descriptor —
+    the disc itself (window at sector 16) and DATA.PAK's embedded volume both."""
+    try: return json.dumps(P.rofs_volume_at(_buf(buf), int(off)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakdirents(buf):
+    try: return json.dumps({"entries": P.dir_entries(_buf(buf))})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakcodec(buf):
+    try: return json.dumps({"codec": P.rom_codec(_buf(buf))})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakdecode(buf):
+    """Decode one .ROM container -> base64 payload, for download."""
+    try:
+        codec, data, ok = P.rom_decode(_buf(buf))
+        return json.dumps({"codec": codec, "decoded": ok, "size": len(data), "b64": _b64(data)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_paktextures(buf, label):
+    try:
+        _c, data, _ok = P.rom_decode(_buf(buf))
+        tx = P.render_textures_data(data, label)
+        return json.dumps({"imgs": [{"src": "data:image/png;base64," + _b64(png), "w": w, "h": h}
+                                    for png, w, h in tx]})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakfaces(buf, label):
+    try:
+        _c, data, _ok = P.rom_decode(_buf(buf))
+        faces, W, H = P.decode_faces_data(data, label)
+        return json.dumps({"w": W, "h": H,
+                           "faces": ["data:image/png;base64," + _b64(P._png(W, H, f)) for f in faces]})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_paksheet(buf, label, cols=8):
+    try:
+        _c, data, _ok = P.rom_decode(_buf(buf))
+        png, n = P.render_portrait_sheet_data(data, label, int(cols))
+        return json.dumps({"count": n, "b64": _b64(png)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakzip(buf, label):
+    try:
+        _c, data, _ok = P.rom_decode(_buf(buf))
+        blob, n = P.render_portrait_zip_data(data, label)
+        return json.dumps({"count": n, "b64": _b64(blob)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_pakmodelinfo(buf, label):
+    try:
+        _c, data, _ok = P.rom_decode(_buf(buf))
+        return json.dumps(P.model_info_data(data, label))
     except Exception as e: return json.dumps({"error": str(e)})
 
 # ---- Field models: which file each model id loads (pointer swap, see s5patch.set_model)

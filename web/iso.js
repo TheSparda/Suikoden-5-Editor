@@ -21,6 +21,7 @@ const ISO_PATH = "/iso.bin";
 
 let isoHandle = null;              // FileSystemFileHandle (read+write)
 let ORIG = null;                  // pristine slice (Uint8Array) for diffing
+let isoFile = null;               // the whole disc, for the asset tools' range reads
 let isoRegion = null;
 let isoMAPS = null;
 let SPELL_LIST = [];              // [{id,name}] for spellid pickers
@@ -52,6 +53,7 @@ const ISO_VIEWS = [
   { id: "balance",  label: "Balance" },
   { id: "name",     label: "Char names" },
   { id: "model",    label: "Field models" },
+  { id: "assets",   label: "Assets" },
   { id: "ref",      label: "Reference" },
 ];
 
@@ -109,6 +111,7 @@ async function openISO(src) {
     if (file.size < ISO_END) { toast("That file is too small to be a Suikoden V disc.", "bad"); return; }
     const slice = new Uint8Array(await file.slice(0, ISO_END).arrayBuffer());
     pyodide.FS.writeFile(ISO_PATH, slice);
+    isoFile = file; PAK.index = null;   // asset tools read the whole disc on demand
     const load = JSON.parse(window.PYISO.load());
     if (load.error) { toast(load.error, "bad"); return; }
     isoHandle = isHandle ? src : null; ORIG = slice.slice(); ISO_PREV = slice.slice();
@@ -1077,7 +1080,10 @@ VIEW_RENDER.model = async (body) => {
       <label>#${m.id} ${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
       <div class="in"><select data-mid="${m.id}" onchange="onModelPick(this)">${opts(m)}</select>
       ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
-        onclick="onModelReset(${m.id})" tabindex="-1">↺</button>` : ""}</div></div>`).join("") + `</div>`;
+        onclick="onModelReset(${m.id})" tabindex="-1">↺</button>` : ""}
+      <button type="button" class="ghost mini" onclick="modelInfo('${esc(m.file)}')"
+        title="read this model's skeleton off the disc">i</button></div></div>`).join("")
+    + `<div class="fnote" id="modelInfoOut" style="grid-column:1/-1"></div></div>`;
 };
 let MODEL_LINK = true;
 /* The model view commits on its own: one pick can rewrite several pointers, so it writes,
@@ -1104,7 +1110,182 @@ async function writeModels(id, slot) {
   finally { spin(false); }
 }
 function onModelPick(el) { return writeModels(+el.dataset.mid, +el.value); }
+/* Reads the model out of DATA.PAK — same bone/mesh/animation summary the disc gives up. */
+async function modelInfo(file) {
+  const out = $("modelInfoOut"); if (out) out.textContent = "reading " + file + " from DATA.PAK…";
+  spin(true);
+  try {
+    await pakIndex(out);
+    const e = pakFind(file.replace(/^.*:/, ""));
+    if (!e) throw new Error(file + " not found in DATA.PAK");
+    const r = pyOk(window.PYISO.pakmodelinfo(await pakRead(e), e.name));
+    if (out) out.innerHTML = `<b>${esc(r.file)}</b> · ${r.bones} bones · ${r.geometries} meshes
+      (${r.geometry_sizes.join(", ")} B) · ${r.animations} animations · ${r.size.toLocaleString()} B`;
+  } catch (err) { if (out) out.innerHTML = `<span class="bad">${esc(err.message || String(err))}</span>`; }
+  finally { spin(false); }
+}
 function onModelReset(id) { return writeModels(id, -1); }
+
+/* ---------------- DATA.PAK assets ----------------
+ * The editor keeps only the disc's front slice in memory, and the asset volume sits ~2 GB
+ * in, so it's read on demand: JS pulls byte ranges out of the File and the Python engine
+ * parses the ISO9660 records and decodes the containers. Building the index costs about
+ * 600 KB of reads across 126 directory extents, and is cached for the session. */
+const PAK = { index: null, vol: 0 };
+const SECT = 2048;
+async function isoBlob() {
+  if (isoHandle) { try { return await isoHandle.getFile(); } catch (_) {} }
+  return isoFile;
+}
+async function readRange(off, len) {
+  const f = await isoBlob();
+  if (!f) throw new Error("open the ISO first");
+  return new Uint8Array(await f.slice(off, off + len).arrayBuffer());
+}
+function pyOk(res) { const r = JSON.parse(res); if (r.error) throw new Error(r.error); return r; }
+async function pakIndex(note) {
+  if (PAK.index) return PAK.index;
+  const say = (m) => { if (note) note.textContent = m; };
+  say("reading the disc's directory…");
+  // the disc's own volume descriptor lives at sector 16; DATA.PAK's is embedded at +0x9800
+  const outer = pyOk(window.PYISO.pakvolume(await readRange(16 * SECT, SECT), 16 * SECT));
+  const root = pyOk(window.PYISO.pakdirents(
+    await readRange(outer.vol_start + outer.root_lba * SECT, outer.root_size))).entries;
+  const pak = root.find(e => e.name === "DATA.PAK");
+  if (!pak) throw new Error("DATA.PAK not found on this disc");
+  const base = pak.lba * SECT;
+  const vol = pyOk(window.PYISO.pakvolume(await readRange(base, 64 * 1024), base));
+  const out = [], stack = [{ lba: vol.root_lba, size: vol.root_size, path: "" }];
+  while (stack.length) {
+    const d = stack.pop();
+    const ents = pyOk(window.PYISO.pakdirents(
+      await readRange(vol.vol_start + d.lba * SECT, d.size))).entries;
+    for (const e of ents) {
+      const path = d.path + "/" + e.name;
+      if (e.dir) stack.push({ lba: e.lba, size: e.size, path });
+      else out.push({ path, name: e.name, lba: e.lba, size: e.size });
+    }
+    say(`indexing… ${out.length} files`);
+  }
+  out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  PAK.index = out; PAK.vol = vol.vol_start;
+  return out;
+}
+/* Raw container bytes for one indexed file. */
+function pakRead(e) { return readRange(PAK.vol + e.lba * SECT, e.size); }
+function pakFind(name) {
+  const n = name.toUpperCase();
+  return (PAK.index || []).find(e => e.name.toUpperCase() === n)
+      || (PAK.index || []).find(e => e.name.toUpperCase().includes(n));
+}
+function saveBlob(bytes, filename, mime) {
+  const url = URL.createObjectURL(new Blob([bytes], { type: mime || "application/octet-stream" }));
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function b64bytes(b64) {
+  const bin = atob(b64), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+let PAK_FILTER = "";
+VIEW_RENDER.assets = async (body) => {
+  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every asset packed into
+      <code>DATA.PAK</code> — the disc's 2.3 GB CRI ROFS volume, ~7,700 files. It sits far past the
+      part of the disc the editor holds in memory, so it's read straight off your file on demand;
+      nothing is uploaded and nothing here writes to the disc.</div>
+    <div class="row" style="padding:0 16px 6px">
+      <button id="pakGo">Browse DATA.PAK</button>
+      <input class="pick-q" id="pakQ" type="search" placeholder="filter path… (try FACE)" style="max-width:240px">
+      <span class="note" id="pakNote"></span></div>
+    <div id="pakGallery" style="display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;
+      background:#0d1420;padding:10px;border-radius:8px;margin:0 16px 10px"></div>
+    <div id="pakList" style="padding:0 16px 14px"></div>`;
+  const note = $("pakNote"), list = $("pakList");
+  const draw = () => {
+    const f = PAK_FILTER.toLowerCase();
+    const rows = PAK.index.filter(e => !f || e.path.toLowerCase().includes(f));
+    note.textContent = `${rows.length} of ${PAK.index.length} files`;
+    list.innerHTML = `<div class="tablewrap"><table><thead><tr><th>Path</th><th>Size</th><th></th></tr></thead>
+      <tbody>` + rows.slice(0, 400).map((e, i) => {
+        const idx = PAK.index.indexOf(e);
+        const face = /FACE/i.test(e.name);
+        return `<tr><td class="note">${esc(e.path)}</td><td class="note">${e.size.toLocaleString()}</td>
+          <td><button class="ghost mini" onclick="pakExtract(${idx})">Extract</button>
+          ${face ? `<button class="ghost mini" onclick="pakPortraits(${idx})">Portraits</button>`
+                 : `<button class="ghost mini" onclick="pakTextures(${idx})">Textures</button>`}</td></tr>`;
+      }).join("") + `</tbody></table></div>` +
+      (rows.length > 400 ? `<p class="note">showing the first 400 — filter to narrow</p>` : "");
+  };
+  $("pakQ").value = PAK_FILTER;
+  $("pakQ").oninput = (ev) => { PAK_FILTER = ev.target.value; if (PAK.index) draw(); };
+  $("pakGo").onclick = async () => {
+    spin(true);
+    try { await pakIndex(note); draw(); }
+    catch (e) { toast(e.message || String(e), "bad"); note.textContent = ""; }
+    finally { spin(false); }
+  };
+  if (PAK.index) draw();
+};
+function pakGallery() { const g = $("pakGallery"); g.style.display = "flex"; return g; }
+async function pakExtract(i) {
+  const e = PAK.index[i]; spin(true);
+  try {
+    const r = pyOk(window.PYISO.pakdecode(await pakRead(e)));
+    saveBlob(b64bytes(r.b64), e.name.replace(/\.ROM$/i, "") + (r.decoded ? ".bin" : "." + r.codec + ".rom"));
+    toast(`${e.name} · ${r.codec} · ${r.size.toLocaleString()} bytes`, "ok");
+  } catch (err) { toast(err.message || String(err), "bad"); }
+  finally { spin(false); }
+}
+async function pakTextures(i) {
+  const e = PAK.index[i], g = pakGallery(); spin(true);
+  g.innerHTML = `<span class="note">decoding ${esc(e.name)}…</span>`;
+  try {
+    const r = pyOk(window.PYISO.paktextures(await pakRead(e), e.name));
+    g.innerHTML = r.imgs.map(im => `<figure style="margin:0;text-align:center">
+      <a href="${im.src}" download="${esc(e.name.split(".")[0])}_${im.w}x${im.h}.png">
+      <img src="${im.src}" style="max-height:160px;image-rendering:pixelated;border:1px solid #333;
+        border-radius:4px;background:#fff"></a>
+      <figcaption class="note" style="font-size:10px">${im.w}×${im.h}</figcaption></figure>`).join("")
+      || `<span class="note">no textures in ${esc(e.name)}</span>`;
+  } catch (err) { g.innerHTML = `<span class="bad">${esc(err.message || String(err))}</span>`; }
+  finally { spin(false); }
+}
+async function pakPortraits(i) {
+  const e = PAK.index[i], g = pakGallery(); spin(true);
+  g.innerHTML = `<span class="note">decoding ${esc(e.name)}…</span>`;
+  try {
+    const buf = await pakRead(e);
+    const r = pyOk(window.PYISO.pakfaces(buf, e.name));
+    const big = r.w >= 200;
+    g.innerHTML = `<div style="width:100%;display:flex;gap:6px;margin-bottom:6px">
+        <button class="ghost mini" onclick="pakSheet(${i})">⬇ Sprite sheet</button>
+        <button class="ghost mini" onclick="pakZip(${i})">⬇ ZIP of PNGs</button>
+        <span class="note">${r.faces.length} faces · ${r.w}×${r.h}</span></div>` +
+      r.faces.map((src, n) => `<a href="${src}" download="${esc(e.name.split(".")[0])}_${String(n).padStart(2,"0")}.png">
+        <img src="${src}" style="height:${big ? 128 : 72}px;border:1px solid #333;border-radius:4px;
+          background:#fff;image-rendering:${big ? "auto" : "pixelated"}"></a>`).join("");
+  } catch (err) { g.innerHTML = `<span class="bad">${esc(err.message || String(err))}</span>`; }
+  finally { spin(false); }
+}
+async function pakSheet(i) {
+  const e = PAK.index[i]; spin(true);
+  try {
+    const r = pyOk(window.PYISO.paksheet(await pakRead(e), e.name, 8));
+    saveBlob(b64bytes(r.b64), e.name.split(".")[0] + "_sheet.png", "image/png");
+    toast(`${r.count} faces in one sheet`, "ok");
+  } catch (err) { toast(err.message || String(err), "bad"); } finally { spin(false); }
+}
+async function pakZip(i) {
+  const e = PAK.index[i]; spin(true);
+  try {
+    const r = pyOk(window.PYISO.pakzip(await pakRead(e), e.name));
+    saveBlob(b64bytes(r.b64), e.name.split(".")[0] + "_portraits.zip", "application/zip");
+    toast(`${r.count} PNGs zipped`, "ok");
+  } catch (err) { toast(err.message || String(err), "bad"); } finally { spin(false); }
+}
 
 VIEW_RENDER.ref = async (body) => {
   const ref = JSON.parse(window.PYISO.reference());
