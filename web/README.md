@@ -1,159 +1,127 @@
-# Suikoden V Editor — web edition
-
-A browser-based twin of the desktop editor with **two modes**, running **entirely on your
-device** (nothing is uploaded):
-
-- **Save editor** — opens a Suikoden V (PS2) save, edits it, saves the edited copy back.
-  Works everywhere, including Android.
-- **ISO / Disc editor** — edits the game disc's data tables (stats, gear, spells, runes,
-  prices, enemies, unites, MP, skill effects, names) **plus equipment-set bonuses,
-  always-on rune passives, and gear name/description text** — and writes only the changed bytes
-  back into your ~4 GB ISO in place. Desktop Chromium only (needs the File System Access
-  API); the Save editor covers everything else.
+# Suikoden V Editor, web edition
 
 **Live:** https://thesparda.github.io/Suikoden-5-Editor/web/
 
-> **This is now the editor.** The desktop app (`Editor/s5editor.py`) is **being retired** —
-> it still runs, but new features and fixes land here. See
-> [Retiring the desktop editor](../README.md#retiring-the-desktop-editor).
+This is **the** editor. The full feature list lives in the [root README](../README.md); this
+file is the developer-facing companion: architecture, files, tests and deployment.
 
-## Web-exclusive tabs
+Two modes, both running entirely on the user's device:
 
-These features exist here and not in the desktop UI:
+- **Save editor**: opens a Suikoden V (PS2) save, edits it, writes the edited copy back.
+  Works everywhere, Android included.
+- **ISO / disc editor**: 19 tabs over the disc's data tables and, for a handful of features,
+  its code. On desktop Chromium (File System Access) it writes only the changed bytes back
+  into the ~4 GB ISO in place; everywhere else you can still open, edit and export a
+  `.s5mod` recipe.
 
-- **Sets** — the 9 armor sets: swap members (including the accessory slot), change which
-  effects a completed set grants and by how much (26 targets), add effects a set never had
-  (assembled into verified unreferenced code space), rewrite the bonus description, and
-  remove or retarget the Sun set's "Prince only" restriction.
-- **Passives** — force a rune's overworld effect permanently on, no equip needed:
-  Champion's (fewer encounters), Great Firefly (more), Fortune (2x EXP), Prosperity
-  (2x Potch), Godspeed (2x field speed + 100% escape). Each is an 8-byte NOP pair per call
-  site and reverts byte-for-byte.
-- **Gear text** — rename gear and rewrite descriptions (English only), length-capped to
-  what each record actually has room for.
+## How it works, and why it needs almost no new code
 
-The first three edit the game's **code** rather than a data table, so they were built
-against the disassembly and are covered by their own test suites. Two more are ordinary
-table work, brought over from the desktop and improved on the way:
+Neither mode reimplements the game logic in JavaScript. The page runs the repository's own
+pure-Python modules **unchanged** inside [Pyodide](https://pyodide.org) (CPython compiled to
+WebAssembly):
 
-- **Excel / CSV** — export any of the eleven data tables (including **Spells** and the
-  **Runes** grant table), bulk-edit it in a spreadsheet, and import it back. A value too big
-  for its field is **capped at that field's maximum and listed in the report** rather than
-  failing the write, and a sheet exported from a different table is **refused before
-  anything is written** (stat names like HP and Speed are shared, so the wrong dropdown used
-  to write enemy numbers into character stats). Columns that hold a code rather than a
-  quantity — a spell's element / target / status, a rune's start-spell id — are **refused
-  rather than capped**, since a capped code is a different spell; their legend is printed
-  next to the Table picker.
-- **Balance → Enemies** — scale every enemy's combat stats by a multiplier, with a separate
-  one for HP. Potch, skill-point rewards, affinities and drops are left alone; the baseline
-  is remembered, so re-applying never compounds and Restore is exact.
+- **Saves:** [`../Editor/s5save.py`](../Editor/s5save.py). The picked file is written to
+  `/save.bin` in Pyodide's in-memory FS, the module's normal path-based functions run against
+  it, and the edited bytes are read back for download. Checksums, ECC and the CodeBreaker /
+  SharkPort containers are all handled by the trusted engine code.
+- **ISO:** [`../Editor/s5patch.py`](../Editor/s5patch.py) plus `s5fields.py`. The disc is
+  ~4 GB, so we do **not** load it. We read a **~6.6 MB front slice**
+  (`file.slice(0, 0x6A0000)`); every editable table, from the serial at `0x828BD` up through
+  the `0x691600` name list, lives below that offset, so the engine's absolute-offset reads
+  and writes work on the slice exactly as on the full disc. On **Save** the edited slice is
+  diffed against the pristine one and **only the changed byte runs** go back into the real
+  file in place (`createWritable({keepExistingData: true})`) at their absolute offsets.
+- **Assets:** `DATA.PAK` sits ~2 GB in, past the slice, so the Assets and Field models tabs
+  pull byte ranges out of the `File` on demand and hand them to the Python decoders (ISO9660
+  records, Konami LZSS / `bpe`, the `dxt` texture container). Indexing costs ~600 KB of reads
+  across 126 directory extents and is cached for the session.
 
-Every write here is reversible and recorded in the same dirty/undo/`.s5mod` machinery as
-the ordinary table edits.
+Same "one source of truth for offsets" discipline as the CLI: the web UI never guesses a byte
+layout.
 
-## How it works (and why it needs almost no new code)
+## Code-level features
 
-Neither editor reimplements the game logic in JavaScript. The page runs the desktop
-editor's own pure-Python modules **unchanged** inside [Pyodide](https://pyodide.org)
-(CPython → WebAssembly):
+Most tabs are ordinary table edits. Five features patch the game's **code** instead, so they
+were built against the disassembly and each carries its own test suite:
 
-- **Saves:** [`../Editor/s5save.py`](../Editor/s5save.py) — the picked file is written to
-  `/save.bin` in Pyodide's in-memory FS, the module's normal path-based functions run
-  against it, and the edited bytes are read back for download. Checksums, ECC, and the
-  CodeBreaker/SharkPort containers are all handled by the trusted desktop code.
-- **ISO:** [`../Editor/s5patch.py`](../Editor/s5patch.py) + `s5fields.py`. Because the
-  disc is ~4 GB, we do **not** load it into memory. We read only a **~6.6 MB front-slice**
-  (`file.slice(0, 0x6A0000)`) — every editable table (the serial at `0x828BD` up through
-  the `0x691600` name list) lives below that offset, so the engine's absolute-offset
-  reads/writes work on the slice exactly as on the full disc. On **Save**, the edited
-  slice is diffed against the pristine one and **only the changed byte-runs** are written
-  back into the real file in place (`createWritable({keepExistingData:true})`) at their
-  absolute offsets. The disc-wide extras (overlay/DATA.PAK/portrait tooling) are desktop-
-  only and intentionally omitted.
+| Feature | What it rewrites | Reversible |
+|---|---|---|
+| **Sets** | the set detector's member immediates, handler magnitudes, the u32 jump table, the per-character gate, and custom bonuses assembled into unreferenced code space | yes |
+| **Passives** | the rune equip-check pair, 8 bytes of NOPs per call site | byte for byte |
+| **Dawn Rune fourth spell** | one instruction holding the spell counter at 4 | byte for byte |
+| **Sun set restriction** | a 4-byte NOP, or a re-pointed `li`+`bne` to another character id | yes |
+| **Field models** | a single 4-byte pointer into the resource-path table | yes, per row |
 
-This is the same "one source of truth for offsets" discipline the desktop uses — the web
-UI never guesses a byte layout.
-
-## Quality-of-life (both modes)
-
-- **Searchable pickers** instead of native dropdowns for big id lists (items/runes/armor/
-  spells) — usable on a phone.
-- **Review-before-save** — an explicit old→new list is confirmed before anything is written
-  to your file/disc.
-- **Dirty highlight + unsaved badge** — changed fields are marked; a sticky toolbar shows
-  the pending count and keeps Save reachable.
-- **Remember last opened** — a one-tap **↻ Last opened** chip (IndexedDB; for the ISO it
-  stores the file *handle*, never the 4 GB of bytes).
-- **Save-in-place** via File System Access (overwrite the original after a permission
-  prompt), with transparent **download** fallback; **Web Share** in and out on Android
-  (share a save *into* the installed PWA, and share the edited copy *out*).
-- **`.s5mod` recipe** (ISO) — export your edits as a tiny JSON of byte-runs to share a
-  rebalance without passing around the disc; import replays it, serial-checked and warning
-  on any byte that doesn't match the author's recorded original.
-- **Balance** (ISO) — a one-click Hard Mode multiplier that scales starting stats from a
-  remembered baseline (re-applying doesn't compound).
-- **PWA / offline** — installable; a network-first service worker keeps returning users on
-  the latest deploy yet still opens offline; the pinned Pyodide runtime is cached once.
-  Same-origin fetches revalidate (`cache: "no-cache"`) and every script/style URL carries a
-  `?v=<release>` stamp, so a deploy can't serve a new `index.html` beside a stale `iso.js`
-  — GitHub Pages' `max-age=600` made exactly that happen once.
-
-## Install as an app (PWA)
-
-Open the live URL in Chrome and tap **⬇ Install** (or **⋮ → Install app / Add to Home
-Screen**). iOS Safari: **Share → Add to Home Screen**. After the first visit it works
-offline.
-
-## Deploying on GitHub Pages
-
-1. **Settings → Pages → Deploy from a branch → your default branch → `/ (root)`.**
-2. The editor lives at `/<repo>/web/` and fetches `../Editor/*.py` + `*.json` at runtime,
-   so Pages **must serve from the repo root** (not `/web`), and the `Editor/` folder must
-   stay in the deployed tree (it already is).
-3. A root **`.nojekyll`** is committed so Pages serves `.py` and `_`-prefixed files
-   verbatim. No build step; the Pyodide version is pinned in `index.html` and `sw.js`.
+Sets, Passives and Char names are **NTSC-U only** (their PAL offsets are not mapped). The
+Dawn Rune site is located by signature, so it simply does not surface on a disc without it.
+Everything else works on both discs.
 
 ## Files
 
 | File | Purpose |
 |---|---|
-| `index.html` | Dual-mode app shell (Save / ISO tabs), PWA meta, script load order |
+| `index.html` | Dual-mode app shell (Save / ISO tabs), PWA meta, pinned Pyodide, script load order |
 | `common.js` | Shared UI helpers: IndexedDB kv, searchable picker + review modals, theme, PWA, tabs |
-| `diff-core.js` | Pure byte-diff logic (changed-run computation) — DOM-free, unit-tested |
+| `diff-core.js` | Pure byte-diff logic (changed-run computation), DOM-free, unit-tested |
 | `app.js` | Save editor + the shared Pyodide boot and the Python glue for **both** engines |
-| `iso.js` | ISO editor: slice load, all table views, diff-runs save-in-place, `.s5mod` recipe |
+| `iso.js` | ISO editor: slice load, all 19 tab views, diff save-in-place, `.s5mod` recipe, DATA.PAK reads |
 | `style.css` | Falena Twilight / Sun Rune theme (dark + light), mobile-first, safe-area aware |
 | `manifest.webmanifest`, `sw.js`, `icons/` | PWA install + offline + Web Share target |
-| `tests/` | `validate.mjs` (static), `diff-logic.mjs` (pure), `iso_roundtrip.py` (+`.mjs` wrapper), `e2e.mjs` (headless) |
+| `serve.py` | Tiny static server for local development |
+| `tests/` | Static, pure-logic, engine round-trip, feature and headless-e2e suites |
+
+The Python glue for both engines lives as a string constant in `app.js` (`GLUE`) and is
+extracted verbatim by `tests/iso_roundtrip.py`, so the tested code is the shipped code.
 
 ## Tests
 
-The repo ships **no ROM/ISO/saves**; tests build synthetic fixtures from the engine's own
-constants, so they can't drift.
+The repo ships **no ROM, ISO or saves**; tests build synthetic fixtures from the engine's own
+constants, so they cannot drift.
 
 ```bash
-cd web && npm test        # static + pure-logic + engine round-trip
-npm run test:e2e          # headless Chromium shell + mobile-overflow (skips if not installed)
+cd web && npm test        # static + pure logic + engine round-trip + feature suites
+npm run test:e2e          # headless Chromium shell + mobile overflow (skips if not installed)
+npm run test:all          # both
 ```
 
-- **`validate.mjs`** — every client JS parses; the shell is wired (script tags, both mode
-  tabs); the service worker precaches the shell + every engine data file; the ISO slice
+- **`validate.mjs`**: every client script parses; the shell is wired (script tags, both mode
+  tabs); the service worker precaches the shell and every engine data file; the ISO slice
   window covers the highest table offset; the manifest declares the share target.
-- **`diff-logic.mjs`** — unit tests for the pure changed-run computation.
-- **`iso_roundtrip.py`** — extracts the **exact** Python glue from `app.js`, points it at a
-  fabricated 6.6 MB slice, and drives the same adapters the front-end calls (load / read /
-  write / re-read / hardmode / recipe) — proving the engine reuse on the slice is correct.
-  The `.mjs` wrapper skips cleanly if `python3` is absent.
-- **`e2e.mjs`** — headless Chromium: shell renders, both modes switch, and **no horizontal
-  overflow at 320/360 px**. Self-skips if playwright/Chromium isn't installed.
+- **`diff-logic.mjs`**: unit tests for the pure changed-run computation.
+- **`iso-roundtrip.mjs`** (wrapping `iso_roundtrip.py`): drives the extracted glue against a
+  fabricated 6.6 MB slice through load, read, write, re-read, hard mode and recipe. Skips
+  cleanly if `python3` is absent.
+- **`save-fields.mjs`**: write and read-back round-trips of every save field on every
+  supported format.
+- **`sets-unit.mjs`** / **`sets-iso.mjs`**: set decode and rewrite, with the Suikosource
+  Armor Sets guide encoded as ground truth.
+- **`runes-always.mjs`** / **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,
+  including exact restoration when a toggle goes back off.
+- **`enemy-base.mjs`**: guards the region-specific enemy table bases.
+- **`e2e.mjs`**: headless Chromium; the shell renders, both modes switch, and there is no
+  horizontal overflow at 320 / 360 px.
 
-## Notes & limits
+## Deploying on GitHub Pages
 
-- Save-editable fields match the desktop's verified set (hero/castle name, New Game Plus,
-  per-character level/armor/runes/skill slots/skill ranks, recruitment). Fields whose
-  offsets aren't reverse-engineered yet are intentionally not exposed.
-- ISO edits apply to a **new game** — do not use emulator save-states. Back up your ISO
-  (or export a recipe) before saving.
-- Keep your original file until you've confirmed the edited one loads in-game.
-- First load downloads a few MB of Pyodide from a CDN; later loads are cached.
+1. **Settings → Pages → Deploy from a branch → your default branch → `/ (root)`.**
+2. The editor lives at `/<repo>/web/` and fetches `../Editor/*.py` and `*.json` at runtime,
+   so Pages **must serve from the repo root** (not `/web`), and the `Editor/` folder must
+   stay in the deployed tree (it already is).
+3. A root **`.nojekyll`** is committed so Pages serves `.py` and `_`-prefixed files verbatim.
+   No build step; the Pyodide version is pinned in `index.html` and `sw.js`.
+4. Every script and style URL carries a `?v=<release>` stamp, so a deploy can never serve a
+   new `index.html` beside a stale `iso.js`. GitHub Pages' `max-age=600` made exactly that
+   happen once. Bump the stamp with the version.
+
+## Notes and limits
+
+- Save-editable fields are the verified set (hero / castle / army name, Potch, Party SP, New
+  Game Plus, active party, and per character level, armor, accessory, runes, skill slots,
+  skill ranks, recruitment). Fields whose offsets are not reverse-engineered yet are
+  intentionally not exposed.
+- ISO edits apply to a **new game**. Do not use emulator save states. Back up the ISO, or
+  export a recipe, before saving.
+- Keep the original file until the edited one has loaded in-game.
+- Overlay extraction, the overlay text editor, `.xdelta` patches, raw hex and boot-ELF string
+  editing stay in the CLI / retired desktop app.
+- First load downloads a few MB of Pyodide from a CDN; later loads are cached and offline.
