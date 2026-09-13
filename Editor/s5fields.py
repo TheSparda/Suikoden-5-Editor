@@ -148,29 +148,67 @@ SPELL_FIELDS = [("Element", 0, 1, "element"),
                 ("Status", 5, 1, "spellstatus")]
 SPELL_STATUS_NAMES = {0: "None", 1: "Unknown (0x01)", 2: "Revive", 0x20: "Add status"}
 
-# ---- Rune -> spell GRANT table (VERIFIED vs the rune guide, 24/24) -----------
-# Base 0x4E6DA2, stride 0x46, 24 records. A rune teaches the CONTIGUOUS spell
-# range [start .. start+count-1] (spell ids index the spell table above).
-#   +0 u8 start spell id, +2 u8 count, +3 u8 flag(=1), +4.. Shift-JIS name.
-RUNE_GRANT_BASE, RUNE_GRANT_STRIDE, RUNE_GRANT_COUNT = 0x4E6DA2, 0x46, 24
+# ---- Rune -> spell GRANT table (VERIFIED vs the rune guide, 26/26) -----------
+# Stride 0x46, records indexed by the game's own rune id. A rune teaches the
+# CONTIGUOUS spell range [start .. start+count-1] (ids index the spell table above).
+#   +0 u8 start spell id, +2 u8 count, +3 u8 kind, +4.. Shift-JIS name.
+# +3 is the rune KIND: 1 = spell rune, 2 = summon, 3 = passive. The three accessors
+# that read this record live at vaddrs 0x3C3630 (+0), 0x3C3660 (+2), 0x3C3690 (+3).
+# CORRECTED 2026-09-13: the table's real record 0 is a blank at ISO 0x4E6CD0, and what
+# this base used to point at (0x4E6DA2, "Fire Rune") is record 3. The Dawn Rune (record
+# 1, 黎明の紋章) and Twilight Rune (record 2, 黄昏の紋章) are REAL records, not the
+# synthetic placeholders they were modelled as — so the base moves back two records and
+# both become fully editable. Record 0 stays out (blank name, kind 0, no spells).
+RUNE_GRANT_BASE, RUNE_GRANT_STRIDE, RUNE_GRANT_COUNT = 0x4E6D16, 0x46, 26
 RUNE_GRANT_NAMES = [
+    "Dawn Rune", "Twilight Rune",
     "Fire Rune", "Rage Rune", "Lightning Rune", "Thunder Rune", "Water Rune",
     "Flowing Rune", "Wind Rune", "Cyclone Rune", "Earth Rune", "Mother Earth Rune",
     "Star Rune", "Blinking Rune", "Sound Rune (DoReMi)", "Beast Rune", "Shield Rune",
-    "Pale Gate Rune", "Resurrection Rune", "Rune 17 (spells 59-62)",
+    # 闇の紋章 — its four spells (59-62) have no English names in the disc's pool.
+    "Pale Gate Rune", "Resurrection Rune", "Darkness Rune",
     "Rage Sword Rune", "Thunder Sword Rune", "Flowing Sword Rune",
     "Cyclone Sword Rune", "Mother Earth Sword Rune", "Rune of Condemnation",
 ]
 RUNE_GRANT_FIELDS = [("Start spell", 0, 1, "spellid"), ("Spell count", 2, 1, "num")]
+DAWN_RUNE_INDEX = 0            # the Dawn Rune's record, now that the base starts on it
 
 # Spells not owned by any grant record, surfaced as read-only "runes" so every
 # spell is still reachable + editable from the Runes tab (no separate Spells tab).
 SYNTH_RUNE_BASE = 100
 SYNTH_RUNES = [
-    {"name": "Dawn Rune", "start": 0, "count": 4},       # Time of Wakening..Crimson Sky
-    {"name": "Twilight Rune", "start": 4, "count": 4},    # Evening Dusk..Vermilion Sky
     {"name": "Other · Level placeholders", "start": 82, "count": 24},
 ]
+
+# ---- Dawn Rune: unlock all four spells ---------------------------------------
+# The Dawn Rune is the one spell rune whose count is NOT read from its own +2 byte.
+# The list builder @0x3BB940 does:
+#     if (record[+0] != 0) count = record[+2];   // every other rune
+#     else                 count = dawnCounter() // start-spell-id 0 == the Dawn Rune
+# dawnCounter is a single byte at vaddr 0x6E0ED8 (= $gp-17432, NTSC $gp = 0x6E52F0)
+# with exactly TWO references in the whole ELF: a setter @0x334930 (`sb a0,-17432(gp)`)
+# and a getter @0x334940. The setter's only caller is a wrapper @0x346F10, reached only
+# through a script-opcode pointer table, that does `clamp(scriptVar, 0, 4)` — i.e. the
+# story script LOWERS the byte from its initial on-disc value of 4. That is why the
+# community .pnach has to rewrite it every frame, and why editing the data byte alone
+# does nothing.
+# The patch: the wrapper's `jal` delay slot is `andi a0,v1,255`; replacing it with
+# `addiu a0,zero,N` makes the setter always store N. Since the byte is already N at boot
+# and after every call, this is exactly equivalent to the frame-by-frame cheat.
+# Located by signature so it works in both regions (NTSC-U ISO 0x2F484C, PAL 0x2F549C);
+# the pattern below has exactly ONE hit in each disc.
+#     24030004   addiu v1,zero,4      <- the clamp's own ceiling
+#     0C??????   jal <setter>
+#     306400FF   andi a0,v1,255       <- PATCH SITE (hit + 8)
+DAWN_ANCHOR_WORD = 0x24030004
+DAWN_STOCK_WORD  = 0x306400FF          # andi a0,v1,255  (vanilla: use the story value)
+DAWN_FORCE_WORD  = 0x24040000          # addiu a0,zero,N — OR in N to force the count
+DAWN_MAX         = 4                   # the clamp's ceiling; the rune has 4 spells
+# Scan window: ELF text only — it ends below the first data table in EITHER region
+# (NTSC resource names 0x432C00, PAL 0x436E80), so the signature can never collide with
+# float or string data, and the read stays small enough to redo on every panel open.
+DAWN_SCAN_LO = 0x0AD900                # ISO offset of the ELF's first PT_LOAD byte
+DAWN_SCAN_HI = 0x432C00
 
 # Character name table (separate index order from the NNN id list).
 NAME_TABLE_BASE = 0x691600
@@ -553,7 +591,9 @@ _PAL = {
     "armor_head": 0x49AF70, "armor_body": 0x491B90, "armor_arm": 0x499490,
     "armor_foot": 0x49C6B0, "armor_accessory": 0x4B2070,
     # Phase 2 (byte-match verified): rune->spell grant, shop item prices, starting-equipment armor.
-    "runegrant": 0x4FAF02, "price": 0x49952C, "starting equipment": 0x498302,
+    # runegrant moved back two records (Dawn + Twilight) with the NTSC base — PAL's
+    # Fire Rune record is 0x4FAF02, so the Dawn Rune is 0x4FAF02 - 2*0x46. Verified.
+    "runegrant": 0x4FAE76, "price": 0x49952C, "starting equipment": 0x498302,
     # Phase 3: starting held-items share the starting-equipment record base.
     "starting items": 0x498302,
     # Phase 3: unite table (packed; byte-identical layout, Δ+0x59B0). scan-end keeps the

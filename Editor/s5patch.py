@@ -1381,6 +1381,53 @@ def write_rune_always_on(iso, rune_id, enabled, originals=None):
     if not n: raise ValueError("no original instructions matched this rune's sites")
     return {"ok": True, "runeId": int(rune_id), "sites": n, "forced": False}
 
+_DAWN_RE = None
+
+def _dawn_pattern():
+    """`addiu v1,zero,4` / `jal <setter>` / <patch site>, where the patch site is either
+    the stock `andi a0,v1,255` or an already-applied `addiu a0,zero,N`. Exactly one hit
+    per disc in both regions."""
+    global _DAWN_RE
+    if _DAWN_RE is None:
+        anchor = re.escape(struct.pack("<I", F.DAWN_ANCHOR_WORD))   # addiu v1,zero,4
+        jal    = b"..." + re.escape(b"\x0c")                        # jal <anything>
+        stock  = re.escape(struct.pack("<I", F.DAWN_STOCK_WORD))    # andi a0,v1,255
+        # addiu a0,zero,N — the immediate is the low byte, so leave it open
+        forced = b"[\\x00-\\xff]" + re.escape(struct.pack("<I", F.DAWN_FORCE_WORD)[1:])
+        _DAWN_RE = re.compile(anchor + jal + b"(?:" + stock + b"|" + forced + b")", re.S)
+    return _DAWN_RE
+
+def _dawn_site(iso):
+    """ISO offset + current word of the Dawn Rune spell-count patch site, or None."""
+    lo, hi = F.DAWN_SCAN_LO, F.DAWN_SCAN_HI
+    blob = iso.rd(lo, hi - lo)
+    hits = [m.start() for m in _dawn_pattern().finditer(blob)]
+    if len(hits) != 1: return None                 # ambiguous -> refuse to guess
+    at = hits[0] + 8
+    return {"off": lo + at, "word": struct.unpack_from("<I", blob, at)[0]}
+
+def read_dawn_unlock(iso):
+    """How many Dawn Rune spells are unlocked from the start. `count` 0 means vanilla —
+    the story script decides, so the fourth spell only arrives near the endgame."""
+    s = _dawn_site(iso)
+    if not s: return {"found": False, "count": 0, "max": F.DAWN_MAX}
+    w = s["word"]
+    forced = (w & 0xFFFF0000) == F.DAWN_FORCE_WORD
+    return {"found": True, "off": s["off"], "word": w, "max": F.DAWN_MAX,
+            "count": (w & 0xFF) if forced else 0, "stock": w == F.DAWN_STOCK_WORD}
+
+def write_dawn_unlock(iso, count):
+    """Force the Dawn Rune's spell count (1..DAWN_MAX), or pass 0 to restore the stock
+    instruction and hand the count back to the story script. One word, reversible."""
+    n = int(count)
+    if not (0 <= n <= F.DAWN_MAX):
+        raise ValueError("dawn spell count must be 0 (vanilla) .. %d" % F.DAWN_MAX)
+    s = _dawn_site(iso)
+    if not s: raise KeyError("Dawn Rune spell-count patch site not found on this disc")
+    word = F.DAWN_STOCK_WORD if n == 0 else (F.DAWN_FORCE_WORD | n)
+    iso.wu(s["off"], 4, word)
+    return {"ok": True, "off": s["off"], "count": n, "word": word}
+
 def set_effect_targets():
     """Catalog of char-struct fields a custom set bonus can touch."""
     return [{"label": l, "charOff": o, "width": w, "verified": v, "kind": k}
