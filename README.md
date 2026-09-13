@@ -17,7 +17,7 @@ copy.
 > runs, but every new feature lands in the web editor. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.16.0**.
+Current release: **v1.17.0**.
 
 ## Two modes
 
@@ -243,20 +243,31 @@ is exact, and anything past a field's ceiling is capped rather than failing.
 
 ### Excel / CSV
 
-Export any of **nine data tables** as CSV, bulk-edit it in Excel, Sheets or LibreOffice, and
-import it back:
+Export any of **eleven data tables** as CSV, bulk-edit it in Excel, Sheets or LibreOffice,
+and import it back:
 
 `Characters — stats & growths`, `— elemental affinities`, `— equipable-skill caps`,
-`— weapon growth`, `— starting equipment`, `Enemies`, `Prices`, `Skill effects`,
-`MP growth`.
+`— weapon growth`, `— starting equipment`, `Enemies`, `Spells`, `Runes`, `Prices`,
+`Skill effects`, `MP growth`.
+
+`Spells` is all 106 spell records (element, power / heal, target, status). `Runes` is the
+rune → spell grant table: a rune teaches the contiguous run
+`Start spell … Start spell + Spell count - 1`, one spell per rune level, so those two columns
+are both *which* spells a rune teaches and *how many levels* it has. Export both together,
+since a rune's `Start spell` is an id from the `Spells` sheet.
 
 Import writes only the cells that changed, with the same range validation, backup and recipe
 recording as a tab edit. Blank cells and Excel quirks (BOM, `12.0` decimals) are handled.
-Two things it will not let you get wrong:
+Three things it will not let you get wrong:
 
 - a value **too big for its field is capped** at that field's maximum and listed in the
   report, so doubling a column cannot leave the sheet half applied (enemy stats are u16, so
   tripling a 30,000 HP boss lands on 65535);
+- a column that holds a **code rather than a quantity is never capped**. A spell's element,
+  target and status, and a rune's start-spell id, are refused per cell if the value is not a
+  real code, because capping one of those silently writes a *different* element. The legend
+  for those columns is printed next to the Table picker, and anything the disc itself already
+  uses stays accepted, so an edit can always be reverted;
 - a sheet exported from a **different table is refused** before a byte is written. Stat names
   are shared between tables, so importing the enemy sheet with the Characters table selected
   used to write enemy numbers into character stats. The report names the table the columns

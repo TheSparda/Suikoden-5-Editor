@@ -608,7 +608,7 @@ def iso_esrestore():
     except Exception as e: return json.dumps({"error": str(e)})
 
 def iso_csvdatasets():
-    try: return json.dumps({"datasets": P.CSV_DATASETS})
+    try: return json.dumps({"datasets": P.CSV_DATASETS, "legends": P.csv_legends()})
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_csvexport(dataset):
     try:
