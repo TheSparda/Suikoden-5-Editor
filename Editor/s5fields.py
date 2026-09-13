@@ -549,7 +549,7 @@ GATED_IN_PAL = []
 _PAL = {
     "stats": 0x48FB60, "affinities": 0x490720, "equipable skills": 0x4B80D1,
     "weapon growth": 0x49D9B0, "spell": 0x4FC950, "runeprice": 0x4F0B20, "runeprice_stride": 80,
-    "healprice": 0x4D2980, "mp": 0x49D8B0, "skillfx": 0x4B44BC, "enemy": 0x4A4347,
+    "healprice": 0x4D2980, "mp": 0x49D8B0, "skillfx": 0x4B44BC, "enemy": 0x4A42CC,   # byte-match verified vs NTSC (ids 1..219 identical)
     "armor_head": 0x49AF70, "armor_body": 0x491B90, "armor_arm": 0x499490,
     "armor_foot": 0x49C6B0, "armor_accessory": 0x4B2070,
     # Phase 2 (byte-match verified): rune->spell grant, shop item prices, starting-equipment armor.
