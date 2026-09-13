@@ -1121,9 +1121,13 @@ VIEW_RENDER.csv = async (body) => {
         const text = (await f.text()).replace(/^\uFEFF/, "");     // Excel writes a BOM
         const x = JSON.parse(window.PYISO.csvimport(ds, text));
         if (x.error) { $("csvMsg").textContent = x.error; toast(x.error, "bad"); return; }
+        // The engine only ships the first 20 of each list, so say so rather than
+        // letting "438 capped" sit above 20 lines and read as the whole story.
+        const listed = (lines, total) => lines.join("\n  ")
+          + (total > lines.length ? `\n  …and ${total - lines.length} more` : "");
         let msg = `${x.changed} value(s) written, ${x.skippedCells} cell(s) skipped.`;
-        if (x.clamped) msg += `\n\n${x.clamped} value(s) capped to the field maximum:\n  ` + x.clamps.join("\n  ");
-        if (x.errorCount) msg += `\n\n${x.errorCount} error(s):\n  ` + x.errors.join("\n  ");
+        if (x.clamped) msg += `\n\n${x.clamped} value(s) capped to the field maximum:\n  ` + listed(x.clamps, x.clamped);
+        if (x.errorCount) msg += `\n\n${x.errorCount} error(s):\n  ` + listed(x.errors, x.errorCount);
         $("csvMsg").textContent = msg;
         if (x.changed) {
           isoEdits["csv:" + ds] = { label: `CSV import — ${label} (${x.changed} value(s))`,
