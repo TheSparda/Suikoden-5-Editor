@@ -502,6 +502,22 @@ UNITE_EXTRA_CHARS = {129: "ReMiFa", 130: "MiFaSo", 131: "FaSoLa", 132: "SoLaTi",
 # E/D/C/B/A/S/SS, at offsets 0,2,4,6,8,10,12. Verified content: "Attack +" 5..40,
 # "Stamina (% HP)" 105..130, "Karmic Effect" starts at C. GLOBAL table (indexed by skill
 # id, shared by all units). Names from skills.txt (s5_skilleffect_names.json, 165).
+#
+# A row is one SUB-EFFECT, not one skill: the Defense skill owns ids 2..5 (Defense +,
+# % Block, % Parry, % Weapon Defense), so a 0 at rank E/D means that sub-effect does
+# not unlock until C — the skill itself is live there (Defense + pays 3 at E).
+#
+# The ids run in a fixed CANONICAL effect order, and every skill that grants a set of
+# effects lists them as a rising subsequence of it. Royal Paradise (98..120) grants all
+# 23, so it spells the order out. That invariant caught a rotation in the shipped names:
+# the base block had ids 20..22 as [Sword Magic +, Incantation % casting, Incantation
+# % area] where all 11 other groups (Divine Right 85..87, Zen Sword 88..91, Sacred Oath
+# 92..97, Royal Paradise) put Sword Magic + LAST, after the two Incantation effects. The
+# verified equipable-skill caps agree (Incantation is skill 8, Sword of Magic is 9), and
+# so do the values: the row then labelled "% reduced casting time" reads 0,0,110..130,
+# and a >100% casting-time reduction is not a thing. Corrected to [% casting, % area,
+# Sword Magic +], which also makes id 22 match the other two Sword Magic + rows (91,
+# 97, 120 read 102,105,108,110,112,115,120). Guarded by validate.mjs.
 SKILLFX_BASE, SKILLFX_STRIDE, SKILLFX_COUNT = 0x4AEB1C, 36, 165
 SKILLFX_RANKS = ["E", "D", "C", "B", "A", "S", "SS"]
 def _skillfx_names():

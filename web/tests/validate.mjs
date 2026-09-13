@@ -199,6 +199,40 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
   ok("model ids stay inside the slice", ptrBase + 4 * num("MODEL_PTR_COUNT") < 0x6A0000);
 }
 
+// 3b-ii) Skill-effect names: a row is one sub-effect, and every skill lists its effects
+// in the same canonical order. Royal Paradise (98..120) grants all 23, so it spells that
+// order out; each other group must be a RISING subsequence of it. The shipped names had
+// the base block's ids 20..22 rotated (Sword Magic + sat before the two Incantation
+// effects, giving a "% reduced casting time" row of 0,0,110..130), which this catches.
+{
+  const fx = JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_skilleffect_names.json"), "utf8"));
+  ok("skill-effect names count matches SKILLFX_COUNT", fx.length === 165, String(fx.length));
+  const norm = (s) => {
+    let t = (s.includes("(") ? s.slice(s.indexOf("(") + 1).replace(/\)\s*$/, "") : s).toLowerCase();
+    for (const [a, b] of [["critical", "crit"], ["defense", "def"], ["technique", "tech"],
+                          ["damg", "dmg"], ["damage", "dmg"], ["multiples", "multiple"],
+                          ["mag def", "mdef"], ["magic def", "mdef"],
+                          ["resist mag dmg", "resistmag"], ["resist magic dmg", "resistmag"],
+                          ["reduced casting time", "casting"],
+                          ["chance to change single target spell to area spell", "area"],
+                          ["change single target spell to area spell", "area"]]) t = t.split(a).join(b);
+    return t.replace(/[^a-z+% ]/g, " ").split(/\s+/).filter(Boolean).join(" ");
+  };
+  const canon = fx.slice(98, 121).map(norm);                    // Royal Paradise: all 23
+  ok("Royal Paradise spells out all 23 effects", new Set(canon).size === 23, String(new Set(canon).size));
+  const groups = { "base": [0, 23], "Raging Lion": [23, 25], "Fate Control": [25, 30],
+    "Karmic Effect": [30, 38], "Armor of Gods": [38, 44], "Swift Foot": [44, 52],
+    "Triple Harmony": [52, 60], "All out Strike": [60, 69], "Untold Clarity": [69, 85],
+    "Divine Right": [85, 88], "Zen Sword": [88, 92], "Sacred Oath": [92, 98] };
+  for (const [label, [a, b]] of Object.entries(groups)) {
+    const pos = fx.slice(a, b).map((s) => canon.indexOf(norm(s)));
+    ok(`${label} effects follow the canonical order`,
+       pos.every((p, i) => p >= 0 && (i === 0 || p > pos[i - 1])), pos.join(","));
+  }
+  ok("Sword Magic + comes last in every group that grants it",
+     [22, 91, 97, 120].every((i) => /Sword Magic \+/.test(fx[i]) && norm(fx[i]) === canon[22]));
+}
+
 // 3c) Cache correctness: every versioned asset must carry the displayed release stamp,
 // and same-origin fetches must revalidate (GitHub Pages sends max-age=600).
 const idxSrc = read("index.html"), swSrc = read("sw.js");
