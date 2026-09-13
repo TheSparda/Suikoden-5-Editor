@@ -1543,13 +1543,21 @@ def read_enemy(iso, eid):
             for (l, o, w, k) in F.ENEMY_FIELDS]
 
 def read_enemies(iso, names=None):
-    """List unit records that have HP (enemies + units), with best-effort names."""
+    """List unit records that have HP (enemies + units), with best-effort names.
+
+    HP is u16, so ANY non-zero value is a plausible record; a slot is only rejected
+    when it reads as 0xFF padding. The ceiling used to be 60000, which quietly dropped
+    an enemy off the list the moment a mod pushed its HP past that — the record was
+    still on the disc, but the editor stopped showing it and a CSV re-import called its
+    id unknown. 65535 HP is a legitimate (if silly) edit, so it has to survive too."""
     names = names or {}
     out = []
     for eid in range(F.ENEMY_MAX):
-        hp = iso.ru(enemy_addr(eid) + 2, 2)
-        if 0 < hp < 60000:
-            out.append({"id": eid, "hp": hp, "name": names.get(str(eid)) or f"Enemy {eid}"})
+        base = enemy_addr(eid)
+        hp = iso.ru(base + 2, 2)
+        if hp == 0: continue
+        if hp == 0xFFFF and iso.rd(base, 16) == b"\xff" * 16: continue   # unused slot
+        out.append({"id": eid, "hp": hp, "name": names.get(str(eid)) or f"Enemy {eid}"})
     return out
 
 def write_enemy_field(iso, eid, label, value):
@@ -1851,20 +1859,48 @@ def csv_export(iso_path, dataset):
     for r in rows: w.writerow(r)
     return f"s5_{dataset}.csv", buf.getvalue()
 
+def _csv_field_widths(dataset):
+    """label -> storage width in bytes, so an import can CAP a too-big value instead of
+    failing that write. Doubling or tripling a column is the common bulk edit and every
+    one of these fields is a fixed-width integer, so "as high as this field goes" beats
+    an error that leaves the rest of the sheet half-applied."""
+    if dataset in _CSV_CHAR_TABLE:
+        return {l: w for (l, o, w, k) in F.TABLES[_CSV_CHAR_TABLE[dataset]][2]}
+    if dataset == "enemies":
+        return {l: w for (l, o, w, k) in F.ENEMY_FIELDS}
+    if dataset == "prices":
+        return {n: w for (n, o, w) in F.PRICE_FIELDS}
+    if dataset == "skillfx":
+        return {r: 2 for r in F.SKILLFX_RANKS}
+    if dataset == "mp":
+        return {l: 2 for l in F.MP_FIELD_LABELS}
+    return {}
+
 def csv_import(iso_path, dataset, csv_text, make_backup=True):
     import csv, io
     idh, labels, cur_rows = _csv_rows(iso_path, dataset)
     current = {r[0]: dict(zip(labels, r[2:])) for r in cur_rows}
-    rdr = csv.reader(io.StringIO(csv_text))
+    widths = _csv_field_widths(dataset)
+    rdr = csv.reader(io.StringIO(csv_text.lstrip("\ufeff")))    # Excel writes a BOM
     try: header = next(rdr)
     except StopIteration: return {"error": "empty CSV"}
-    header = [h.strip() for h in header]
+    header = [h.strip().lstrip("\ufeff") for h in header]
     if not header or header[0].lower() != "id":
         return {"error": "first column must be 'id' (export a CSV first to see the format)"}
     colmap = {i: h for i, h in enumerate(header) if h in labels}
     if not colmap:
         return {"error": "no known field columns found — headers must match the exported CSV"}
-    changed = skipped = 0; errors = []
+    # Tables share stat names (HP/Attack/Speed/…), so a sheet exported from one table
+    # imports "successfully" into another and quietly writes nonsense — enemy HP into a
+    # character's u8 HP, say. Whichever table the columns match best wins; ties go to the
+    # table the caller asked for, so a trimmed-down sheet still imports.
+    owner = max(CSV_DATASETS, key=lambda ds: (len(set(header) & set(_csv_field_widths(ds))),
+                                              ds == dataset))
+    if owner != dataset:
+        return {"error": f"these columns are the “{CSV_DATASETS[owner]}” table, not "
+                         f"“{CSV_DATASETS[dataset]}” — nothing was written. "
+                         f"Pick “{CSV_DATASETS[owner]}” in the Table list and import again."}
+    changed = skipped = clamped = 0; errors = []; clamps = []
     if make_backup: backup(iso_path)
     with Iso(iso_path, writable=True) as g:
         for ln, row in enumerate(rdr, start=2):
@@ -1872,15 +1908,28 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
             try: rid = int(row[0])
             except ValueError:
                 errors.append(f"line {ln}: bad id {row[0]!r}"); continue
-            if rid not in current:
-                errors.append(f"line {ln}: unknown id {rid}"); continue
+            cur = current.get(rid)
+            if cur is None:
+                # Enemy ids address a fixed-stride table, so every slot in range is
+                # writable even when its record isn't in the detected enemy list.
+                if dataset == "enemies" and 0 <= rid < F.ENEMY_MAX:
+                    cur = {f["label"]: f["value"] for f in read_enemy(g, rid)}
+                else:
+                    errors.append(f"line {ln}: unknown id {rid}"); continue
             for ci, label in colmap.items():
                 if ci >= len(row): continue
                 cell = row[ci].strip()
                 if cell == "": skipped += 1; continue
                 try: val = int(float(cell))   # Excel may emit "12.0"
                 except ValueError: skipped += 1; continue
-                if current[rid].get(label) == val: continue
+                lim = (1 << 8 * widths.get(label, 2)) - 1
+                if not (0 <= val <= lim):
+                    capped = max(0, min(lim, val))
+                    clamped += 1
+                    if len(clamps) < 20:
+                        clamps.append(f"line {ln} {label}: {val} -> {capped} (field holds 0-{lim})")
+                    val = capped
+                if cur.get(label) == val: continue
                 try:
                     if dataset in _CSV_CHAR_TABLE:
                         write_field(g, _CSV_CHAR_TABLE[dataset], rid, label, val)
@@ -1896,7 +1945,7 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                 except Exception as e:
                     errors.append(f"line {ln} {label}={cell}: {e}")
     return {"changed": changed, "skippedCells": skipped, "errors": errors[:20],
-            "errorCount": len(errors)}
+            "errorCount": len(errors), "clamped": clamped, "clamps": clamps}
 
 # ---- Hard Mode: scale every character's VERIFIED starting stats party-wide.
 # Idempotent via a sidecar baseline (originals stored once), so re-applying a new
@@ -1937,6 +1986,58 @@ def hardmode_restore(iso_path):
                 g.wu(a + off, w, vals[i])
     os.remove(side)
     return len(base)
+
+
+# ---- Enemy scaler: the same baseline trick, applied to every enemy's COMBAT stats.
+# Rewards (potch / skill points), elemental affinities and item drops are deliberately
+# left alone — scaling those changes the economy, not the difficulty. Each stat is u16,
+# so a big multiplier caps at 65535 rather than failing the write.
+_ES_STATS = [f for f in F.ENEMY_FIELDS if f[0] in
+             ("HP", "Attack", "Technique", "Accuracy", "Magic",
+              "Evasion", "PDF", "MDF", "Speed", "Luck")]
+
+def _es_sidecar(iso_path): return iso_path + ".enemyscale.json"
+
+def enemy_scale(iso_path, factor, hp_factor=None):
+    """Multiply every enemy's combat stats by `factor`, HP by `hp_factor` (defaults to
+    `factor`). Baseline is stored once, so re-applying scales the ORIGINALS instead of
+    compounding and Restore is exact. -> {count, clamped}."""
+    factor = float(factor)
+    hp_factor = float(factor if hp_factor is None else hp_factor)
+    for f in (factor, hp_factor):
+        if not (0.1 <= f <= 20): raise ValueError("factor must be between 0.1 and 20")
+    side = _es_sidecar(iso_path)
+    base = {}
+    if os.path.exists(side):
+        try: base = _json.load(open(side))
+        except Exception: base = {}
+    backup(iso_path)
+    clamped = 0
+    with Iso(iso_path, writable=True) as g:
+        ids = sorted({int(k) for k in base} | {e["id"] for e in read_enemies(g)})
+        for eid in ids:
+            a = enemy_addr(eid); key = str(eid)
+            if key not in base:
+                base[key] = [g.ru(a + off, w) for (_l, off, w, _k) in _ES_STATS]
+            for i, (lbl, off, w, _k) in enumerate(_ES_STATS):
+                lim = (1 << 8*w) - 1
+                v = int(base[key][i] * (hp_factor if lbl == "HP" else factor))
+                if v > lim: clamped += 1
+                g.wu(a + off, w, max(0, min(lim, v)))
+    _json.dump(base, open(side, "w"))
+    return {"count": len(base), "clamped": clamped}
+
+def enemy_scale_restore(iso_path):
+    side = _es_sidecar(iso_path)
+    if not os.path.exists(side): return {"count": 0}
+    base = _json.load(open(side))
+    with Iso(iso_path, writable=True) as g:
+        for key, vals in base.items():
+            a = enemy_addr(int(key))
+            for i, (_l, off, w, _k) in enumerate(_ES_STATS):
+                g.wu(a + off, w, vals[i])
+    os.remove(side)
+    return {"count": len(base)}
 
 
 # --------------------------------------------------------------------------- CLI

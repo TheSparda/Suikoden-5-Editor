@@ -51,6 +51,7 @@ const ISO_VIEWS = [
   { id: "mp",       label: "MP growth" },
   { id: "skillfx",  label: "Skill effects" },
   { id: "balance",  label: "Balance" },
+  { id: "csv",      label: "Excel / CSV" },
   { id: "name",     label: "Char names" },
   { id: "model",    label: "Field models" },
   { id: "assets",   label: "Assets" },
@@ -1010,6 +1011,7 @@ VIEW_RENDER.skillfx = async (body) => {
 VIEW_RENDER.balance = async (body) => {
   body.innerHTML = `<div style="padding:14px">
     <div class="note">${esc((isoMAPS.help||{}).stats||"")}</div>
+    <div class="subhd" style="margin:12px 0 4px">Characters</div>
     <p class="note">Scale every character's <b>starting stats</b> by a factor (baseline is remembered, so
       re-applying doesn't compound). Great for a quick Hard Mode. Applies to a new game.</p>
     <div class="row">
@@ -1017,7 +1019,42 @@ VIEW_RENDER.balance = async (body) => {
       <button id="hmApply">Apply multiplier</button>
       <button class="ghost" id="hmRestore">Restore original</button>
     </div>
-    <div id="hmMsg" class="note"></div></div>`;
+    <div id="hmMsg" class="note"></div>
+
+    <div class="subhd" style="margin:22px 0 4px">Enemies</div>
+    <p class="note">Scale every enemy's <b>combat stats</b> — HP, Attack, Technique, Accuracy, Magic, Evasion,
+      PDF, MDF, Speed, Luck. Potch, skill-point rewards, elemental affinities and item drops are left untouched.
+      HP takes its own multiplier, so you can run tankier enemies without making them hit harder. The baseline is
+      remembered, so re-applying never compounds; each stat holds 0-65535 and anything past that is capped.</p>
+    <div class="row">
+      <label>Stats × <input type="number" id="esFactor" value="2" min="0.1" max="20" step="0.1" style="width:90px"></label>
+      <label>HP × <input type="number" id="esHp" value="3" min="0.1" max="20" step="0.1" style="width:90px"></label>
+      <button id="esApply">Apply to all enemies</button>
+      <button class="ghost" id="esRestore">Restore original</button>
+    </div>
+    <div id="esMsg" class="note"></div></div>`;
+  $("esApply").onclick = async () => {
+    spin(true);
+    try {
+      const f = +$("esFactor").value, hp = +$("esHp").value;
+      const r = JSON.parse(window.PYISO.enemyscale(f, hp));
+      if (r.error) { toast(r.error, "bad"); return; }
+      isoEdits["enemyscale"] = { label: `Enemy stats ×${f}${hp !== f ? `, HP ×${hp}` : ""}`, group: "Balance", to: "applied" };
+      $("esMsg").textContent = `Scaled ${r.count} enemies.` +
+        (r.clamped ? ` ${r.clamped} stat(s) hit the 65535 cap.` : "");
+      updateIsoToolbar(); captureUndoStep();
+    } finally { spin(false); }
+  };
+  $("esRestore").onclick = async () => {
+    spin(true);
+    try {
+      const r = JSON.parse(window.PYISO.esrestore());
+      if (r.error) { toast(r.error, "bad"); return; }
+      delete isoEdits["enemyscale"];
+      $("esMsg").textContent = r.count ? `Restored ${r.count} enemies.` : "Nothing to restore.";
+      updateIsoToolbar(); captureUndoStep();
+    } finally { spin(false); }
+  };
   $("hmApply").onclick = async () => {
     spin(true);
     try {
@@ -1035,6 +1072,69 @@ VIEW_RENDER.balance = async (body) => {
       delete isoEdits["balance"];
       $("hmMsg").textContent = `Restored ${r.count} characters.`; updateIsoToolbar(); captureUndoStep();
     } finally { spin(false); }
+  };
+};
+
+/* Excel round-trip: export a whole table, bulk-edit it in a spreadsheet, import it back.
+   Import only writes cells that actually changed, and a value too big for its field is
+   capped to that field's maximum rather than aborting the row. */
+VIEW_RENDER.csv = async (body) => {
+  const r = JSON.parse(window.PYISO.csvdatasets());
+  if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
+  const opts = Object.entries(r.datasets || {})
+    .map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
+  body.innerHTML = `<div style="padding:14px">
+    <p class="note">Export a table as CSV, bulk-edit it in Excel / Sheets / LibreOffice, then import it back.
+      Only the cells you <b>changed</b> are written; blank and non-numeric cells are skipped. Keep the
+      <code>id</code> column and the header row intact — the <code>name</code> column is there to read by,
+      and is ignored on import.</p>
+    <p class="note">Every field is a fixed-width number, so a value that doesn't fit is capped at that field's
+      maximum and listed in the report (enemy stats hold 0-65535, so tripling a 30,000 HP boss lands on 65535
+      instead of failing). For a straight across-the-board multiplier, the <b>Balance</b> tab is easier and
+      can be undone exactly.</p>
+    <div class="row">
+      <label>Table <select id="csvDs">${opts}</select></label>
+      <button id="csvExport">Export CSV</button>
+      <button class="ghost" id="csvImport">Import CSV…</button>
+    </div>
+    <div id="csvMsg" class="note" style="white-space:pre-wrap"></div></div>`;
+  $("csvExport").onclick = () => {
+    spin(true);
+    try {
+      const ds = $("csvDs").value;
+      const x = JSON.parse(window.PYISO.csvexport(ds));
+      if (x.error) { $("csvMsg").textContent = x.error; toast(x.error, "bad"); return; }
+      downloadBlob(new TextEncoder().encode(x.csv), x.filename, "text/csv");
+      const rows = x.csv.trim().split("\n").length - 1;
+      $("csvMsg").textContent = `Exported ${x.filename} (${rows} row(s)). Edit the values, save as CSV, then Import.`;
+      toast("CSV exported", "ok");
+    } finally { spin(false); }
+  };
+  $("csvImport").onclick = () => {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".csv,text/csv";
+    inp.onchange = async () => {
+      const f = inp.files[0]; if (!f) return;
+      spin(true);
+      try {
+        const ds = $("csvDs").value, label = $("csvDs").selectedOptions[0].textContent;
+        const text = (await f.text()).replace(/^\uFEFF/, "");     // Excel writes a BOM
+        const x = JSON.parse(window.PYISO.csvimport(ds, text));
+        if (x.error) { $("csvMsg").textContent = x.error; toast(x.error, "bad"); return; }
+        let msg = `${x.changed} value(s) written, ${x.skippedCells} cell(s) skipped.`;
+        if (x.clamped) msg += `\n\n${x.clamped} value(s) capped to the field maximum:\n  ` + x.clamps.join("\n  ");
+        if (x.errorCount) msg += `\n\n${x.errorCount} error(s):\n  ` + x.errors.join("\n  ");
+        $("csvMsg").textContent = msg;
+        if (x.changed) {
+          isoEdits["csv:" + ds] = { label: `CSV import — ${label} (${x.changed} value(s))`,
+                                    group: "Excel / CSV", to: "imported" };
+          updateIsoToolbar(); captureUndoStep();
+        }
+        toast(`${x.changed} value(s) written`, x.errorCount ? "bad" : "ok");
+      } catch (e) { toast("Could not read that CSV: " + (e.message || e), "bad"); }
+      finally { spin(false); }
+    };
+    inp.click();
   };
 };
 
