@@ -236,8 +236,16 @@ damage and target are engine-driven, so those are shown for reference.
 ### MP growth and Skill effects
 
 - **MP growth**: the MP-cost thresholds for each magic level (Lv1 to Lv4), a global table.
-- **Skill effects**: the magnitude of each of the 165 skills at every rank (E through SS),
+- **Skill effects**: the magnitude of each of the 165 rows at every rank (E through SS),
   global and filterable.
+
+  A row is one **sub-effect**, not one skill: *Defense* owns rows 2-5 (Defense +, % Block,
+  % Parry, % Weapon Defense). A **0 at E/D** therefore means that sub-effect doesn't unlock
+  until C, while the skill is still live at E through its other rows — editing that 0 is a
+  real change. Each row carries its own scale, which you read off its values rather than its
+  name: rows in the 1xx range are 100-based (110 = 10%), rows climbing from 0/2/5 are direct
+  amounts, and a few are literal counts (*Mow Down (number target)* is 1-4, and 65535 means
+  every enemy).
 
 ### Balance
 
