@@ -17,7 +17,11 @@ copy.
 > runs, but every new feature lands in the web editor. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.17.0**.
+Current release: **v1.17.2**.
+
+> 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md) — what every
+> editable value means, its scale and its limits, table by table, plus the ISO offsets if
+> you'd rather work in a hex editor.
 
 ## Two modes
 
