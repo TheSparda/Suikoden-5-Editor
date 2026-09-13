@@ -238,6 +238,20 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
      /sub-effect/.test(isoFx) && /0 at E\/D/.test(isoFx) && /100-based/.test(isoFx));
 }
 
+// 3d) The field reference has to keep up with the editor: every ISO tab needs a section,
+// and the three grade scales (which don't agree with each other) have to be spelled out.
+{
+  const guide = fs.readFileSync(path.join(web, "..", "docs", "editing-guide.md"), "utf8");
+  const labels = [...read("iso.js").matchAll(/{ id: "\w+",\s*label: "([^"]+)" }/g)].map((m) => m[1]);
+  ok("iso.js declares its views", labels.length >= 15, `${labels.length} views`);
+  const missing = labels.filter((l) => !guide.includes(l));
+  ok("the field reference covers every ISO tab", !missing.length, missing.join(", "));
+  for (const s of ["Skill rank", "Character affinity", "Enemy affinity"])
+    ok(`the field reference documents the ${s} scale`, guide.includes(s));
+  ok("README links the field reference",
+     fs.readFileSync(path.join(web, "..", "README.md"), "utf8").includes("docs/editing-guide.md"));
+}
+
 // 3c) Cache correctness: every versioned asset must carry the displayed release stamp,
 // and same-origin fetches must revalidate (GitHub Pages sends max-age=600).
 const idxSrc = read("index.html"), swSrc = read("sw.js");
