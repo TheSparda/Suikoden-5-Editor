@@ -8,6 +8,11 @@ web app in your browser — nothing is uploaded, and the server only touches the
 point it at. It ships with **no game ROM/ISO**; supply your own legally-obtained ISO and
 save files.
 
+> ⚠️ **The desktop editor is being retired.** `Editor/s5editor.py` (and the `Start Editor`
+> launchers) still work, but **new features and fixes now land in the web editor only**.
+> Everything it does, the web edition does — in a browser, with no Python install. See
+> [Retiring the desktop editor](#retiring-the-desktop-editor).
+
 > 💬 **Feature requests / Support** available on the **Toran Castle Discord**:
 > https://discord.gg/KesHMX5P2Z
 
@@ -22,8 +27,9 @@ save files.
 **At a glance:**
 
 - **ISO editing** — characters, runes & spells, gear, **equipment set bonuses**,
-  **always-on passives**, enemies, prices, unites, MP growth, skill effects, text, and a
-  one-click Hard Mode. Edits apply to a *new game*.
+  **always-on passives**, enemies, prices, unites, MP growth, skill effects, text, a
+  one-click Hard Mode and an enemy stat scaler, plus an **Excel / CSV round-trip** for bulk
+  edits. Edits apply to a *new game*.
 - **Save editing** — full per-character editing (level, armor, accessory, runes,
   battle-skill slots, all 48 skill ranks) plus **recruitment** of the 108 Stars, the
   **active party**, Potch, Party SP, hero/castle/army names, and New Game Plus. Works on
@@ -36,10 +42,28 @@ save files.
 - **Both regions** — NTSC-U (`SLUS-21291`) and PAL (`SLES-54087`), auto-detected from the
   ISO serial (badge in the header). Saves additionally support NTSC-J detection.
 
-> **Web-exclusive:** **Equipment Sets**, **Passives**, and gear name/description editing
-> are in the [web editor](https://thesparda.github.io/Suikoden-5-Editor/web/) only. They
-> use the same `Editor/s5patch.py` engine (which the web app runs unchanged in Pyodide),
-> but the desktop UI doesn't surface them yet.
+> **Web-exclusive:** **Equipment Sets**, **Passives**, gear name/description editing, the
+> **Excel / CSV round-trip**, and the **enemy stat scaler** are in the
+> [web editor](https://thesparda.github.io/Suikoden-5-Editor/web/) only. They use the same
+> `Editor/s5patch.py` engine (which the web app runs unchanged in Pyodide); the desktop UI
+> is no longer being extended to match.
+
+## Retiring the desktop editor
+
+The local app — `Editor/s5editor.py`, started by `Start Editor (Mac).command` /
+`Start Editor (Windows).bat` — is **in maintenance only**. It still runs and still edits
+what it always did; it is simply no longer where the work happens.
+
+- **New features and bug fixes go to the [web editor](https://thesparda.github.io/Suikoden-5-Editor/web/).**
+  It needs no Python, no install and no localhost server, runs on machines where installing
+  Python isn't an option, and already carries several tabs the desktop UI never got.
+- **Nothing is lost.** Both front-ends drive the same verified engine (`Editor/s5patch.py`,
+  `s5fields.py`, `s5save.py`), which is **not** being retired — the web app runs those exact
+  modules in Pyodide, and the CLI keeps working. Engine fixes reach both.
+- **Still desktop-only:** overlay extraction/re-insertion and the overlay text editor, plus
+  the `xdelta` patch build. Use the desktop app or the CLI for those.
+- **Your files are portable.** ISOs, saves and `.s5mod` recipes move between the two
+  unchanged, so you can switch mid-project.
 
 Every editable field was **reverse-engineered and verified** — against public stat guides,
 the game's own data tables, and (for saves) the game's disassembled save code. Fields that
@@ -147,6 +171,10 @@ a great addition but has no forceable gate, so it's deliberately excluded.)
 Level, combat stats, Potch / Skill-Point rewards, per-enemy elemental affinities (E–S),
 and the five item-drop slots picked by item name (verified via the in-game drop table).
 
+Every stat is a **u16 (0–65535)**, so that is the ceiling on a modded enemy; the editor
+caps at it rather than refusing the write. For across-the-board changes, use the enemy
+scaler in **Balance** or the **Excel / CSV** tab.
+
 ### Unites
 Every unite attack (49, verified against the Unites guide) with its participant slots
 editable via full-roster dropdowns. Member count is fixed (the table is packed) and the
@@ -197,8 +225,16 @@ count) — same bone count plus matching mesh sizes means the same character red
 Cutscenes ship their own baked copies of the cast, so a swap shows while you walk around
 rather than in pre-rendered story scenes.
 
-### Hard Mode
-Scale every character's growth rates down by a factor — idempotent and fully restorable.
+### Balance (Hard Mode)
+Scale every character's starting stats by a factor — idempotent and fully restorable.
+
+In the web editor the same tab also scales **every enemy's combat stats** (HP, Attack,
+Technique, Accuracy, Magic, Evasion, PDF, MDF, Speed, Luck), with a **separate multiplier
+for HP** so you can make enemies tankier without making them hit harder. Potch and
+skill-point rewards, elemental affinities and item drops are deliberately left alone —
+those change the economy, not the difficulty. The original values are remembered on first
+apply, so re-applying never compounds, **Restore** is exact, and anything past a field's
+ceiling (65535) is capped rather than failing.
 
 ## Save Editor
 
@@ -320,7 +356,16 @@ new patched ISO alongside.
   effects, MP growth) as CSV, bulk-edit in Excel / Sheets / LibreOffice, and import back.
   Import writes only the cells that changed, with the same range validation, `.bak`
   backup, and recipe recording as tab edits; blank cells and Excel quirks (BOM, `12.0`
-  decimals) are handled.
+  decimals) are handled. Two things it will not let you get wrong:
+  - a value **too big for its field is capped** at that field's maximum and listed in the
+    report, so doubling a column can't leave the sheet half-applied (enemy stats are u16 —
+    tripling a 30,000 HP boss lands on 65535);
+  - a sheet exported from a **different table is refused** before a byte is written. Stat
+    names are shared between tables, so importing the enemy sheet with the Characters table
+    selected used to write enemy numbers into character stats.
+
+  The **Excel / CSV** tab is in the web editor; the desktop **Tools** tab has the older UI
+  over the same engine.
 - **Overlays** — extract/decompress the disc's 17 engine overlays (OVL/\*.ROM),
   re-insert edited ones (LZSS, sector-slot guarded), and an **Overlay Text** editor for
   the story/dialogue text inside them (endings, letters, lore, newspaper, …).
@@ -346,7 +391,7 @@ python3 s5patch.py set-model "/path/to/Suikoden V.iso" --id 2 --reset
 
 ```
 Editor/
-  s5editor.py            local web app (all tabs + JSON API)
+  s5editor.py            local web app (all tabs + JSON API) — being retired, see above
   s5patch.py             ISO engine + CLI (verify / dump / set / recipe / xdelta / overlays / assets)
   s5fields.py            verified ISO tables + field schema (NTSC-U + PAL bases, region switch)
   s5save.py              PS2 memory-card + standalone-save engine (.ps2/.psu/.xps/.sps/.cbs)
