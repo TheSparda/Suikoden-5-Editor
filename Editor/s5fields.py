@@ -543,7 +543,19 @@ GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — us
 # +0x28 = 100%-drop flag (0x0F = drops whole loot table every time).
 # Enemy AFFINITIES @+0x1A..: 14 grade bytes, scale 0=E..5=S (ENEMY_AFFINITY_GRADES —
 # distinct from the character scale which starts at 0=None).
-ENEMY_BASE, ENEMY_STRIDE, ENEMY_MAX = 0x49F0DC, 0x7C, 584
+# ENEMY_MAX is the END of the table, and it has to be exact: past the last record the
+# scan is reading whatever the ELF happens to store next, and the editor was offering
+# those bytes as editable "enemies". The count used to be 584, which ran 365 records
+# (0xB100 bytes) past the end. Decoding one of the phantom rows settles it — id 223's
+# stats are the ASCII bytes "lease select MEMORY CARD sl", i.e. the memory-card prompt,
+# and ids 516+ sit directly on top of the VERIFIED skill-effect table at SKILLFX_BASE.
+# So they were never enemies: the "murderous" stats are text and pointers read as u16,
+# which is also why they stop at no particular id and why their Levels run past 99.
+# The real table is ids 0..218 (0 is a dummy, 1..218 are the named roster ending at
+# Bahram, the final boss); 219/220 read as zeroed padding and 221 is already a foreign
+# +8 progression table. 219 records * 0x7C ends at 0x4A5AF0 (PAL 0x4AACE0), clear of
+# every other mapped table in both regions.
+ENEMY_BASE, ENEMY_STRIDE, ENEMY_MAX = 0x49F0DC, 0x7C, 219
 ENEMY_AFFINITY_GRADES = ["E", "D", "C", "B", "A", "S"]
 def _enemy_fields():
     f = [("Level", 0x01, 1, "num")]

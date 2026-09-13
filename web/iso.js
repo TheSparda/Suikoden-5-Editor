@@ -1070,7 +1070,8 @@ VIEW_RENDER.balance = async (body) => {
       if (r.error) { toast(r.error, "bad"); return; }
       isoEdits["enemyscale"] = { label: `Enemy stats ×${f}${hp !== f ? `, HP ×${hp}` : ""}`, group: "Balance", to: "applied" };
       $("esMsg").textContent = `Scaled ${r.count} enemies.` +
-        (r.clamped ? ` ${r.clamped} stat(s) hit the 65535 cap.` : "");
+        (r.clamped ? ` ${r.clamped} stat(s) hit the 65535 cap.` : "") +
+        (r.repaired ? ` Put back ${r.repaired} slot(s) an older build scaled past the end of the enemy table.` : "");
       updateIsoToolbar(); captureUndoStep();
     } finally { spin(false); }
   };

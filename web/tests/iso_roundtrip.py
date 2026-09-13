@@ -213,6 +213,47 @@ def main():
     with P.Iso(slice_path) as h:
         back = {eid: h.ru(P.enemy_addr(eid) + 0x02, 2) for eid in SEED}
     chk("restore puts every enemy back exactly", back == before, str(back))
+
+    # ---- the enemy table has an END, and everything past it belongs to something else.
+    # F.ENEMY_MAX was 584 against a 219-record table, so the editor listed ~210 rows of
+    # unrelated ELF data as enemies (ELF text at the near end, the verified skill-effect
+    # table at the far end) and the scaler happily multiplied all of it.
+    chk("the enemy table clears the skill-effect table",
+        F.ENEMY_BASE + F.ENEMY_MAX * F.ENEMY_STRIDE <= F.SKILLFX_BASE,
+        "enemies end %#x, skillfx %#x" % (F.ENEMY_BASE + F.ENEMY_MAX * F.ENEMY_STRIDE, F.SKILLFX_BASE))
+    pal_end = F._PAL["enemy"] + F.ENEMY_MAX * F.ENEMY_STRIDE   # same check, PAL layout
+    chk("PAL enemy table clears PAL skillfx", pal_end <= F._PAL["skillfx"],
+        "enemies end %#x, skillfx %#x" % (pal_end, F._PAL["skillfx"]))
+    chk("the roster stops at the last named enemy", F.ENEMY_MAX == 219, str(F.ENEMY_MAX))
+    names = F.res_json("s5_enemy_names.json")
+    stray = sorted(int(k) for k in names if int(k) >= F.ENEMY_MAX)
+    chk("no enemy name points past the table", not stray, str(stray))
+
+    # a phantom id is out of bounds for a sheet import, whatever the sheet says
+    ph = 223
+    with P.Iso(slice_path, writable=True) as h:
+        h.wu(P.enemy_addr(ph) + 0x02, 2, 30000)       # looks exactly like a record
+    with P.Iso(slice_path) as h:
+        chk("a slot past the table is not listed as an enemy",
+            ph not in {e["id"] for e in P.read_enemies(h)})
+    oob = json.loads(g["iso_csvimport"]("enemies", "id,HP\n%d,5\n" % ph))
+    chk("a sheet cannot write past the table", oob.get("errorCount") == 1 and oob.get("changed") == 0,
+        str(oob)[:140])
+    with P.Iso(slice_path) as h:
+        chk("the out-of-range row left the disc alone", h.ru(P.enemy_addr(ph) + 0x02, 2) == 30000)
+
+    # a sidecar written by the old build still holds those bytes: scaling again puts
+    # them back rather than re-scaling data that was never an enemy
+    side = slice_path + ".enemyscale.json"
+    json.dump({str(ph): [1234] + [0] * 9}, open(side, "w"))
+    with P.Iso(slice_path, writable=True) as h: h.wu(P.enemy_addr(ph) + 0x02, 2, 65535)
+    sc2 = json.loads(g["iso_enemyscale"](2.0, 2.0))
+    chk("scaling repairs a stale out-of-range slot", sc2.get("repaired") == 1, str(sc2)[:140])
+    with P.Iso(slice_path) as h:
+        chk("the repaired slot holds its original bytes", h.ru(P.enemy_addr(ph) + 0x02, 2) == 1234)
+    chk("the repaired slot is dropped from the baseline",
+        str(ph) not in json.load(open(side)))
+    json.loads(g["iso_esrestore"]())
     em = json.loads(g["iso_exportmod"](""))
     chk("iso_exportmod recipe", em.get("ok") is True and em["mod"]["patchCount"] > 0)
     # the recipe offset for the Dinn HP write must be the verified absolute ISO offset
