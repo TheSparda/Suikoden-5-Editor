@@ -218,6 +218,15 @@ Every stat is a **u16 (0 to 65535)**, which is the ceiling on a modded enemy; th
 at it rather than refusing the write. For across-the-board changes use **Balance** or
 **Excel / CSV**.
 
+The table is **219 records (ids 0 to 218)**, ending at Bahram. Builds before v1.17.1 scanned
+584 records and so listed roughly 210 extra rows named `Enemy 221`, `Enemy 222`, … with
+impossible Levels and five-digit stats. Those were never enemies: past the end of the table
+the scan was reading unrelated data from the game's executable through the enemy record
+layout (`Enemy 223` decodes to the ASCII text `lease select MEMORY CARD sl`, and the far end
+of the scan sat on top of the skill-effect table). They are gone from the list, the sheet and
+the scaler. If you scaled enemies with an older build, applying the scaler again puts those
+slots back the way the disc had them and reports how many it repaired.
+
 ### Unites
 
 All 49 unite attacks, verified against the Unites guide, with their participant slots
@@ -530,7 +539,8 @@ npm run test:all          # both
 - **`runes-always.mjs`**, **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,
   including that switching a toggle back off restores the original bytes exactly.
 - **`enemy-base.mjs`**: guards the region-specific enemy table bases against a real disc
-  layout.
+  layout, and that the scan stops at the end of the table instead of running on into the
+  executable's own data.
 - **`e2e.mjs`**: headless Chromium, checking that the shell renders, both modes switch, and
   there is no horizontal overflow at 320 and 360 px.
 

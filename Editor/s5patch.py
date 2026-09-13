@@ -1596,7 +1596,12 @@ def read_enemies(iso, names=None):
     when it reads as 0xFF padding. The ceiling used to be 60000, which quietly dropped
     an enemy off the list the moment a mod pushed its HP past that — the record was
     still on the disc, but the editor stopped showing it and a CSV re-import called its
-    id unknown. 65535 HP is a legitimate (if silly) edit, so it has to survive too."""
+    id unknown. 65535 HP is a legitimate (if silly) edit, so it has to survive too.
+
+    That leniency only works because F.ENEMY_MAX stops the scan at the end of the table.
+    It used to be 584 instead of 219, and every "HP" past the roster was a byte of some
+    unrelated ELF structure — which is where the placeholder "Enemy 221"+ rows with
+    impossible Levels and five-digit stats came from (see the F.ENEMY_MAX note)."""
     names = names or {}
     out = []
     for eid in range(F.ENEMY_MAX):
@@ -2132,7 +2137,12 @@ def _es_sidecar(iso_path): return iso_path + ".enemyscale.json"
 def enemy_scale(iso_path, factor, hp_factor=None):
     """Multiply every enemy's combat stats by `factor`, HP by `hp_factor` (defaults to
     `factor`). Baseline is stored once, so re-applying scales the ORIGINALS instead of
-    compounding and Restore is exact. -> {count, clamped}."""
+    compounding and Restore is exact. -> {count, clamped, repaired}.
+
+    Ids outside the enemy table are never written. A sidecar left by a build that scaled
+    past the end of the table (the old F.ENEMY_MAX = 584) still holds those slots' real
+    bytes, so this puts them back and forgets them — scaling again repairs the disc
+    instead of re-scaling ELF data that was never an enemy."""
     factor = float(factor)
     hp_factor = float(factor if hp_factor is None else hp_factor)
     for f in (factor, hp_factor):
@@ -2143,11 +2153,17 @@ def enemy_scale(iso_path, factor, hp_factor=None):
         try: base = _json.load(open(side))
         except Exception: base = {}
     backup(iso_path)
-    clamped = 0
+    clamped = repaired = 0
     with Iso(iso_path, writable=True) as g:
         ids = sorted({int(k) for k in base} | {e["id"] for e in read_enemies(g)})
         for eid in ids:
             a = enemy_addr(eid); key = str(eid)
+            if not (0 <= eid < F.ENEMY_MAX):
+                old = base.pop(key, None)                          # stale sidecar: undo it
+                if old and len(old) == len(_ES_STATS):
+                    for i, (_l, off, w, _k) in enumerate(_ES_STATS): g.wu(a + off, w, old[i])
+                    repaired += 1
+                continue
             if key not in base:
                 base[key] = [g.ru(a + off, w) for (_l, off, w, _k) in _ES_STATS]
             for i, (lbl, off, w, _k) in enumerate(_ES_STATS):
@@ -2156,7 +2172,7 @@ def enemy_scale(iso_path, factor, hp_factor=None):
                 if v > lim: clamped += 1
                 g.wu(a + off, w, max(0, min(lim, v)))
     _json.dump(base, open(side, "w"))
-    return {"count": len(base), "clamped": clamped}
+    return {"count": len(base), "clamped": clamped, "repaired": repaired}
 
 def enemy_scale_restore(iso_path):
     side = _es_sidecar(iso_path)
