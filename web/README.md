@@ -13,11 +13,13 @@ device** (nothing is uploaded):
 
 **Live:** https://thesparda.github.io/Suikoden-5-Editor/web/
 
+> **This is now the editor.** The desktop app (`Editor/s5editor.py`) is **being retired** —
+> it still runs, but new features and fixes land here. See
+> [Retiring the desktop editor](../README.md#retiring-the-desktop-editor).
+
 ## Web-exclusive tabs
 
-Three features exist here and not in the desktop UI. All three edit the game's **code**
-rather than a data table, so they were built against the disassembly and are covered by
-their own test suites:
+These features exist here and not in the desktop UI:
 
 - **Sets** — the 9 armor sets: swap members (including the accessory slot), change which
   effects a completed set grants and by how much (26 targets), add effects a set never had
@@ -29,6 +31,19 @@ their own test suites:
   site and reverts byte-for-byte.
 - **Gear text** — rename gear and rewrite descriptions (English only), length-capped to
   what each record actually has room for.
+
+The first three edit the game's **code** rather than a data table, so they were built
+against the disassembly and are covered by their own test suites. Two more are ordinary
+table work, brought over from the desktop and improved on the way:
+
+- **Excel / CSV** — export any of the nine data tables, bulk-edit it in a spreadsheet, and
+  import it back. A value too big for its field is **capped at that field's maximum and
+  listed in the report** rather than failing the write, and a sheet exported from a
+  different table is **refused before anything is written** (stat names like HP and Speed
+  are shared, so the wrong dropdown used to write enemy numbers into character stats).
+- **Balance → Enemies** — scale every enemy's combat stats by a multiplier, with a separate
+  one for HP. Potch, skill-point rewards, affinities and drops are left alone; the baseline
+  is remembered, so re-applying never compounds and Restore is exact.
 
 Every write here is reversible and recorded in the same dirty/undo/`.s5mod` machinery as
 the ordinary table edits.
