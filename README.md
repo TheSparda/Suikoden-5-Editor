@@ -78,7 +78,14 @@ Per-character, indexed by the in-game roster, verified byte-for-byte:
 
 ### Runes & Spells
 - Which contiguous spell range each **rune** teaches (rune → spell grant table), plus a
-  **custom spell-set builder**.
+  **custom spell-set builder**. The **Dawn** and **Twilight** runes are in the list now —
+  they turned out to be real records, not the fixed spell sets they were shown as before.
+- **Dawn Rune → Fourth spell** *(web editor)*: unlock **Crimson Sky** from the start
+  instead of near the endgame. It's the one rune whose spell count the game reads from a
+  runtime counter the story lowers, so the toggle rewrites a single instruction to keep
+  that counter at 4 — the same end state as the community `.pnach` cheat, without an
+  emulator. Untick it and the disc is byte-identical again. The Prince still needs the
+  magic level to actually cast it.
 - **Spell** definition: element, power / heal amount, target shape, and status effect.
 
 ### Gear (Armor)

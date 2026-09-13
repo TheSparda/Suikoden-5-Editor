@@ -309,6 +309,13 @@ function afterIsoWrite(view, ident, el) {
     if (lbl) lbl.innerHTML = el.checked ? "<b>On</b> — always active, no rune needed"
                                         : "Off — vanilla: only works while equipped";
   }
+  /* Caption-only update, like runealways: re-rendering would reset data-orig and take
+   * the ↺ baseline with it. */
+  if (view === "dawnrune") {
+    const lbl = el && el.nextElementSibling;
+    if (lbl) lbl.innerHTML = el.checked ? "<b>Unlocked</b> — all four spells from the start"
+                                        : "Off — vanilla: the story unlocks it near the endgame";
+  }
   if (view === "setgate") {
     const cb = q('#isoSetBody input[data-view="setgate"]');
     const lbl = cb && cb.nextElementSibling;
@@ -342,6 +349,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "setgate") res = window.PYISO.setgate(+el.dataset.setidx, value ? 1 : 0, +el.dataset.word || 0);
     else if (view === "runealways") res = window.PYISO.setrunealways(+el.dataset.rid, value ? 1 : 0,
       JSON.stringify(RUNE_GATE_WORDS[el.dataset.rid] || {}));
+    else if (view === "dawnrune") res = window.PYISO.setdawnrune(value ? 4 : 0);
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -800,6 +808,27 @@ function renderRune(rid) {
       r.synthetic
         ? " This rune's spell list is fixed (no grant record), but each spell below is fully editable."
         : " Use “Spell set” below to change <b>which</b> spells it teaches."}</div>`;
+
+  /* Dawn Rune only: its spell count is the one that ISN'T read from its own record.
+   * The game keeps a runtime counter that the story script lowers, so the fourth spell
+   * (Crimson Sky) normally only arrives near the endgame. The toggle rewrites one
+   * instruction so that counter is always 4 — the same end state as the community
+   * .pnach cheat, minus the emulator. */
+  if (r.dawn && r.dawn.found) {
+    const on = r.dawn.count >= r.dawn.max;
+    h += `<div class="subhd">Fourth spell</div>
+      <div class="grid" style="padding-top:8px"><div class="fld">
+        <label>Crimson Sky</label><div class="in">
+        <label class="chk"><input type="checkbox" ${on ? "checked" : ""}
+          data-key="dawnrune" data-view="dawnrune" data-kind="num" data-orig="${on ? 1 : 0}"
+          data-lbl="Dawn Rune · unlock all four spells" data-grp="Runes"
+          onchange="onIsoField(this)">
+          <span class="note">${on ? "<b>Unlocked</b> — all four spells from the start"
+                                  : "Off — vanilla: the story unlocks it near the endgame"}</span>
+        </label>${REVERT_BTN}</div>
+        <div class="fnote">The Prince still needs the magic level to cast it.</div>
+      </div></div>`;
+  }
 
   // Spell-set builder (real grant records only): which contiguous spells the rune grants.
   if (!r.synthetic && r.grant.length) {
