@@ -1851,6 +1851,8 @@ CSV_DATASETS = {
     "char-weapon":      "Characters — weapon growth (sharpen Lv1-16 attack)",
     "char-equipment":   "Characters — starting equipment (armor ids)",
     "enemies":          "Enemies — stats/rewards/affinities/drops",
+    "spells":           "Spells — element / power / target / status",
+    "runes":            "Runes — which spells each rune teaches",
     "prices":           "Prices — item buy/sell",
     "skillfx":          "Skill effects — magnitude per rank (E..SS)",
     "mp":               "MP growth — thresholds per magic level",
@@ -1858,6 +1860,29 @@ CSV_DATASETS = {
 _CSV_CHAR_TABLE = {"char-stats": "stats", "char-affinities": "affinities",
                    "char-skillcaps": "equipable skills", "char-weapon": "weapon growth",
                    "char-equipment": "starting equipment"}
+
+def csv_legends():
+    """dataset -> notes explaining the columns that hold a CODE rather than a plain
+    number. Built from the engine's own maps so the sheet's legend can't drift from
+    what the pickers in the tabs offer."""
+    codes = lambda m: ", ".join(f"{k}={v}" for k, v in sorted(m.items()))
+    return {
+        "spells": [
+            "Element: " + codes(F.ELEMENT_NAMES),
+            "Target: " + codes(F.TARGET_NAMES),
+            "Status: " + codes(F.SPELL_STATUS_NAMES),
+            f"Power / heal holds 0-65535; 9999 on a healing spell means a full heal. "
+            f"The id column is the spell id used by the Runes sheet (0-{F.SPELL_COUNT - 1}).",
+        ],
+        "runes": [
+            "Start spell is a spell id from the Spells sheet — export that table too to "
+            "see which id is which.",
+            "A rune teaches the CONTIGUOUS run Start spell … Start spell + Spell count - 1, "
+            "one spell per rune level, so Spell count is also how many levels it has.",
+            "Only runes with a grant record of their own are listed; the Runes tab's "
+            "“fixed spell set” entries have no record to write.",
+        ],
+    }
 
 def _csv_rows(iso_path, dataset):
     """-> (id_headers, field_labels, rows) where each row = [ids..., name, values...]."""
@@ -1878,6 +1903,24 @@ def _csv_rows(iso_path, dataset):
             for e in read_enemies(g):
                 vals = [f["value"] for f in read_enemy(g, e["id"])]
                 rows.append([e["id"], names.get(str(e["id"]), e["name"])] + vals)
+            return ["id"], labels, rows
+        if dataset == "spells":
+            try: names = F.res_json("s5_spell_names.json")
+            except Exception: names = []
+            labels = [l for (l, o, w, k) in F.SPELL_FIELDS]
+            rows = []
+            for sid in range(F.SPELL_COUNT):
+                nm = (names[sid] if sid < len(names) else None) or f"Spell {sid}"
+                rows.append([sid, nm] + [f["value"] for f in read_spell(g, sid)])
+            return ["id"], labels, rows
+        if dataset == "runes":
+            labels = [l for (l, o, w, k) in F.RUNE_GRANT_FIELDS]
+            rows = []
+            for r in read_runes(g):
+                # Synthetic runes are a UI convenience for spells no grant record owns;
+                # there is nothing on the disc to write back, so they stay out of the sheet.
+                if r.get("synthetic"): continue
+                rows.append([r["id"], r["name"]] + [f["value"] for f in read_rune(g, r["id"])])
             return ["id"], labels, rows
         if dataset == "prices":
             try: items = F.res_json("s5_item_names.json")
@@ -1915,6 +1958,10 @@ def _csv_field_widths(dataset):
         return {l: w for (l, o, w, k) in F.TABLES[_CSV_CHAR_TABLE[dataset]][2]}
     if dataset == "enemies":
         return {l: w for (l, o, w, k) in F.ENEMY_FIELDS}
+    if dataset == "spells":
+        return {l: w for (l, o, w, k) in F.SPELL_FIELDS}
+    if dataset == "runes":
+        return {l: w for (l, o, w, k) in F.RUNE_GRANT_FIELDS}
     if dataset == "prices":
         return {n: w for (n, o, w) in F.PRICE_FIELDS}
     if dataset == "skillfx":
@@ -1922,6 +1969,24 @@ def _csv_field_widths(dataset):
     if dataset == "mp":
         return {l: 2 for l in F.MP_FIELD_LABELS}
     return {}
+
+def _csv_code_columns(dataset):
+    """label -> {code: name} for columns that hold a CODE, not a quantity. Capping one of
+    these the way a stat is capped would silently write a DIFFERENT element or target, so
+    an unknown code is refused instead (the rest of the sheet still applies)."""
+    if dataset == "spells":
+        return {"Element": F.ELEMENT_NAMES, "Target": F.TARGET_NAMES,
+                "Status": F.SPELL_STATUS_NAMES}
+    if dataset == "runes":
+        # Ids past the end of the spell table make the rune teach whatever follows it.
+        return {"Start spell": {i: None for i in range(F.SPELL_COUNT)}}
+    return {}
+
+def _csv_codes_hint(codes):
+    ks = sorted(codes)
+    if len(ks) > 16 or any(codes[k] is None for k in ks):
+        return f"valid values are {ks[0]}-{ks[-1]}"
+    return "valid values: " + ", ".join(f"{k}={codes[k]}" for k in ks)
 
 def csv_import(iso_path, dataset, csv_text, make_backup=True):
     import csv, io
@@ -1947,6 +2012,12 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
         return {"error": f"these columns are the “{CSV_DATASETS[owner]}” table, not "
                          f"“{CSV_DATASETS[dataset]}” — nothing was written. "
                          f"Pick “{CSV_DATASETS[owner]}” in the Table list and import again."}
+    codecols = _csv_code_columns(dataset)
+    # A code the disc itself uses is legitimate even where the legend doesn't name it, and
+    # undoing an edit has to stay possible, so each coded column also accepts every value
+    # currently in that column.
+    allowed_vals = {lab: set(codes) | {r.get(lab) for r in current.values()}
+                    for lab, codes in codecols.items()}
     changed = skipped = clamped = 0; errors = []; clamps = []
     if make_backup: backup(iso_path)
     with Iso(iso_path, writable=True) as g:
@@ -1969,6 +2040,15 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                 if cell == "": skipped += 1; continue
                 try: val = int(float(cell))   # Excel may emit "12.0"
                 except ValueError: skipped += 1; continue
+                # An untouched cell is a no-op whatever it holds, so settle that first:
+                # re-importing an unedited sheet can then never trip the guards below,
+                # even where the disc itself holds a code the legend doesn't list.
+                if cur.get(label) == val: continue
+                allowed = allowed_vals.get(label)
+                if allowed is not None and val not in allowed:
+                    errors.append(f"line {ln} {label}={cell}: unknown code "
+                                  f"({_csv_codes_hint(codecols[label])})")
+                    continue
                 lim = (1 << 8 * widths.get(label, 2)) - 1
                 if not (0 <= val <= lim):
                     capped = max(0, min(lim, val))
@@ -1976,12 +2056,16 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                     if len(clamps) < 20:
                         clamps.append(f"line {ln} {label}: {val} -> {capped} (field holds 0-{lim})")
                     val = capped
-                if cur.get(label) == val: continue
+                    if cur.get(label) == val: continue
                 try:
                     if dataset in _CSV_CHAR_TABLE:
                         write_field(g, _CSV_CHAR_TABLE[dataset], rid, label, val)
                     elif dataset == "enemies":
                         write_enemy_field(g, rid, label, val)
+                    elif dataset == "spells":
+                        write_spell_field(g, rid, label, val)
+                    elif dataset == "runes":
+                        write_rune_field(g, rid, label, val)
                     elif dataset == "prices":
                         write_price(g, rid, label, val)
                     elif dataset == "skillfx":

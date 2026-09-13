@@ -358,18 +358,28 @@ new patched ISO alongside.
 ## Tools
 
 - **Share / Patch** — the recipe + xdelta workflow above.
-- **Excel / CSV round-trip** — export any of nine data tables (character stats /
-  affinities / skill caps / weapon growth / starting equipment, enemies, prices, skill
-  effects, MP growth) as CSV, bulk-edit in Excel / Sheets / LibreOffice, and import back.
-  Import writes only the cells that changed, with the same range validation, `.bak`
-  backup, and recipe recording as tab edits; blank cells and Excel quirks (BOM, `12.0`
-  decimals) are handled. Two things it will not let you get wrong:
+- **Excel / CSV round-trip** — export any of eleven data tables (character stats /
+  affinities / skill caps / weapon growth / starting equipment, enemies, spells, runes,
+  prices, skill effects, MP growth) as CSV, bulk-edit in Excel / Sheets / LibreOffice, and
+  import back. Import writes only the cells that changed, with the same range validation,
+  `.bak` backup, and recipe recording as tab edits; blank cells and Excel quirks (BOM,
+  `12.0` decimals) are handled. Three things it will not let you get wrong:
   - a value **too big for its field is capped** at that field's maximum and listed in the
     report, so doubling a column can't leave the sheet half-applied (enemy stats are u16 —
     tripling a 30,000 HP boss lands on 65535);
+  - a column that holds a **code rather than a quantity is never capped** — a spell's
+    element / target / status and a rune's start-spell id are refused if the value isn't a
+    real code, because capping one of those writes a *different* element, silently. The
+    legend for those columns sits next to the Table picker;
   - a sheet exported from a **different table is refused** before a byte is written. Stat
     names are shared between tables, so importing the enemy sheet with the Characters table
     selected used to write enemy numbers into character stats.
+
+  The **Spells** sheet is all 106 spell records (element, power / heal, target, status) and
+  the **Runes** sheet is the rune → spell grant table: each rune teaches the contiguous run
+  `Start spell … Start spell + Spell count - 1`, one spell per rune level, so those two
+  columns are both *which* spells a rune teaches and *how many levels* it has. Export both
+  together — the id column of the Spells sheet is what the rune's **Start spell** points at.
 
   The **Excel / CSV** tab is in the web editor; the desktop **Tools** tab has the older UI
   over the same engine.
