@@ -340,7 +340,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-skillfx>
   <h2>Skill Effects</h2>
-  <p class=sub>The magnitude of each skill at every rank (E → SS). Values are the skill's effect (e.g. Attack + is a flat bonus; "% …" skills are percentages, 100 = no change). Global — shared by all units. Verified vs the game data. Applies to a NEW GAME.</p>
+  <p class=sub>The magnitude of each sub-effect at every rank (E → SS). A skill owns several rows (Defense is rows 2-5), so a 0 at E/D means that sub-effect doesn't unlock until C, not that the skill is inactive. Read each row's scale off its own values, not its name: 1xx rows are 100-based (110 = 10%), rows climbing from 0/2/5 are direct amounts, and a few are literal counts (65535 = every enemy). Global — shared by all units. Verified vs the game data. Applies to a NEW GAME.</p>
   <div class=row id=skillfxrow style=display:none><button onclick=loadSkillfx()>Reload</button>
    <input id=skillfxfilter size=16 placeholder="filter skill…" oninput=skillfxShow()>
    <span id=skillfxnote class=note></span></div>

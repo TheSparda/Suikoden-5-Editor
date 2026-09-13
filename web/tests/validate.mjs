@@ -231,6 +231,11 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
   }
   ok("Sword Magic + comes last in every group that grants it",
      [22, 91, 97, 120].every((i) => /Sword Magic \+/.test(fx[i]) && norm(fx[i]) === canon[22]));
+  // The panel has to explain the two things that read as bugs: a row is a sub-effect, so a
+  // 0 at E/D is "locked until C", and the scale is per-row rather than per-label.
+  const isoFx = read("iso.js").slice(read("iso.js").indexOf("VIEW_RENDER.skillfx"));
+  ok("skill-effect panel explains sub-effects and the per-row scale",
+     /sub-effect/.test(isoFx) && /0 at E\/D/.test(isoFx) && /100-based/.test(isoFx));
 }
 
 // 3c) Cache correctness: every versioned asset must carry the displayed release stamp,

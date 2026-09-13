@@ -1025,7 +1025,17 @@ VIEW_RENDER.mp = async (body) => {
 
 VIEW_RENDER.skillfx = async (body) => {
   const r = JSON.parse(window.PYISO.skillfx());
-  let h = `<div style="padding:10px 14px"><input class="pick-q" id="fxQ" type="search" placeholder="filter skill…" style="max-width:260px"></div>
+  let h = `<div style="padding:10px 14px 0">
+    <p class="note" style="margin:0 0 10px">Each row is <b>one sub-effect</b>, and a skill usually owns several:
+      <i>Defense</i> is rows 2-5 (Defense +, % Block, % Parry, % Weapon Defense). So a <b>0 at E/D</b> means that
+      sub-effect doesn't unlock until C — the skill is still live at E through its other rows, which is why
+      Defense + pays 3 there. Editing a 0 is a real change, not a no-op.
+      <b>Read each row's scale off its own values</b>, not its name: rows in the 1xx range are 100-based
+      (110 = 10%, so fill an empty E/D with 101-109), rows that climb from 0/2/5 are direct amounts
+      (<i>Thief (% chance of success)</i> runs 0-50), and a few are literal counts
+      (<i>Mow Down (number target)</i> is 1-4, and 65535 means every enemy).
+      This table is <b>global</b> — it applies to every unit with that skill, not one character.</p>
+    <input class="pick-q" id="fxQ" type="search" placeholder="filter skill…" style="max-width:260px"></div>
     <div class="tablewrap"><table><thead><tr><th>#</th><th>Skill</th>${r.ranks.map(rk=>`<th>${rk}</th>`).join("")}</tr></thead><tbody id="fxBody">`;
   h += r.skills.map(s => `<tr data-name="${esc((s.name||"").toLowerCase())}"><td class="note">${s.id}</td><td>${esc(s.name)}</td>` +
     s.values.map((v, k) => `<td class="cellwrap"><input type="number" min="0" value="${v}" style="width:78px"
