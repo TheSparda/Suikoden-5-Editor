@@ -126,6 +126,8 @@ function isoGlueHandles(){
     pakdecode:g("iso_pakdecode"), paktextures:g("iso_paktextures"), pakfaces:g("iso_pakfaces"),
     paksheet:g("iso_paksheet"), pakzip:g("iso_pakzip"), pakmodelinfo:g("iso_pakmodelinfo"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
+    enemyscale:g("iso_enemyscale"), esrestore:g("iso_esrestore"),
+    csvdatasets:g("iso_csvdatasets"), csvexport:g("iso_csvexport"), csvimport:g("iso_csvimport"),
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
     setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
@@ -582,6 +584,26 @@ def iso_hardmode(factor):
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_hmrestore():
     try: return json.dumps({"ok": True, "count": P.hardmode_restore(ISO)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_enemyscale(factor, hp_factor):
+    try:
+        r = P.enemy_scale(ISO, float(factor), float(hp_factor))
+        return json.dumps(dict(r, ok=True))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_esrestore():
+    try: return json.dumps(dict(P.enemy_scale_restore(ISO), ok=True))
+    except Exception as e: return json.dumps({"error": str(e)})
+
+def iso_csvdatasets():
+    try: return json.dumps({"datasets": P.CSV_DATASETS})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_csvexport(dataset):
+    try:
+        fn, text = P.csv_export(ISO, str(dataset))
+        return json.dumps({"ok": True, "filename": fn, "csv": text})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_csvimport(dataset, csv_text):
+    try: return json.dumps(P.csv_import(ISO, str(dataset), str(csv_text), make_backup=False))
     except Exception as e: return json.dumps({"error": str(e)})
 
 def iso_exportmod(note):

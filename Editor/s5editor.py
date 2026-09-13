@@ -1073,6 +1073,7 @@ async function csvImport(){if(!needIso())return;const ds=document.getElementById
  const r=await j('/api/csvimport',{iso:iso(),dataset:ds,path:p});
  if(r.error){document.getElementById('csvout').textContent=r.error;toast(r.error,'bad');return}
  let msg='Imported: '+r.changed+' value(s) changed, '+r.skippedCells+' cell(s) skipped';
+ if(r.clamped)msg+=', '+r.clamped+' capped to the field maximum:\n  '+r.clamps.join('\n  ');
  if(r.errorCount)msg+=', '+r.errorCount+' error(s):\n  '+r.errors.join('\n  ');
  document.getElementById('csvout').textContent=msg;
  toast(r.changed+' value(s) written','ok');}

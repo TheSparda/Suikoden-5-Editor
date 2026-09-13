@@ -128,6 +128,28 @@ ok("s5patch groups a character's model ids", fs.readFileSync(path.join(web,"..",
     ok("app.js exposes iso_" + a, appSrc.includes("def iso_" + a));
 }
 ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && appSrc.includes("def iso_setmodel"));
+
+// 3f) Excel / CSV round-trip + the enemy scaler. Behaviour is covered by
+// tests/iso_roundtrip.py (which drives these very adapters); guard the wiring here.
+{
+  const psrc = fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8");
+  ok("iso.js registers the Excel / CSV tab",
+     /id:\s*"csv",\s*label:\s*"Excel \/ CSV"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.csv"));
+  for (const a of ["csvdatasets", "csvexport", "csvimport", "enemyscale", "esrestore"])
+    ok("app.js exposes iso_" + a, appSrc.includes("def iso_" + a));
+  ok("iso.js wires the CSV buttons", isoSrc.includes('$("csvExport")') && isoSrc.includes('$("csvImport")'));
+  ok("CSV import strips the Excel BOM", isoSrc.includes("\\uFEFF") && psrc.includes('lstrip("\\ufeff")'));
+  ok("CSV import reports capped values", isoSrc.includes("x.clamped") && psrc.includes('"clamped": clamped'));
+  ok("s5patch caps instead of failing the write", psrc.includes("def _csv_field_widths"));
+  ok("s5patch defines the enemy scaler",
+     psrc.includes("def enemy_scale") && psrc.includes("def enemy_scale_restore"));
+  ok("the enemy scaler leaves rewards and drops alone",
+     /_ES_STATS = \[f for f in F\.ENEMY_FIELDS if f\[0\] in/.test(psrc) &&
+     !/_ES_STATS[\s\S]{0,220}Potch/.test(psrc));
+  ok("iso.js wires the enemy scaler", isoSrc.includes('$("esApply")') && isoSrc.includes('$("esRestore")'));
+  // the 60000 HP ceiling used to erase heavily-modded enemies from the list (issue #3)
+  ok("enemy detection no longer has a 60000 HP ceiling", !psrc.includes("hp < 60000"));
+}
 {
   const fsrc = fs.readFileSync(path.join(web, "..", "Editor", "s5fields.py"), "utf8");
   const num = (k) => { const m = fsrc.match(new RegExp(k + "\\s*=\\s*(0x[0-9A-Fa-f]+|\\d+)")); return m ? Number(m[1]) : NaN; };

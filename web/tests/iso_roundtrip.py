@@ -80,6 +80,75 @@ def main():
     chk("iso_setname ok", json.loads(g["iso_setname"](0, "Test")).get("ok") is True)
     chk("iso_hardmode ok", json.loads(g["iso_hardmode"](2.0)).get("ok") is True)
     chk("iso_hmrestore ok", json.loads(g["iso_hmrestore"]()).get("ok") is True)
+
+    # ---- Excel / CSV round-trip and the enemy scaler (issues #3 and #5).
+    # Give the fabricated slice a few enemies, including one whose HP cannot survive
+    # being tripled (u16 tops out at 65535) and one that lands in the old 60000 blind
+    # spot, which used to erase the record from the list and the next import.
+    import s5patch as P, io, csv as _csv
+    SEED = {1: 80, 2: 9000, 3: 21000, 4: 30000}
+    with P.Iso(slice_path, writable=True) as h:
+        for eid, hp in SEED.items():
+            a = P.enemy_addr(eid)
+            h.wu(a + 0x01, 1, 30); h.wu(a + 0x02, 2, hp); h.wu(a + 0x04, 2, 300)
+    chk("iso_csvdatasets lists enemies", "enemies" in json.loads(g["iso_csvdatasets"]())["datasets"])
+    ex = json.loads(g["iso_csvexport"]("enemies"))
+    chk("iso_csvexport ok", ex.get("ok") is True and ex["filename"] == "s5_enemies.csv")
+    rows = list(_csv.reader(io.StringIO(ex["csv"]))); hdr, bodyrows = rows[0], rows[1:]
+    chk("export lists every seeded enemy",
+        {int(r[0]) for r in bodyrows} >= set(SEED), str(sorted(int(r[0]) for r in bodyrows)))
+    hp_i = hdr.index("HP")
+    for r in bodyrows: r[hp_i] = str(int(r[hp_i]) * 3)       # the reporter's edit: x3 HP
+    buf = io.StringIO(); w = _csv.writer(buf); w.writerow(hdr); w.writerows(bodyrows)
+    edited = buf.getvalue()
+    im = json.loads(g["iso_csvimport"]("enemies", edited))
+    chk("x3 HP import writes every row", im.get("changed") == len(SEED), str(im.get("changed")))
+    chk("oversized values are capped, not errors", im.get("errorCount") == 0 and im.get("clamped") == 1,
+        "clamped=%s errors=%s" % (im.get("clamped"), im.get("errors")))
+    with P.Iso(slice_path) as h:
+        got = {e["id"]: e["hp"] for e in P.read_enemies(h)}
+    chk("HP past the old 60000 ceiling stays listed", got.get(3) == 63000, str(got.get(3)))
+    chk("HP that cannot fit caps at 65535", got.get(4) == 65535, str(got.get(4)))
+    again = json.loads(g["iso_csvimport"]("enemies", edited))
+    chk("re-importing the same sheet reports no unknown ids", again.get("errorCount") == 0,
+        str(again.get("errors")))
+    # UTF-8 BOM (what Excel writes) must not look like a broken 'id' header
+    chk("BOM'd sheet is accepted", json.loads(g["iso_csvimport"]("enemies", "﻿" + edited))
+        .get("errorCount") == 0)
+    chk("a sheet with no id column is rejected",
+        "error" in json.loads(g["iso_csvimport"]("enemies", "nope,HP\n1,5\n")))
+    # The enemy sheet into the character-stats table (the dropdown's default) used to
+    # write hundreds of enemy numbers into u8 character stats before erroring out.
+    wrong = json.loads(g["iso_csvimport"]("char-stats", edited))
+    chk("enemy sheet is refused by the character table",
+        "error" in wrong and "Enemies" in wrong["error"], str(wrong)[:120])
+    with P.Iso(slice_path) as h:
+        dinn = h.ru(P.table_addr("stats", 11), 1)
+    chk("the refused import wrote nothing", dinn == 88, str(dinn))   # still the HP set above
+    # every exported sheet must identify as its own table, or the guard is a nuisance
+    for ds in json.loads(g["iso_csvdatasets"]())["datasets"]:
+        text = json.loads(g["iso_csvexport"](ds))["csv"]
+        chk("%s round-trips into its own table" % ds,
+            "error" not in json.loads(g["iso_csvimport"](ds, text)))
+
+    # enemy scaler: baseline is exact, re-applying never compounds
+    before = {eid: hp for eid, hp in SEED.items()}
+    json.loads(g["iso_esrestore"]())                     # clear any earlier baseline
+    with P.Iso(slice_path, writable=True) as h:
+        for eid, hp in SEED.items(): h.wu(P.enemy_addr(eid) + 0x02, 2, hp)
+    sc = json.loads(g["iso_enemyscale"](2.0, 3.0))
+    chk("iso_enemyscale ok", sc.get("ok") is True and sc.get("count") >= len(SEED), str(sc))
+    with P.Iso(slice_path) as h:
+        hp3 = h.ru(P.enemy_addr(3) + 0x02, 2); atk3 = h.ru(P.enemy_addr(3) + 0x04, 2)
+    chk("HP takes its own multiplier", hp3 == 21000 * 3, str(hp3))
+    chk("other stats take the stat multiplier", atk3 == 600, str(atk3))
+    json.loads(g["iso_enemyscale"](2.0, 3.0))           # re-apply: must not compound
+    with P.Iso(slice_path) as h: chk("re-applying does not compound",
+        h.ru(P.enemy_addr(3) + 0x02, 2) == 21000 * 3)
+    chk("iso_esrestore ok", json.loads(g["iso_esrestore"]()).get("ok") is True)
+    with P.Iso(slice_path) as h:
+        back = {eid: h.ru(P.enemy_addr(eid) + 0x02, 2) for eid in SEED}
+    chk("restore puts every enemy back exactly", back == before, str(back))
     em = json.loads(g["iso_exportmod"](""))
     chk("iso_exportmod recipe", em.get("ok") is True and em["mod"]["patchCount"] > 0)
     # the recipe offset for the Dinn HP write must be the verified absolute ISO offset
@@ -124,6 +193,6 @@ if __name__ == "__main__":
     finally:
         try: os.remove(slice_path)
         except OSError: pass
-        for side in (".s5mod.json", ".hardmode.json"):
+        for side in (".s5mod.json", ".hardmode.json", ".enemyscale.json"):
             try: os.remove(slice_path + side)
             except OSError: pass
