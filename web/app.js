@@ -132,6 +132,7 @@ function isoGlueHandles(){
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
     setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
     runealways:g("iso_runealways"), setrunealways:g("iso_setrunealways"),
+    dawnrune:g("iso_dawnrune"), setdawnrune:g("iso_setdawnrune"),
     effecttargets:g("iso_effecttargets"), customsetbonus:g("iso_customsetbonus"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
@@ -299,7 +300,11 @@ def iso_rune(rid):
                     spells.append({"id": sid, "level": k+1,
                         "name": spn[sid] if sid < len(spn) and spn[sid] else "Spell %d" % sid,
                         "fields": P.read_spell(g, sid)})
-        return json.dumps({"name": name, "synthetic": synth, "grant": grant, "spells": spells})
+            # The Dawn Rune ignores its own count byte — the game reads a runtime counter
+            # the story script lowers — so its unlock toggle rides along on its panel.
+            dawn = None if synth or rid != F.DAWN_RUNE_INDEX else P.read_dawn_unlock(g)
+        return json.dumps({"name": name, "synthetic": synth, "grant": grant,
+                           "spells": spells, "dawn": dawn})
     except Exception as e: return json.dumps({"error": str(e)})
 iso_setrune = _setter(lambda g, ident, e: P.write_rune_field(g, int(ident["id"]), e["field"], int(e["value"])))
 
@@ -541,6 +546,14 @@ def iso_setrunealways(rid, enabled, originals_json):
         with P.Iso(ISO, writable=True) as g:
             orig = json.loads(originals_json) if originals_json else None
             return json.dumps(P.write_rune_always_on(g, int(rid), bool(int(enabled)), orig))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_dawnrune():
+    try:
+        with P.Iso(ISO) as g: return json.dumps(P.read_dawn_unlock(g))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setdawnrune(count):
+    try:
+        with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_dawn_unlock(g, int(count)))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_effecttargets():
     try:
