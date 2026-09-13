@@ -167,6 +167,15 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
   ok("CSV import strips the Excel BOM", isoSrc.includes("\\uFEFF") && psrc.includes('lstrip("\\ufeff")'));
   ok("CSV import reports capped values", isoSrc.includes("x.clamped") && psrc.includes('"clamped": clamped'));
   ok("s5patch caps instead of failing the write", psrc.includes("def _csv_field_widths"));
+  ok("the CSV list offers the spell and rune tables",
+     /"spells":\s*"Spells/.test(psrc) && /"runes":\s*"Runes/.test(psrc) &&
+     /dataset == "spells"[\s\S]{0,400}write_spell_field/.test(psrc) &&
+     /dataset == "runes"[\s\S]{0,400}write_rune_field/.test(psrc));
+  ok("coded columns are refused rather than capped",
+     psrc.includes("def _csv_code_columns") && psrc.includes("unknown code"));
+  ok("the CSV tab prints the legend for coded columns",
+     psrc.includes("def csv_legends") && appSrc.includes("P.csv_legends()") &&
+     isoSrc.includes('$("csvLegend")'));
   ok("s5patch defines the enemy scaler",
      psrc.includes("def enemy_scale") && psrc.includes("def enemy_scale_restore"));
   ok("the enemy scaler leaves rewards and drops alone",

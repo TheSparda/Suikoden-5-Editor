@@ -433,6 +433,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span class=note>Table</span><select id=csvds></select>
    <button onclick=csvExport()>Export CSV</button>
   </div>
+  <p class=sub id=csvlegend></p>
   <div class=row>
    <span class=note>Import file</span><input id=csvpath size=36 placeholder="/path/to/edited.csv">
    <button class=ghost onclick=csvImport()>Import CSV into ISO</button>
@@ -1058,7 +1059,14 @@ async function saveWrite(i){const sv=window._saves[i];
  if(r.error)toast('Error: '+r.error,'bad');else toast('Wrote '+r.changed+' field(s) to card','ok')}
 
 async function csvInit(){const r=await j('/api/csvdatasets',{});const sel=document.getElementById('csvds');
- if(sel&&r.datasets&&!sel.options.length)sel.innerHTML=Object.entries(r.datasets).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');}
+ if(sel&&r.datasets&&!sel.options.length)sel.innerHTML=Object.entries(r.datasets).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+ // Spells/runes columns hold codes (element 1=Fire, a rune's "start spell"=a spell id);
+ // a spreadsheet shows them as bare numbers, so print the legend next to the picker.
+ const leg=document.getElementById('csvlegend');if(!sel||!leg)return;
+ const show=()=>{const lines=(r.legends||{})[sel.value]||[];
+  leg.innerHTML=lines.length?'<b>Column codes</b><ul style="margin:4px 0 0 18px;padding:0">'
+   +lines.map(l=>'<li>'+l.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</li>').join('')+'</ul>':''};
+ sel.onchange=show;show();}
 async function csvExport(){if(!needIso())return;const ds=document.getElementById('csvds').value;
  const r=await j('/api/csvexport',{iso:iso(),dataset:ds});
  if(r.error){document.getElementById('csvout').textContent=r.error;toast(r.error,'bad');return}
@@ -1521,7 +1529,8 @@ class H(http.server.BaseHTTPRequestHandler):
                     P.write_rune_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/csvdatasets":
-                return self._send(200, json.dumps({"datasets": P.CSV_DATASETS}))
+                return self._send(200, json.dumps({"datasets": P.CSV_DATASETS,
+                                                   "legends": P.csv_legends()}))
             if self.path == "/api/csvexport":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))
