@@ -1126,7 +1126,21 @@ VIEW_RENDER.csv = async (body) => {
       <button id="csvExport">Export CSV</button>
       <button class="ghost" id="csvImport">Import CSV…</button>
     </div>
+    <div id="csvLegend" class="note" style="margin-top:8px"></div>
     <div id="csvMsg" class="note" style="white-space:pre-wrap"></div></div>`;
+  /* Spells and runes store CODES (element 1 = Fire, target 0xC = all enemies, a rune's
+     "start spell" = a spell id), which a spreadsheet shows as bare numbers. Spell out
+     the legend for whichever table is selected so the sheet is editable away from the
+     tabs, where the pickers do that job. */
+  const legends = r.legends || {};
+  const showLegend = () => {
+    const lines = legends[$("csvDs").value] || [];
+    $("csvLegend").innerHTML = lines.length
+      ? `<b>Column codes</b><ul style="margin:4px 0 0 18px;padding:0">`
+        + lines.map((l) => `<li>${esc(l)}</li>`).join("") + `</ul>` : "";
+  };
+  $("csvDs").onchange = showLegend;
+  showLegend();
   $("csvExport").onclick = () => {
     spin(true);
     try {

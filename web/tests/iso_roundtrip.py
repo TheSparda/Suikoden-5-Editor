@@ -125,11 +125,75 @@ def main():
     with P.Iso(slice_path) as h:
         dinn = h.ru(P.table_addr("stats", 11), 1)
     chk("the refused import wrote nothing", dinn == 88, str(dinn))   # still the HP set above
-    # every exported sheet must identify as its own table, or the guard is a nuisance
+    # every exported sheet must identify as its own table, or the guard is a nuisance —
+    # and re-importing it unedited must be a clean no-op, not a pile of errors
     for ds in json.loads(g["iso_csvdatasets"]())["datasets"]:
         text = json.loads(g["iso_csvexport"](ds))["csv"]
+        back = json.loads(g["iso_csvimport"](ds, text))
         chk("%s round-trips into its own table" % ds,
-            "error" not in json.loads(g["iso_csvimport"](ds, text)))
+            "error" not in back and back.get("errorCount") == 0, str(back)[:120])
+
+    # ---- Spells & Runes sheets. Both tables are mostly CODES (element, target, status,
+    # and a rune's start-spell id), so the import has to refuse an unknown one rather than
+    # cap it the way a stat is capped — a capped code is a different spell, silently.
+    ds_all = json.loads(g["iso_csvdatasets"]())
+    chk("spells and runes are offered as tables",
+        {"spells", "runes"} <= set(ds_all["datasets"]), str(list(ds_all["datasets"])))
+    chk("the coded columns ship a legend",
+        ds_all.get("legends", {}).get("spells") and ds_all["legends"].get("runes"))
+
+    sp = list(_csv.reader(io.StringIO(json.loads(g["iso_csvexport"]("spells"))["csv"])))
+    hdr, bodyrows = sp[0], sp[1:]
+    chk("spell sheet lists every spell", len(bodyrows) == F.SPELL_COUNT, str(len(bodyrows)))
+    chk("spell sheet carries the spell fields",
+        {"Element", "Power / heal (u16)", "Target", "Status"} <= set(hdr), str(hdr))
+    el, pw, tg = hdr.index("Element"), hdr.index("Power / heal (u16)"), hdr.index("Target")
+    edit = [r[:] for r in bodyrows]
+    edit[7][el], edit[7][pw], edit[7][tg] = "1", "400", "12"        # Fire, 400 power, all enemies
+    def sheet(header, rs):
+        b = io.StringIO(); w = _csv.writer(b); w.writerow(header); w.writerows(rs)
+        return b.getvalue()
+    im = json.loads(g["iso_csvimport"]("spells", sheet(hdr, edit)))
+    chk("spell edits are written", im.get("changed") == 3 and im.get("errorCount") == 0, str(im))
+    with P.Iso(slice_path) as h:
+        f7 = {x["label"]: x["value"] for x in P.read_spell(h, 7)}
+    chk("spell row lands on the right record",
+        (f7["Element"], f7["Power / heal (u16)"], f7["Target"]) == (1, 400, 12), str(f7))
+    badrows = [r[:] for r in bodyrows]
+    badrows[9][el] = "99"; badrows[9][pw] = "250"  # bogus element beside a good power
+    im = json.loads(g["iso_csvimport"]("spells", sheet(hdr, badrows)))
+    chk("an unknown element code is refused, not capped",
+        im.get("errorCount") == 1 and im.get("clamped") == 0, str(im)[:160])
+    with P.Iso(slice_path) as h:
+        f9 = {x["label"]: x["value"] for x in P.read_spell(h, 9)}
+    chk("the refused cell is skipped but its row still applies",
+        f9["Element"] == 0 and f9["Power / heal (u16)"] == 250, str(f9))
+
+    rn = list(_csv.reader(io.StringIO(json.loads(g["iso_csvexport"]("runes"))["csv"])))
+    rhdr, rrows = rn[0], rn[1:]
+    chk("rune sheet lists every grant record",
+        len(rrows) == F.RUNE_GRANT_COUNT, str(len(rrows)))
+    chk("rune sheet leaves out the synthetic runes",
+        max(int(r[0]) for r in rrows) < F.SYNTH_RUNE_BASE)
+    st, cnt = rhdr.index("Start spell"), rhdr.index("Spell count")
+    redit = [r[:] for r in rrows]
+    redit[2][st], redit[2][cnt] = "40", "5"
+    im = json.loads(g["iso_csvimport"]("runes", sheet(rhdr, redit)))
+    chk("rune spell-set edits are written", im.get("changed") == 2 and im.get("errorCount") == 0,
+        str(im))
+    with P.Iso(slice_path) as h:
+        r2 = {x["label"]: x["value"] for x in P.read_rune(h, int(rrows[2][0]))}
+    chk("the rune now teaches the new spell run",
+        (r2["Start spell"], r2["Spell count"]) == (40, 5), str(r2))
+    rbadrows = [r[:] for r in rrows]
+    rbadrows[3][st] = "200"                        # past the end of the spell table
+    im = json.loads(g["iso_csvimport"]("runes", sheet(rhdr, rbadrows)))
+    with P.Iso(slice_path) as h:
+        r3 = {x["label"]: x["value"] for x in P.read_rune(h, int(rrows[3][0]))}
+    chk("a start spell past the spell table is refused",
+        im.get("errorCount") == 1 and r3["Start spell"] == int(rrows[3][st]), str(im)[:160])
+    chk("the spell sheet is refused by the rune table",
+        "error" in json.loads(g["iso_csvimport"]("runes", sheet(hdr, edit))))
 
     # enemy scaler: baseline is exact, re-applying never compounds
     before = {eid: hp for eid, hp in SEED.items()}

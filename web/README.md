@@ -36,11 +36,15 @@ The first three edit the game's **code** rather than a data table, so they were 
 against the disassembly and are covered by their own test suites. Two more are ordinary
 table work, brought over from the desktop and improved on the way:
 
-- **Excel / CSV** — export any of the nine data tables, bulk-edit it in a spreadsheet, and
-  import it back. A value too big for its field is **capped at that field's maximum and
-  listed in the report** rather than failing the write, and a sheet exported from a
-  different table is **refused before anything is written** (stat names like HP and Speed
-  are shared, so the wrong dropdown used to write enemy numbers into character stats).
+- **Excel / CSV** — export any of the eleven data tables (including **Spells** and the
+  **Runes** grant table), bulk-edit it in a spreadsheet, and import it back. A value too big
+  for its field is **capped at that field's maximum and listed in the report** rather than
+  failing the write, and a sheet exported from a different table is **refused before
+  anything is written** (stat names like HP and Speed are shared, so the wrong dropdown used
+  to write enemy numbers into character stats). Columns that hold a code rather than a
+  quantity — a spell's element / target / status, a rune's start-spell id — are **refused
+  rather than capped**, since a capped code is a different spell; their legend is printed
+  next to the Table picker.
 - **Balance → Enemies** — scale every enemy's combat stats by a multiplier, with a separate
   one for HP. Potch, skill-point rewards, affinities and drops are left alone; the baseline
   is remembered, so re-applying never compounds and Restore is exact.
