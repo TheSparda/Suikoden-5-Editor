@@ -231,6 +231,13 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
   }
   ok("Sword Magic + comes last in every group that grants it",
      [22, 91, 97, 120].every((i) => /Sword Magic \+/.test(fx[i]) && norm(fx[i]) === canon[22]));
+  // The Reference tab reads its own copy of this list (s5_ref_english.json). They have to
+  // agree, or the same row gets two different names in two tabs — which is exactly what
+  // happened when the rotation was fixed in one file and not the other.
+  const refEn = JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_ref_english.json"), "utf8"));
+  const drift = fx.map((n, i) => (n === refEn.Skills[i] ? null : i)).filter((i) => i !== null);
+  ok("the Reference tab's skill names match the skill-effect names", !drift.length,
+     drift.map((i) => `${i}: ${fx[i]} vs ${refEn.Skills[i]}`).join(" | "));
   // The panel has to explain the two things that read as bugs: a row is a sub-effect, so a
   // 0 at E/D is "locked until C", and the scale is per-row rather than per-label.
   const isoFx = read("iso.js").slice(read("iso.js").indexOf("VIEW_RENDER.skillfx"));
