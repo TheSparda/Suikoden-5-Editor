@@ -17,7 +17,7 @@ copy.
 > runs, but every new feature lands in the web editor. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.17.2**.
+Current release: **v1.17.3**.
 
 > 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md) — what every
 > editable value means, its scale and its limits, table by table, plus the ISO offsets if
@@ -191,9 +191,18 @@ rune and the slot stays free:
 |---|---|
 | Champion's Rune | fewer encounters, suppresses weak enemies |
 | Great Firefly Rune | more encounters, increases enemy appearances |
-| Fortune Rune | all party members receive 2x experience |
-| Prosperity Rune | double Potch after every battle |
-| Godspeed Rune | 2x field movement speed, and a 100% escape rate |
+| Fortune Rune | **not working**: meant to give 2x experience |
+| Prosperity Rune | **not working**: meant to double Potch after battle |
+| Godspeed Rune | **not working**: meant to give 2x field speed and a 100% escape rate |
+
+**Fortune, Prosperity and Godspeed don't work yet.** Players confirmed no effect in-game
+([#18](https://github.com/TheSparda/Suikoden-5-Editor/issues/18),
+[#20](https://github.com/TheSparda/Suikoden-5-Editor/issues/20)), and the disc explains why.
+The gate the toggle removes is in the rune resolver, whose active path only hands a code to
+the event scripts. The bonuses themselves are applied somewhere else: Fortune has a second
+equip check at `0x436548` that this patch doesn't touch, and Prosperity and Godspeed have no
+other call to the equip check at all. The toggles are kept so an already-patched disc can be
+switched back off.
 
 These runes gate their effect behind *is it equipped* **and** *is its flag set*. Both checks
 branch to the same target, so replacing the pair with NOPs leaves only the active path. That
@@ -202,7 +211,7 @@ The effect wording is read from the disc's own description pool and cross-checke
 its separate rune-name pool.
 
 **Verified:** the equip check really is bypassed and nothing else on the disc moves.
-**Not verified in-game:** how strongly each effect then behaves. The resolver only selects an
+**Not verified in-game:** the encounter runes' effect. The resolver only selects an
 effect id, so this is an on/off switch, not a rate slider (the encounter-rate *value* lives
 in map script data, not in the executable). The Raven Rune's dungeon evasion would be a fine
 addition but has no forceable gate, so it is deliberately excluded.
