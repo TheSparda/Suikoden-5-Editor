@@ -932,15 +932,17 @@ async function openChars(i){
   renderChar(i);
 }
 
-/* picker-button field for id-based selects (armor / rune / skill-slot). */
+/* picker-button field for id-based selects (armor / rune / skill-slot).
+ * onPick carries single-quoted string args (pickArmor(0,'helm',0)), so the attribute
+ * must be double-quoted — single quotes would end it early and the click would do nothing. */
 function pickBtn(sk, cf, curId, curName, onPick){
-  return `<button type="button" class="pickbtn" data-sk="${sk}" data-cf="${cf}" data-orig="${esc(curId)}" onclick='${onPick}'>
+  return `<button type="button" class="pickbtn" data-sk="${sk}" data-cf="${cf}" data-orig="${esc(curId)}" onclick="${onPick}">
     <span class="pickbtn-name">${esc(curName)}</span><span class="pickbtn-id note">#${esc(curId)}</span></button>${REVERT_BTN_SAVE}`;
 }
 function armorList(slot){
   const m = (slot === "accessory" ? (NAMES.accNames || {}) : NAMES.armorNames[slot]) || {};
   const list = Object.keys(m).map(k => ({ id:k, name:m[k] }));
-  list.unshift({ id:"0", name:"— Nothing —" });
+  if(!("0" in m)) list.unshift({ id:"0", name:"— Nothing —" });   // tables already carry 0: "Nothing"
   return list;
 }
 function runeList(){

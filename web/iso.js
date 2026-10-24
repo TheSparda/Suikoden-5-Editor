@@ -911,11 +911,21 @@ VIEW_RENDER.passive = async (body) => {
              Great Firefly brings more of them, which is what you want for grinding.`,
       runes: { 79: "fewer encounters — suppresses weak enemies",
                80: "more encounters — increases enemy appearances" } },
-    { title: "Party perks",
-      note: `Field and reward passives worth having on permanently.`,
-      runes: { 77: "all party members receive 2x experience",
-               78: "double Potch after every battle",
-               82: "2x field movement speed, and a 100% escape rate" } },
+    /* Reported broken in-game (issues #18, #20), and the disc agrees. Each of these has one
+     * canonical gate, in the resolver, and its active path only stores a code into
+     * 16348($gp), which the script VM reads. The actual bonuses are applied elsewhere:
+     * Fortune has a second, non-canonical hasRune check at 0x436548, and Prosperity and
+     * Godspeed have no other hasRune caller at all. Kept (not removed) so a disc that was
+     * already patched can still be switched back off. */
+    { title: "Party perks — not working",
+      note: `<b>These don't work yet.</b> The toggle does bypass the rune's check, but only
+             the check that feeds the game's event scripts. The actual bonuses (battle EXP,
+             Potch, movement speed, escape) are applied somewhere else, which hasn't been
+             found yet. Players have confirmed no effect in-game. If you already turned one
+             on, turn it off to restore the disc.`,
+      runes: { 77: "NOT working — meant to give 2x experience; no effect in battle",
+               78: "NOT working — meant to double Potch after battle; no effect",
+               82: "NOT working — meant to give 2x field speed and 100% escape; no effect" } },
   ];
   // The disc's name field is 16 bytes, so rune 80 stores the truncated "Great Firefly Rn".
   const FULL_NAME = { 80: "Great Firefly Rune" };
@@ -945,7 +955,8 @@ VIEW_RENDER.passive = async (body) => {
     + `<div class="fnote" style="margin:10px 14px 0">Each toggle replaces the rune's equip check
       with two NOPs (8 bytes per call site) and is fully reversible — switch it back off and the
       disc is byte-identical. <b>Verified:</b> the equip check really is bypassed and nothing else
-      on the disc moves. <b>Not verified in-game:</b> how strongly each effect then behaves.</div>`;
+      on the disc moves. <b>Not verified in-game:</b> the encounter runes' effect. The party
+      perks above are confirmed <b>not</b> to work.</div>`;
 };
 
 VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",

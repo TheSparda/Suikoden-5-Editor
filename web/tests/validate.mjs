@@ -80,6 +80,10 @@ ok("s5patch defines armor_summary_cap", fs.readFileSync(path.join(web,"..","Edit
 ok("armor names table has an accessory list",
    !!JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_armor_names.json"), "utf8")).accessory);
 
+// Save editor pickers: onPick carries single-quoted args (pickArmor(0,'helm',0)), so the
+// onclick attribute must be double-quoted or the handler is cut off and clicks do nothing (#17).
+ok("pickBtn double-quotes its onclick", /class="pickbtn"[^`]*onclick="\$\{onPick\}"/.test(appSrc));
+
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
 ok("iso.js registers the Passives tab",
    /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
@@ -90,9 +94,11 @@ const gsrc = grpM ? grpM[1] : "";
 // Verified against the disc's own description pool (names cross-checked id 73-92).
 ok("Champion's 79 = fewer encounters", /79:\s*"fewer encounters/.test(gsrc));
 ok("Great Firefly 80 = more encounters", /80:\s*"more encounters/.test(gsrc));
-ok("Fortune 77 = 2x experience", /77:\s*"all party members receive 2x experience/.test(gsrc));
-ok("Prosperity 78 = double Potch", /78:\s*"double Potch/.test(gsrc));
-ok("Godspeed 82 = speed + escape", /82:\s*"2x field movement speed/.test(gsrc));
+// Fortune/Prosperity/Godspeed only reach the script-facing resolver gate; players confirmed
+// no in-game effect (#18, #20). They must stay labelled as not working until that changes.
+for (const [id, nm] of [[77, "Fortune"], [78, "Prosperity"], [82, "Godspeed"]])
+  ok(`${nm} ${id} is labelled as not working`, new RegExp(`${id}:\\s*"NOT working`).test(gsrc));
+ok("party-perk group says it doesn't work", /Party perks — not working/.test(gsrc));
 ok("Firefly 62 is not offered (it is Bull's Eye, not an encounter rune)", !/\b62\s*:/.test(gsrc));
 ok("Raven 83 is not offered (it has no forceable gate)", !/\b83\s*:/.test(gsrc));
 ok("checkbox caption states the mode, not a requirement",

@@ -417,6 +417,12 @@ shape: check the rune, then check the rune's own enable flag. Both branches land
 equipped. Eight bytes per effect, reversible, and the editor remembers the original
 instructions so the toggle restores them exactly.
 
+That gate lives in the rune resolver, and its active path only stores a code for the event
+scripts to read. So it works for effects the scripts act on, but not for bonuses applied in
+native code. **Fortune, Prosperity and Godspeed are confirmed not to work** (no 2x EXP, no
+double Potch, no speed or escape change). Fortune's battle check is a separate, non-canonical
+call at `0x436548`; Prosperity and Godspeed are checked some other way that hasn't been found.
+
 ---
 
 ## Prices
