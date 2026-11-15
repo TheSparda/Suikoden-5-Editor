@@ -49,6 +49,19 @@ gd3, _ = SV.apply_gamedata_edits(gd2, {"potch": 500_000_000, "partySP": 5_000_00
 f3 = SV.decode_gamedata(gd3)
 chk("potch clamped", f3["potch"] == 99_999_999, f"{f3['potch']:,}")
 chk("partySP clamped", f3["partySP"] == 999_999, f"{f3['partySP']:,}")
+# 16-char names (issue #38): the game allows the full 16-byte field; the editor
+# used to truncate to 15 and silently cut a character off the castle name on save.
+gd5, _ = SV.apply_gamedata_edits(gd, {"castleName": "Chateau Lalaland"})
+f5 = SV.decode_gamedata(gd5)
+chk("16-char castle round-trip", f5["castleName"] == "Chateau Lalaland", f5["castleName"])
+chk("16-char castle mirror", gd5[SV.S5_FIELD_MIRRORS["castleName"]:][:17] == b"Chateau Lalaland\x00")
+gd6, _ = SV.apply_gamedata_edits(gd, {"castleName": "1234567890ABCDEFG"})
+chk("17-char castle truncates at 16", SV.decode_gamedata(gd6)["castleName"] == "1234567890ABCDEF")
+# hero can sit in any party slot (issue #38): decode keeps him wherever he is
+gd7 = bytearray(gd)
+gd7[SV.PARTY_OFF:SV.PARTY_OFF+2] = (20).to_bytes(2, "little")   # Georg in slot 1
+gd7[SV.PARTY_OFF+6:SV.PARTY_OFF+8] = (0).to_bytes(2, "little")   # hero in slot 4
+chk("hero in slot 4 decode", SV.decode_gamedata(bytes(gd7))["party"][:4] == [20, 8, SV.PARTY_EMPTY, 0])
 # invalid party value rejected (char id must be <120 or the empty sentinel)
 gd4, ch4 = SV.apply_gamedata_edits(gd3, {"party3": 500})
 chk("bad party id rejected", ch4 == 0)

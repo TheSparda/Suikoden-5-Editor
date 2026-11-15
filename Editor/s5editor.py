@@ -914,9 +914,9 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
     : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button> <button class=ghost onclick=openRecruit(${i})>Recruitment…</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
-   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
-   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
-   `<div class=fld><label>Army name</label><div class=in><input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Army name</label><div class=in><input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Potch</label><div class=in><input type=number id="sv${i}_potch" value="${fl.potch||0}" min=0 max=99999999 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Party SP</label><div class=in><input type=number id="sv${i}_psp" value="${fl.partySP||0}" min=0 max=999999 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the Characters panel."></div></div>`+
@@ -970,7 +970,10 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
   return `<label class=chk data-name="${c.name.toLowerCase()}" style="${dis?'opacity:.4':''}">`
    +`<input type=checkbox data-idx="${c.idx}" ${c.recruited?'checked':''} ${dis?'disabled':''} onchange="recruitCount(${i})">`
    +` <span class=note style="text-transform:none">${c.idx}: ${c.name}</span></label>`;}).join('');
- recruitCount(i);}
+ recruitCount(i);
+ const _c10=r.chars.find(c=>c.idx===10),_c108=r.chars.find(c=>c.idx===108);
+ if(_c10&&_c10.recruited&&_c108&&_c108.recruited)
+  grid.insertAdjacentHTML('beforebegin','<div style="padding:10px 14px 0;color:#d97706">\u26a0 Eresh and Euram are both marked recruited, but the game only lets you recruit one of them. These flags were set outside normal play (for example Check all, Recruit ALL or a cheat device). Uncheck the one you did not recruit, then Write changes.</div>');}
 function recruitCount(i){const boxes=[...document.querySelectorAll('#recgrid'+i+' input[type=checkbox]')];
  const on=boxes.filter(b=>b.checked).length;
  const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+boxes.filter(b=>!b.disabled).length+' recruited';}

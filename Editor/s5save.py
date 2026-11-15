@@ -101,9 +101,10 @@ S5_FIELD_MAX = {"potch": 99_999_999, "partySP": 999_999, "newGamePlus": 1, "leve
 S5_FIELD_MIRRORS = {"heroName": 0xBC7C, "castleName": 0xBC9E}   # 17-byte slots (16+nul)
 
 # ---- Active party (VERIFIED 2026-08-23): 10 u16 slots @0x36 (6 battle + 4 support).
-# Value = character id (s5_characters.json); 0x0100 = empty slot; slot 0 = hero (0).
-# Cross-checked on 6 saves: every member recruited in that save's bitfield, hero always
-# slot 0, Lyon(8) present wherever story allows, sizes 3..10 match save context.
+# Value = character id (s5_characters.json); 0x0100 = empty slot. The hero (id 0)
+# can sit in ANY slot: Eachna's PAL save has Georg (20) in slot 0 and the hero in
+# slot 3 (issue #38). Cross-checked on 7 saves: every member recruited in that
+# save's bitfield, Lyon(8) present wherever story allows, sizes 3..10 match context.
 PARTY_OFF, PARTY_SLOTS, PARTY_EMPTY = 0x36, 10, 0x0100
 # Playtime display copy (header): u16 hours @0x30, minutes @0x32, seconds @0x34.
 # VERIFIED vs icon.sys titles (Sparda 19:16 ✓) — display cache, exposed read-only.
@@ -347,7 +348,7 @@ def decode_gamedata(gd):
             out[k] = gd[off:off+w].split(b"\x00")[0].decode("latin1", "replace")
         else:
             out[k] = int.from_bytes(gd[off:off+w], "little")
-    # active party: 10 u16 slots, 0x0100 = empty (slot 0 = hero)
+    # active party: 10 u16 slots, 0x0100 = empty (hero is id 0, in any slot)
     out["party"] = [int.from_bytes(gd[PARTY_OFF+2*i:PARTY_OFF+2*i+2], "little")
                     for i in range(PARTY_SLOTS)]
     # playtime display copy (read-only): h/m/s u16s
@@ -363,7 +364,7 @@ def apply_gamedata_edits(gd, edits):
         if k in S5_FIELDS:
             off, w, kind = S5_FIELDS[k]
             if kind == "str":
-                s = str(v).encode("latin1", "replace")[:w-1]
+                s = str(v).encode("latin1", "replace")[:w]
                 b[off:off+w] = s + b"\x00"*(w-len(s))
                 if k in S5_FIELD_MIRRORS:            # game-state struct copy (17B slot):
                     m = S5_FIELD_MIRRORS[k]          # the game loads THIS one back live,
