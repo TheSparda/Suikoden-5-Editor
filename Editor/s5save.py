@@ -19,6 +19,15 @@ BACKUPS = True
 
 MAGIC = b"Sony PS2 Memory Card Format"
 S5_PREFIX = "BASLUS-21291"     # USA Suikoden V save-folder prefix on the memcard
+# All known Suikoden V save-folder prefixes, by region. Folder = "B" + region
+# letter (A=US, E=EU/PAL, I=JP) + disc serial. JP serials: SLPM-66286 (standard),
+# SLPM-66170 (limited edition), SLPM-74238 (PlayStation 2 The Best re-release).
+S5_PREFIXES = ("BASLUS-21291", "BESLES-54087",
+               "BISLPM-66286", "BISLPM-66170", "BISLPM-74238")
+
+def is_s5_folder(name):
+    """True if a PS2 save-folder name belongs to Suikoden V, any region."""
+    return bool(name) and name.startswith(S5_PREFIXES)
 
 # --- PS2 memory-card ECC (Hamming) — verbatim from mymc (Ross Ridge, public domain).
 def _parityb(a):
@@ -164,6 +173,10 @@ def read_gamedata_payload(path, folder=None):
     if head[:4] == b"CFU\x00" or head[:17] == b"\x0d\x00\x00\x00SharkPortSave":
         fs = load_individual_save(path)
         return next((v for v in fs.values() if len(v) == GAMEDATA_SIZE), None) if fs else None
+    if _sniff_format(path) == "psu":
+        with open(path, "rb") as f: psu = PsuSave(f.read())
+        if folder not in (None, psu.folder): return None
+        return psu.read_file(psu.folder) or psu.read_file("gamedata")
     with open(path, "rb") as f:
         card = MemCard(f.read())
     tgt = next((s for s in card.find_saves() if folder in (None, s["folder"])), None)
@@ -320,7 +333,7 @@ def read_individual_save(path):
     folder = next((k for k, v in fs.items() if len(v) == GAMEDATA_SIZE), None)
     if folder is None:
         # fall back to prefix match if size differs (defensive)
-        folder = next((k for k in fs if k.startswith(S5_PREFIX)), None)
+        folder = next((k for k in fs if is_s5_folder(k)), None)
         if folder is None: return None
     gd = fs[folder]
     return {"folder": folder, "payloadSize": len(gd), "region": region_label(folder),
@@ -373,6 +386,20 @@ def write_save_fields(card_path, folder, edits, make_backup=True):
     """Write S5_FIELDS edits into a save's gamedata on a memory card, refreshing ECC.
     S5 has no save-body checksum (RE-confirmed via the ELF), so only the card ECC needs
     refreshing (done here); a .bak is kept when backups are on."""
+    if _sniff_format(card_path) == "psu":
+        with open(card_path, "rb") as f: psu = PsuSave(f.read())
+        if psu.folder != folder: return {"error": f"save folder {folder} not found"}
+        gd = psu.read_file(psu.folder) or psu.read_file("gamedata")
+        if not gd: return {"error": "gamedata payload not found"}
+        new_gd, changed = apply_gamedata_edits(gd, edits)
+        if changed == 0: return {"ok": True, "changed": 0}
+        if make_backup and BACKUPS and not os.path.exists(card_path + ".bak"):
+            shutil.copy2(card_path, card_path + ".bak")
+        if not psu.write_file(psu.folder if psu.read_file(psu.folder) else "gamedata", new_gd):
+            return {"error": "gamedata payload not found"}
+        with open(card_path, "wb") as f: f.write(psu.to_bytes())
+        return {"ok": True, "changed": changed,
+                "warn": "saved (.bak kept) — S5 has no save-body checksum, so verified-field edits load fine"}
     with open(card_path, "rb") as f:
         card = MemCard(f.read())
     tgt = next((s for s in card.find_saves() if s["folder"] == folder), None)
@@ -447,9 +474,12 @@ class MemCard:
     def root_entries(self):
         head = self._chain(self.rootdir_cluster, 512)
         return self._listdir(self.rootdir_cluster, self._dirent(head, 0)["length"])
-    def find_saves(self, prefix=S5_PREFIX):
+    def find_saves(self, prefix=None):
+        # prefix=None matches every known Suikoden V region (US/PAL/JP); a caller
+        # may still pass one explicit folder prefix to narrow the scan.
         return [{"folder": e["name"], "cluster": e["cluster"], "length": e["length"]}
-                for e in self.root_entries() if e["is_dir"] and e["name"].startswith(prefix)]
+                for e in self.root_entries() if e["is_dir"] and
+                (e["name"].startswith(prefix) if prefix else is_s5_folder(e["name"]))]
     def read_file(self, dir_cluster, dir_len, filename):
         for e in self._listdir(dir_cluster, dir_len):
             if e["name"] == filename and not e["is_dir"]:
@@ -552,8 +582,12 @@ def read_all_saves(path):
     fmt = _sniff_format(path); out = []
     if fmt == "psu":
         with open(path, "rb") as f: psu = PsuSave(f.read())
-        if not psu.folder.startswith(S5_PREFIX): return []
+        if not is_s5_folder(psu.folder): return []
         gd = psu.read_file("gamedata") or psu.read_file(psu.folder)
+        # The game's own save-select validator requires exactly GAMEDATA_SIZE;
+        # a shorter payload is a truncated/corrupt export, not a save — report
+        # "no save found" instead of surfacing a phantom save with no fields.
+        if not gd or len(gd) != GAMEDATA_SIZE: return []
         out.append(_decode_stub(psu.folder, gd, title_from_icon_sys(psu.read_file("icon.sys"))))
         return out
     if fmt != "card": return []
@@ -567,6 +601,7 @@ def read_all_saves(path):
             data = card.read_file(s["cluster"], s["length"], e["name"])
             if data and (payload is None or len(data) > len(payload)):
                 payload, pname = data, e["name"]
+        if not payload or len(payload) != GAMEDATA_SIZE: continue   # corrupt/truncated save
         ic = card.read_file(s["cluster"], s["length"], "icon.sys")
         d = _decode_stub(s["folder"], payload, title_from_icon_sys(ic)); d["payloadFile"] = pname
         out.append(d)
@@ -598,7 +633,7 @@ def scan_memcards(roots):
                 except OSError: continue
                 if blob[:len(MAGIC)] != MAGIC: continue
                 found.append({"path": full, "name": fn, "size": sz, "kind": "card",
-                              "hasS5": S5_PREFIX.encode() in blob})
+                              "hasS5": any(p.encode() in blob for p in S5_PREFIXES)})
     found.sort(key=lambda x: (not x["hasS5"], x["name"].lower()))
     return found
 
