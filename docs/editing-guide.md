@@ -574,6 +574,20 @@ Honest list of the gaps, so you know where the map ends:
   one of six unlabeled growth-tier values shared across bands of unrelated units, characters
   and enemies alike. Its meaning is unverified, so it's omitted.
 - **Skill-effect rows 129-130** belong to the unused skill slot and have no confirmed meaning.
+- **Starting runes and starting skills** (issue #28) are not editable, because there is no
+  per-character table for them in the disc's ELF to write to. Checked 2026-11-15 against a
+  real save whose unrecruited characters still carry their untouched starting records:
+  those template records appear nowhere in the ISO verbatim; a scan of the whole ELF (data
+  segment at every stride, code and rodata at every plausible stride, byte and u16 form, in
+  both rune id spaces) found no char-indexed table matching the 12 known innate-rune slots;
+  and the starting-equipment record's unmapped bytes (+0x04/+0x05 and +0x16/+0x17) read zero
+  for characters who do start with runes. Starting skill ranks are not stored either: in the
+  untouched templates they track the caps table (rank 1 wherever the cap is above None, rank
+  2 on the initially equipped skills, with one exception in five templates checked). The
+  records are assembled when a character is created, most plausibly by the DATA.PAK event
+  scripts that handle recruitment, and that path has not been traced to a writable table.
+  Until it is, there is nothing verified to write. The Save editor already edits runes and
+  skills on a save in progress, which covers the same goal there.
 
 ---
 
