@@ -71,6 +71,16 @@ chk("emptying a slot leaves the bitfield alone",
 gd7, _ = SV.apply_gamedata_edits(gd, {"c57_rec": 0, "party4": 57})
 chk("party assignment wins over a same-batch un-recruit",
     SV.read_character(gd7, 57)["recruited"] == 1)
+# ---- issue #24: Eresh (10) and Euram (108) are mutually exclusive in normal play,
+# but deliberately recruiting both is a legitimate edit. The engine must set both
+# bits when asked; the impossibility warning is a UI concern, not a write block.
+gd8, ch8 = SV.apply_gamedata_edits(gd, {"c10_rec": 1, "c108_rec": 1})
+chk("Eresh+Euram both settable", ch8 == 2
+    and SV.read_character(gd8, 10)["recruited"] == 1
+    and SV.read_character(gd8, 108)["recruited"] == 1)
+chk("pair bits land in their own bytes",
+    gd8[SV.RECRUIT_BASE + 1] == (gd[SV.RECRUIT_BASE + 1] | (1 << 2))
+    and gd8[SV.RECRUIT_BASE + 13] == (gd[SV.RECRUIT_BASE + 13] | (1 << 4)))
 # regression guards on the verified constants
 chk("POTCH off", SV.S5_FIELDS["potch"][0] == 0xBC74)
 chk("PARTY off/slots", (SV.PARTY_OFF, SV.PARTY_SLOTS, SV.PARTY_EMPTY) == (0x36, 10, 0x0100))

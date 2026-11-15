@@ -84,6 +84,17 @@ ok("armor names table has an accessory list",
 // onclick attribute must be double-quoted or the handler is cut off and clicks do nothing (#17).
 ok("pickBtn double-quotes its onclick", /class="pickbtn"[^`]*onclick="\$\{onPick\}"/.test(appSrc));
 
+// Recruitment freedom (#24): both UIs warn on the impossible Eresh+Euram pair
+// without blocking it, and the text keeps the deliberate path legitimate.
+ok("app.js defines recruitPairWarn (#24)", appSrc.includes("function recruitPairWarn"));
+ok("app.js pair warning keeps the deliberate path open (#24)",
+   appSrc.includes("Eresh and Euram are both marked recruited")
+   && appSrc.includes("Checking both on purpose is allowed"));
+const editorSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5editor.py"), "utf8");
+ok("desktop editor has the pair warning too (#24)",
+   editorSrc.includes("function recruitPairWarn")
+   && editorSrc.includes("Checking both on purpose is allowed"));
+
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
 ok("iso.js registers the Passives tab",
    /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));

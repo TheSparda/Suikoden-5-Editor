@@ -1106,6 +1106,7 @@ async function openRecruit(i){
       <button class="ghost mini" onclick="recruitCheckAll(${i},false)">Uncheck all</button>
       <span class="note">greyed = not recruitable</span>
     </div>
+    <div id="pairwarn${i}"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
   $(`recgrid${i}`).innerHTML = r.chars.map(c => {
     const dis = !c.recruitable;
@@ -1119,6 +1120,21 @@ function recruitCount(i){
   const boxes = [...document.querySelectorAll(`#recgrid${i} input[type=checkbox]`)];
   const on = boxes.filter(b => b.checked).length;
   const el = $(`reccount${i}`); if(el) el.textContent = `${on} / ${boxes.filter(b=>!b.disabled).length} recruited`;
+  recruitPairWarn(i);
+}
+/* Eresh (10) and Euram (108) are mutually exclusive in normal play: the game lets
+   you recruit only one of them. Both bits set is a legitimate deliberate edit
+   (issue #24), so this warns without blocking or unchecking anything: it names
+   the usual accidental sources (bulk actions, cheat devices) and the repair,
+   and states that a deliberate pair is kept as-is. */
+function recruitPairWarn(i){
+  const box = $(`pairwarn${i}`); if(!box) return;
+  const state = {};
+  document.querySelectorAll(`#recgrid${i} input[type=checkbox]`)
+    .forEach(b => { state[+b.dataset.idx] = b.checked; });
+  box.innerHTML = (state[10] && state[108])
+    ? `<div class="warnbox" style="margin:10px 14px 0">⚠ Eresh and Euram are both marked recruited, but the game only lets you recruit one of them. Both flags usually come from a bulk action (Check all, Recruit ALL) or a cheat device; if that is what happened here, uncheck the one you did not recruit to repair the save. Checking both on purpose is allowed and will be kept.</div>`
+    : "";
 }
 function recruitFilter(i){
   const query = $(`recfilter${i}`).value.trim().toLowerCase();
@@ -1146,7 +1162,11 @@ async function recruitAll(i){
     let n=0;
     for(const c of r.chars){ if(c.recruitable && !c.recruited){ await writeRecruitOne(sv, i, c.idx, true, true); n++; } }
     const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
-    updateSaveToolbar();
+    // sync the grid to the written state so the count and the Eresh/Euram pair
+    // warning (issue #24) reflect what Recruit ALL just did
+    if(!rr.error) document.querySelectorAll(`#recgrid${i} input[type=checkbox]`).forEach(b => {
+      const c = rr.chars.find(x => x.idx === +b.dataset.idx); if(c) b.checked = !!c.recruited; });
+    updateSaveToolbar(); recruitCount(i);
     toast(n ? `Recruited ${n} character(s)` : "Everyone recruitable is already recruited", "ok");
   } finally { spin(false); }
 }

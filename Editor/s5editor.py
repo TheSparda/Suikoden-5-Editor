@@ -963,6 +963,7 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
    <button onclick="writeRecruit(${i})">Write changes</button>
    <span class=note>greyed = not recruitable (story/antagonist)</span>
   </div>
+  <div id="pairwarn${i}"></div>
   <div id="recgrid${i}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px"></div></div>`;
  const grid=document.getElementById('recgrid'+i);
  grid.innerHTML=r.chars.map(c=>{
@@ -973,7 +974,17 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
  recruitCount(i);}
 function recruitCount(i){const boxes=[...document.querySelectorAll('#recgrid'+i+' input[type=checkbox]')];
  const on=boxes.filter(b=>b.checked).length;
- const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+boxes.filter(b=>!b.disabled).length+' recruited';}
+ const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+boxes.filter(b=>!b.disabled).length+' recruited';
+ recruitPairWarn(i);}
+/* Eresh (10) and Euram (108) are mutually exclusive in normal play. Both bits set
+   is a legitimate deliberate edit (issue #24), so this warns without blocking:
+   it names the usual accidental sources and the repair, and states that a
+   deliberate pair is kept as-is. */
+function recruitPairWarn(i){const box=document.getElementById('pairwarn'+i);if(!box)return;
+ const state={};document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{state[+b.dataset.idx]=b.checked;});
+ box.innerHTML=(state[10]&&state[108])
+  ?'<div style="padding:10px 14px 0;color:#d97706">⚠ Eresh and Euram are both marked recruited, but the game only lets you recruit one of them. Both flags usually come from a bulk action (Check all, Recruit ALL) or a cheat device; if that is what happened here, uncheck the one you did not recruit, then Write changes. Checking both on purpose is allowed and will be kept.</div>'
+  :'';}
 function recruitFilter(i){const q=document.getElementById('recfilter'+i).value.trim().toLowerCase();
  document.querySelectorAll('#recgrid'+i+' label').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q))?'':'none';});}
 function recruitCheckAll(i,on){document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{
