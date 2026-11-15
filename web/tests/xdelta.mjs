@@ -5,7 +5,7 @@
  * from diff runs must decode correctly in Python. Together they pin the
  * format both sides emit: standard VCDIFF that xdelta3 also reads. */
 import { spawnSync } from "child_process";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, rmSync } from "fs";
 import { createRequire } from "module";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -56,6 +56,11 @@ for (const c of data.cases) {
     r.status === 0 && eq(new Uint8Array(readFileSync(op)), tgt),
     (r.stderr || "").slice(0, 200));
 }
+
+// The fixtures are ~100 MB of scratch (multi-MB sources, targets and
+// outputs); /tmp is a small tmpfs here, so leaving them behind fills it
+// within a few suite runs and later runs start failing on disk space.
+try { rmSync(data.tmp, { recursive: true, force: true }); } catch (_) {}
 
 console.log(`xdelta: ${n - bad}/${n} checks passed`);
 process.exit(bad ? 1 : 0);
