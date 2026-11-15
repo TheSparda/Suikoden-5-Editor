@@ -546,7 +546,7 @@ Verified and editable:
 | Potch | Capped at 99,999,999 |
 | Party SP | Shared party skill points, capped at 999,999 |
 | Level | Lead character, 1-99 |
-| New Game Plus flag | 1 = cleared/NG+ |
+| Cleared-game marker | 1 = set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list (it does not enable New Game Plus) |
 | Active party | 10 slots (6 battle + 4 support); slot 0 is the hero |
 | Per character | Equipped armor (4 slots + accessory), equipped runes (head / right / left), skill ranks |
 

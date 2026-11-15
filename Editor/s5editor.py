@@ -4,7 +4,7 @@ Suikoden V (USA, SLUS-21291) editor — local web app.
 
 Runs an HTTP server on your machine and opens a browser tab. Nothing is uploaded.
 ISO editing (characters/stats/skills/equipment/runes/rune+heal prices/Hard Mode/names/text) and
-PS2 save editing (hero/castle name + New Game Plus).
+PS2 save editing (hero/castle name + cleared-game marker).
 """
 import http.server, json, os, socketserver, webbrowser, threading
 import s5patch as P
@@ -382,7 +382,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-save>
   <h2>Save Editor</h2>
-  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, New Game Plus (fast-forward), and — per character — <b>equipped armor</b> (Helm/Armor/Gloves/Boots) and <b>runes</b> (Head/Right/Left) via the <b>Characters</b> button. ECC and a <code>.bak</code> are handled automatically on write (S5 has no save-body checksum). Offsets reverse-engineered from the game and cross-verified against the item tables.</p>
+  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, the cleared-game marker, and, per character, <b>equipped armor</b> (Helm/Armor/Gloves/Boots) and <b>runes</b> (Head/Right/Left) via the <b>Characters</b> button. ECC and a <code>.bak</code> are handled automatically on write (S5 has no save-body checksum). Offsets reverse-engineered from the game and cross-verified against the item tables.</p>
   <div class=row>
    <button onclick=browseSave()>Open save file…</button>
    <input id=savepath size=40 placeholder="/path/to/save.ps2" onkeydown="if(event.key=='Enter')openSaveFile()">
@@ -912,7 +912,7 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
   const ro=sv.editable===false;
   const foot=ro
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
-    : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button> <button class=ghost onclick=openRecruit(${i})>Recruitment…</button><span class=note>Writes hero/castle name + New Game Plus. A .bak is made first when backups are on (top-right toggle).</span>`;
+    : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button> <button class=ghost onclick=openRecruit(${i})>Recruitment…</button><span class=note>Writes hero/castle name + the cleared-game marker. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
    `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
@@ -921,7 +921,7 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
    `<div class=fld><label>Party SP</label><div class=in><input type=number id="sv${i}_psp" value="${fl.partySP||0}" min=0 max=999999 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the Characters panel."></div></div>`+
    `<div class=fld><label>Playtime <span class=note>(display only)</span></label><div class=in><input value="${esc(fl.playtime)}" disabled></div></div>`+
-   `<div class=fld><label>New Game Plus</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
+   `<div class=fld><label>Cleared-game marker</label><div class=in><label class=chk><input type=checkbox id="sv${i}_ngp" ${fl.newGamePlus?'checked':''} ${ro?'disabled':''}></label></div></div>`+
    `</div><div class=card-ft>${foot}</div><div id="chars${i}" class=note style="margin-top:8px"></div><div id="recruit${i}" style="margin-top:8px"></div></div>`}).join('');}
 let CHARDATA={};
 async function openChars(i){const sv=window._saves[i];const box=document.getElementById('chars'+i);

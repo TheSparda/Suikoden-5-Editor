@@ -111,6 +111,16 @@ ok("save rune list has no phantom Critical/Magic",
 ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
 ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
 
+// Cleared-game marker (#2/#19): the byte at 0x12 is a display marker, not an
+// NG+ or fast-forward switch (PCSX2-verified). The old claims must not return.
+const saveSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8");
+ok("app.js labels it Cleared-game marker (#2)", appSrc.includes("Cleared-game marker")
+   && !appSrc.includes("enables the fast-forward option"));
+ok("desktop editor labels it Cleared-game marker (#2)", editorSrc.includes("Cleared-game marker")
+   && !editorSrc.includes("New Game Plus (fast-forward)"));
+ok("s5save.py comments carry the correction (#2)", saveSrc.includes("cleared-game marker")
+   && !saveSrc.includes("enables fast-forward"));
+
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
 ok("iso.js registers the Passives tab",
    /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));

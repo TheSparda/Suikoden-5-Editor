@@ -70,9 +70,14 @@ PAYLOAD_IS_FOLDER_NAME = True   # payload filename == folder name (not "gamedata
 #   - New Game Plus flag (357 bytes differ across different playthroughs -> can't isolate)
 #   - gamedata checksum algorithm (no whole-payload sum checksum found)
 #   - character stat/party/gold/recruit field offsets
-# VERIFIED New Game Plus / cleared-game flag: gamedata byte @0x12, 1=on 0=off.
-# Confirmed 6/6 across saves: every cleared/NG+ save reads 1, every in-progress save 0
-# (isolated by diffing a same-playthrough pre-end vs post-end save pair).
+# VERIFIED cleared-game marker: gamedata byte @0x12, 1=on 0=off. The game sets
+# it on the clear save it creates at the ending. Confirmed 6/6 across saves:
+# every clear save reads 1, every in-progress save 0 (isolated by diffing a
+# same-playthrough pre-end vs post-end save pair). It is a display marker, not
+# a switch: on a mid-game save it only turns the hero name green in the load
+# list. It does NOT enable New Game Plus or the fast run (the run is
+# unconditional); both PCSX2-verified 2026-11-15, see ps2-re
+# games/suikoden5/NGPLUS.md (issues #2 and #19).
 NG_PLUS_OFF = 0x12
 # VERIFIED gamedata fields (confirmed across multiple saves): hero + castle + NG+ + level.
 # CORRECTION: 0x28 IS the lead character's level (u8). Confirmed 5/5 vs the icon.sys
@@ -82,7 +87,7 @@ NG_PLUS_OFF = 0x12
 S5_FIELDS = {
     "heroName":    (0x00, 16, "str"),
     "castleName":  (0x14, 16, "str"),
-    "newGamePlus": (0x12, 1,  "num"),   # 1 = New Game Plus / cleared (enables fast-forward)
+    "newGamePlus": (0x12, 1,  "num"),   # 1 = cleared-game marker set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list. Does NOT enable New Game Plus or fast-forward (PCSX2-verified 2026-11-15, ps2-re games/suikoden5/NGPLUS.md)
     "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
     # ---- Global game-state struct, serialized at save+0xD8 (VERIFIED 2026-08-23 by ELF RE:
     # live struct 0xA31C10 [potch u32][partySP u32][hero 17B][army 17B][castle 17B] mirrors

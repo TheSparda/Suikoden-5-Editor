@@ -81,6 +81,14 @@ chk("Eresh+Euram both settable", ch8 == 2
 chk("pair bits land in their own bytes",
     gd8[SV.RECRUIT_BASE + 1] == (gd[SV.RECRUIT_BASE + 1] | (1 << 2))
     and gd8[SV.RECRUIT_BASE + 13] == (gd[SV.RECRUIT_BASE + 13] | (1 << 4)))
+# ---- issues #2/#19: the byte at 0x12 is the cleared-game marker (a display
+# marker, not an NG+ or fast-forward switch). The relabel changes no data:
+# offset, width and cap are exactly as before, and an edit touches only 0x12.
+chk("marker offset/width unchanged", SV.S5_FIELDS["newGamePlus"] == (0x12, 1, "num")
+    and SV.NG_PLUS_OFF == 0x12 and SV.S5_FIELD_MAX["newGamePlus"] == 1)
+gd9, ch9 = SV.apply_gamedata_edits(gd, {"newGamePlus": 1})
+chk("marker edit touches only byte 0x12", ch9 == 1
+    and [i for i in range(len(gd)) if gd9[i] != gd[i]] == [0x12] and gd9[0x12] == 1)
 # regression guards on the verified constants
 chk("POTCH off", SV.S5_FIELDS["potch"][0] == 0xBC74)
 chk("PARTY off/slots", (SV.PARTY_OFF, SV.PARTY_SLOTS, SV.PARTY_EMPTY) == (0x36, 10, 0x0100))

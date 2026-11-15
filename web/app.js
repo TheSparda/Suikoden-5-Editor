@@ -750,11 +750,11 @@ function renderSaves(){
       <div class="grid" style="padding-top:6px">
         ${numFld(i, "potch",   "potch",   "Potch",    fl.potch,   99999999, sv.folder, ro)}
         ${numFld(i, "psp",     "partySP", "Party SP", fl.partySP, 999999,   sv.folder, ro)}
-        <div class="fld"><label>New Game Plus</label><div class="in">
+        <div class="fld"><label>Cleared-game marker</label><div class="in">
           <label class="chk"><input type="checkbox" id="sv${i}_ngp" ${fl.newGamePlus?"checked":""} ${ro?"disabled":""}
-            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}">
+            data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="Cleared-game marker" data-grp="${esc(sv.folder)}">
             <span class="note">cleared game</span></label>${ro?"":REVERT_BTN_SAVE}</div>
-          <div class="fnote">enables the fast-forward option</div></div>
+          <div class="fnote">clear-data marker: turns the hero name green in the load list. Does not enable New Game Plus on a save that has not finished the game.</div></div>
       </div>
       ${ro?"":`<div class="subhd">Active party
         <span class="note">— tap a slot to choose; only recruited characters can join</span></div>
