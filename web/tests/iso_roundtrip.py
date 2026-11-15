@@ -220,6 +220,47 @@ def main():
         back = {eid: h.ru(P.enemy_addr(eid) + 0x02, 2) for eid in SEED}
     chk("restore puts every enemy back exactly", back == before, str(back))
 
+    # ---- Gear sheets (issue #25): one CSV dataset per armor slot, keyed by the
+    # equip id the Gear tab shows. Signed stat bonuses must round-trip as signed
+    # (a Speed penalty of -7 is real data, not an error), and out-of-range values
+    # cap to the field's own range instead of failing.
+    ds_all = json.loads(g["iso_csvdatasets"]())
+    chk("gear tables are offered",
+        {"gear-head", "gear-body", "gear-arm", "gear-foot", "gear-accessory"}
+        <= set(ds_all["datasets"]), str(sorted(ds_all["datasets"])))
+    chk("gear sheets ship a legend", bool(ds_all.get("legends", {}).get("gear-body")))
+    gb = list(_csv.reader(io.StringIO(json.loads(g["iso_csvexport"]("gear-body"))["csv"])))
+    ghdr, grows = gb[0], gb[1:]
+    chk("gear sheet lists every body piece", len(grows) == F.ARMOR_TABLES["body"][1],
+        str(len(grows)))
+    chk("gear sheet is keyed by equip id", [int(r[0]) for r in grows[:3]] == [1, 2, 3],
+        str([r[0] for r in grows[:3]]))
+    chk("gear sheet carries the armor fields",
+        {"Buy price", "DEF", "SPD penalty", "Speed", "Sun ATK", "Counter %"} <= set(ghdr),
+        str(ghdr))
+    dfc, spd, buy = ghdr.index("DEF"), ghdr.index("Speed"), ghdr.index("Buy price")
+    gedit = [r[:] for r in grows]
+    gedit[0][dfc], gedit[0][spd] = "42", "-7"                # DEF up, a signed penalty
+    im = json.loads(g["iso_csvimport"]("gear-body", sheet(ghdr, gedit)))
+    chk("gear edits are written", im.get("changed") == 2 and im.get("errorCount") == 0, str(im)[:160])
+    gi = json.loads(g["iso_gearitem"]("body", 0))
+    gvals = {f["label"]: f["value"] for f in gi["fields"]}
+    chk("gear row lands on stat id 0 (equip id 1)",
+        gvals["DEF"] == 42 and gvals["Speed"] == -7, str(gvals)[:120])
+    neg = [r[:] for r in grows]; neg[0][spd] = "-200"        # past the s8 floor
+    im = json.loads(g["iso_csvimport"]("gear-body", sheet(ghdr, neg)))
+    chk("a signed value caps at the field's own floor",
+        im.get("clamped") == 1 and im.get("errorCount") == 0, str(im)[:160])
+    gi = json.loads(g["iso_gearitem"]("body", 0))
+    chk("the cap wrote -128, not 0",
+        {f["label"]: f["value"] for f in gi["fields"]}["Speed"] == -128)
+    oob = json.loads(g["iso_csvimport"]("gear-body", "id,DEF\n999,5\n"))
+    chk("an unknown gear id is an error, not a write",
+        oob.get("errorCount") == 1 and oob.get("changed") == 0, str(oob)[:140])
+    chk("the gear sheet is refused by the enemies table",
+        "error" in json.loads(g["iso_csvimport"]("enemies", sheet(ghdr, grows))))
+    json.loads(g["iso_csvimport"]("gear-body", sheet(ghdr, grows)))   # leave the slice stock
+
     # ---- the enemy table has an END, and everything past it belongs to something else.
     # F.ENEMY_MAX was 584 against a 219-record table, so the editor listed ~210 rows of
     # unrelated ELF data as enemies (ELF text at the near end, the verified skill-effect

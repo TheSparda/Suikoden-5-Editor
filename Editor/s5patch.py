@@ -2020,17 +2020,26 @@ CSV_DATASETS = {
     "runes":            "Runes — which spells each rune teaches",
     "skillfx":          "Skill effects — magnitude per rank (E..SS)",
     "mp":               "MP growth — thresholds per magic level",
+    "gear-head":        "Gear - Head pieces",
+    "gear-body":        "Gear - Body pieces",
+    "gear-arm":         "Gear - Arm pieces",
+    "gear-foot":        "Gear - Foot pieces",
+    "gear-accessory":   "Gear - Accessories",
 }
 _CSV_CHAR_TABLE = {"char-stats": "stats", "char-affinities": "affinities",
                    "char-skillcaps": "equipable skills", "char-weapon": "weapon growth",
                    "char-equipment": "starting equipment"}
+# Gear sheets are keyed by EQUIP id (the number the Gear tab shows, issue #23),
+# which is the engine's stat id + 1; _csv_rows adds it, csv_import subtracts it.
+_CSV_GEAR = {"gear-head": "head", "gear-body": "body", "gear-arm": "arm",
+             "gear-foot": "foot", "gear-accessory": "accessory"}
 
 def csv_legends():
     """dataset -> notes explaining the columns that hold a CODE rather than a plain
     number. Built from the engine's own maps so the sheet's legend can't drift from
     what the pickers in the tabs offer."""
     codes = lambda m: ", ".join(f"{k}={v}" for k, v in sorted(m.items()))
-    return {
+    out = {
         "spells": [
             "Element: " + codes(F.ELEMENT_NAMES),
             "Target: " + codes(F.TARGET_NAMES),
@@ -2047,6 +2056,18 @@ def csv_legends():
             "“fixed spell set” entries have no record to write.",
         ],
     }
+    gear = [
+        "The id column is the equip id the Gear tab shows (the internal stat id + 1).",
+        "Type: 1=Light, 2=Medium, 3=Heavy for armor pieces; accessories use their own "
+        "set (1=Cape .. 6=Ring).",
+        "The stat-bonus columns (HP, Attack, Technique, Magic, Evasion, MDEF, Speed, "
+        "Luck) and the element ATK/DEF columns are SIGNED: a negative value is a real "
+        "penalty on the disc and imports as-is (range -128..127).",
+        "Prices, DEF, SPD penalty and the % effect columns are unsigned.",
+    ]
+    for ds in _CSV_GEAR:
+        out[ds] = gear
+    return out
 
 def _csv_rows(iso_path, dataset):
     """-> (id_headers, field_labels, rows) where each row = [ids..., name, values...]."""
@@ -2090,6 +2111,14 @@ def _csv_rows(iso_path, dataset):
         if dataset == "skillfx":
             rows = [[r["id"], r["name"]] + r["values"] for r in read_skillfx(g)]
             return ["id"], list(F.SKILLFX_RANKS), rows
+        if dataset in _CSV_GEAR:
+            slot = _CSV_GEAR[dataset]
+            labels = [l for (l, o, w, s) in F.ARMOR_FIELDS]
+            rows = []
+            for it in list_armor(g, slot):
+                vals = [f["value"] for f in read_armor_item(g, slot, it["id"])["fields"]]
+                rows.append([it["id"] + 1, it["name"]] + vals)   # equip id (issue #23)
+            return ["id"], labels, rows
         if dataset == "mp":
             rows = [[r["group"], r["label"]] + r["values"] for r in read_mp(g)]
             return ["id"], list(F.MP_FIELD_LABELS), rows
@@ -2121,6 +2150,19 @@ def _csv_field_widths(dataset):
         return {r: 2 for r in F.SKILLFX_RANKS}
     if dataset == "mp":
         return {l: 2 for l in F.MP_FIELD_LABELS}
+    if dataset in _CSV_GEAR:
+        return {l: w for (l, o, w, s) in F.ARMOR_FIELDS}
+    return {}
+
+def _csv_field_ranges(dataset):
+    """label -> (min, max) for SIGNED fields. The generic import caps a value to
+    0..(2^bits - 1); a signed gear byte holding -5 (a real Speed penalty on the
+    disc) would be capped to 0 and silently lose the penalty, so signed fields
+    cap to their own two's-complement range instead. Datasets without signed
+    fields keep the unsigned behavior exactly."""
+    if dataset in _CSV_GEAR:
+        return {l: (-(1 << (8 * w - 1)), (1 << (8 * w - 1)) - 1)
+                for (l, o, w, s) in F.ARMOR_FIELDS if s}
     return {}
 
 def _csv_code_columns(dataset):
@@ -2166,6 +2208,7 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                          f"“{CSV_DATASETS[dataset]}” — nothing was written. "
                          f"Pick “{CSV_DATASETS[owner]}” in the Table list and import again."}
     codecols = _csv_code_columns(dataset)
+    ranges = _csv_field_ranges(dataset)
     # A code the disc itself uses is legitimate even where the legend doesn't name it, and
     # undoing an edit has to stay possible, so each coded column also accepts every value
     # currently in that column.
@@ -2202,12 +2245,12 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                     errors.append(f"line {ln} {label}={cell}: unknown code "
                                   f"({_csv_codes_hint(codecols[label])})")
                     continue
-                lim = (1 << 8 * widths.get(label, 2)) - 1
-                if not (0 <= val <= lim):
-                    capped = max(0, min(lim, val))
+                lo, hi = ranges.get(label, (0, (1 << 8 * widths.get(label, 2)) - 1))
+                if not (lo <= val <= hi):
+                    capped = max(lo, min(hi, val))
                     clamped += 1
                     if len(clamps) < 20:
-                        clamps.append(f"line {ln} {label}: {val} -> {capped} (field holds 0-{lim})")
+                        clamps.append(f"line {ln} {label}: {val} -> {capped} (field holds {lo}-{hi})")
                     val = capped
                     if cur.get(label) == val: continue
                 try:
@@ -2223,6 +2266,8 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                         write_skillfx(g, rid, labels.index(label), val)
                     elif dataset == "mp":
                         write_mp(g, rid, labels.index(label), val)
+                    elif dataset in _CSV_GEAR:
+                        write_armor_field(g, _CSV_GEAR[dataset], rid - 1, label, val)
                     changed += 1
                 except Exception as e:
                     errors.append(f"line {ln} {label}={cell}: {e}")

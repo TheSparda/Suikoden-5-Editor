@@ -184,6 +184,11 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
      isoSrc.includes('$("csvLegend")'));
   ok("s5patch defines the enemy scaler",
      psrc.includes("def enemy_scale") && psrc.includes("def enemy_scale_restore"));
+  ok("the CSV list offers the gear tables (issue #25)",
+     ["gear-head", "gear-body", "gear-arm", "gear-foot", "gear-accessory"]
+       .every((ds) => psrc.includes(`"${ds}"`)) && psrc.includes("_CSV_GEAR"));
+  ok("gear CSV caps signed fields to their own range (issue #25)",
+     psrc.includes("def _csv_field_ranges") && psrc.includes("write_armor_field"));
   ok("the enemy scaler leaves rewards and drops alone",
      /_ES_STATS = \[f for f in F\.ENEMY_FIELDS if f\[0\] in/.test(psrc) &&
      !/_ES_STATS[\s\S]{0,220}Potch/.test(psrc));
