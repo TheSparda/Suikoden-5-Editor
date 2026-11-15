@@ -437,10 +437,13 @@ VIEW_RENDER.gear = async (body) => {
     <div id="isoGbody"></div>`;
   const loadSlot = async () => {
     const slot = $("isoGslot").value;
+    // Display EQUIP ids (stat id + 1; 0 = nothing) so the Gear tab numbers pieces
+    // the same way the Characters tab and the CSV export do (issue #23). The
+    // engine calls below still take stat ids — renderGearItem converts back.
     GEAR_LIST[slot] = (JSON.parse(window.PYISO.gear(slot)).items || [])
-      .map(it => ({ id: it.id, name: it.name, desc: it.effect, cat: "DEF " + it.def }));
+      .map(it => ({ id: it.id + 1, name: it.name, desc: it.effect, cat: "DEF " + it.def }));
     renderGearItem(slot, gearCur[slot] != null ? gearCur[slot]
-                         : (GEAR_LIST[slot][0] ? +GEAR_LIST[slot][0].id : 0));
+                         : (GEAR_LIST[slot][0] ? +GEAR_LIST[slot][0].id : 1));
   };
   $("isoGslot").onchange = loadSlot;
   loadSlot();
@@ -452,8 +455,11 @@ function openGearPicker(){
     (id) => { gearCur[slot] = +id; renderGearItem(slot, +id); }, {});
 }
 function renderGearItem(slot, id) {
+  // `id` here is the EQUIP id shown to the user (issue #23); the engine's armor
+  // tables are indexed by stat id = equip id - 1.
+  const statId = id - 1;
   gearCur[slot] = id;
-  const r = JSON.parse(window.PYISO.gearitem(slot, id));
+  const r = JSON.parse(window.PYISO.gearitem(slot, statId));
   if (r.error) { $("isoGbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
   // make the selection obvious: name + id on the picker itself, effect underneath
   $("isoGpickName").textContent = r.name || ("#" + id);
@@ -466,7 +472,7 @@ function renderGearItem(slot, id) {
       <input type="text" value="${esc(enName)}" ${r.nameCap?"":"disabled"}
         maxlength="${r.nameCap||0}" data-cap="${r.nameCap||0}" oninput="updateCapNote(this)"
         title="${esc(r.nameJp ? "currently stored on the disc: " + r.nameJp : "")}"
-        data-key="gearname:${slot}:${id}" data-view="gearname" data-slot="${slot}" data-gid="${id}"
+        data-key="gearname:${slot}:${id}" data-view="gearname" data-slot="${slot}" data-gid="${statId}"
         data-orig="${esc(enName)}" data-raw="${esc(r.nameJp||"")}" data-kind="str"
         data-lbl="${esc(nm)} · name" data-grp="Gear · ${slot}"
         onchange="onIsoField(this)">${r.nameCap?REVERT_BTN:""}</div>
@@ -476,7 +482,7 @@ function renderGearItem(slot, id) {
       <input type="text" value="${esc(r.summaryEn||"")}" ${r.descCap?"":"disabled"}
         maxlength="${r.descCap||0}" data-cap="${r.descCap||0}" oninput="updateCapNote(this)"
         title="${esc(r.summary ? "currently stored on the disc: " + r.summary : "")}"
-        data-key="setdesc:${slot}:${id}" data-view="setdesc" data-slot="${slot}" data-statid="${id}"
+        data-key="setdesc:${slot}:${id}" data-view="setdesc" data-slot="${slot}" data-statid="${statId}"
         data-orig="${esc(r.summaryEn||"")}" data-raw="${esc(r.summary||"")}" data-kind="str"
         data-lbl="${esc(nm)} · description" data-grp="Gear · ${slot}"
         onchange="onIsoField(this)">${r.descCap?REVERT_BTN:""}</div>
@@ -484,7 +490,7 @@ function renderGearItem(slot, id) {
         · <span class="capnote">${(r.summaryEn||"").length}/${r.descCap||0}</span></div></div>
     </div><div class="subhd">Stats</div>`;
   h += `<div class="grid" style="padding-top:6px">` + r.fields.map(f =>
-    renderField(f, { view: "gear", ident: JSON.stringify({ slot, id }), key: `gear:${slot}:${id}:${f.label}`,
+    renderField(f, { view: "gear", ident: JSON.stringify({ slot, id: statId }), key: `gear:${slot}:${id}:${f.label}`,
       prefix: `${nm} · `, group: `Gear · ${slot}` })).join("") + `</div>`;
   $("isoGbody").innerHTML = h;
 }
@@ -563,6 +569,11 @@ function renderSet(idx){
         <div class="in"><input value="floating-point (read-only)" disabled></div>
         <div class="fnote">this set uses float math — not a simple magnitude</div></div>`;
       const lbl = e.field || ("char+" + e.charOff);
+      if (e.kind === "cap") return `<div class="fld"><label>${esc(lbl)} <span class="pill">cap</span></label>
+        <div class="in"><input type="number" value="${e.value}" disabled></div>
+        <div class="fnote">the game caps this field at ${e.value} — that clamp is built into
+          the set's code (it is not a bonus and does not replace the field's own value),
+          so it is shown for reference and isn't editable</div></div>`;
       return `<div class="fld"><label>${esc(lbl)} <span class="pill">${e.kind === "set" ? "=" : "+"}</span></label>
         <div class="in"><input type="number" value="${e.value}" min="-32768" max="65535"
           data-key="setbonus:${s.index}:${i}" data-view="setbonus" data-setidx="${s.index}" data-eff="${i}"
