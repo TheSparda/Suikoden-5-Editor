@@ -513,6 +513,23 @@ use, so it can't drift.
 
 ---
 
+## Changes
+
+A decoded diff of the disc you have open against a pristine base disc you pick. Every
+differing table field is listed with its old and new values, grouped by table (Characters,
+Spells, Runes, Rune prices, Heal prices, Gear, Enemies, MP growth, Skill effects, Unites,
+Char names, Field models). The region map is built from the same table constants the editor
+edits with, so a field the editor can write is a field the Changes list can name.
+
+Changed bytes that no table claims (code patches such as the Balance scalers and the
+passives, overlay rewrites, anything in the gaps between known fields) are shown as
+**Unmapped** hex rows rather than dropped: the list is complete, or it says why a row is
+only hex. Only the front slice of the base disc is read, the same slice the editor works
+on, so a difference past that slice (inside DATA.PAK, say) cannot be shown here; the CLI's
+xdelta commands cover the whole disc.
+
+---
+
 ## Char names, Field models, Assets, Reference
 
 - **Char names** — the 7-character roster/menu name table. This changes the name in menus,

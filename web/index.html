@@ -100,8 +100,9 @@
       <button class="chip mini" id="isoUndoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
       <button class="chip mini" id="isoRedoBtn" title="Redo (Ctrl+Y)" disabled>Redo ↷</button>
       <span class="sp"></span>
-      <button class="mini" id="isoImportBtn" title="Apply a shared .s5mod recipe">Import recipe</button>
+      <button class="mini" id="isoImportBtn" title="Apply a shared .s5mod recipe or .xdelta patch">Import recipe / patch</button>
       <button class="mini" id="isoExportBtn" title="Export your edits as a shareable .s5mod recipe">Export recipe</button>
+      <button class="mini" id="isoXdeltaBtn" title="Export your edits as a standard .xdelta patch (captures changes a recipe cannot express)">Export .xdelta</button>
       <button class="primary" id="isoSaveBtn" title="Write changed bytes into the ISO / export a recipe">Save<span class="dot hidden"></span></button>
     </div>
   </section>
@@ -127,6 +128,7 @@
 <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
 <script src="diff-core.js?v=1.17.6"></script>
 <script src="health-core.js?v=1.17.6"></script>
+<script src="vcdiff.js?v=1.17.6"></script>
 <script src="common.js?v=1.17.6"></script>
 <script src="app.js?v=1.17.6"></script>
 <script src="iso.js?v=1.17.6"></script>

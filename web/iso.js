@@ -54,6 +54,7 @@ const ISO_VIEWS = [
   { id: "name",     label: "Char names" },
   { id: "model",    label: "Field models" },
   { id: "assets",   label: "Assets" },
+  { id: "changes",  label: "Changes" },
   { id: "ref",      label: "Reference" },
 ];
 
@@ -63,6 +64,7 @@ window.isoReady = function () {
   $("isoPickBtn").onclick = pickISO;
   $("isoImportBtn").onclick = importRecipe;
   $("isoExportBtn").onclick = exportRecipe;
+  $("isoXdeltaBtn").onclick = exportXdelta;
   $("isoSaveBtn").onclick = saveISO;
   $("isoUndoBtn").onclick = isoUndo;
   $("isoRedoBtn").onclick = isoRedo;
@@ -1512,6 +1514,72 @@ async function pakZip(i) {
   } catch (err) { toast(err.message || String(err), "bad"); } finally { spin(false); }
 }
 
+/* Changes tab: a decoded diff of the open disc against a pristine base disc
+ * the user picks. All decoding happens in Python (Editor/s5changes.py, whose
+ * region map is built from s5fields' own table constants); this view only
+ * ships the base disc's front slice to /base.bin and renders the rows.
+ * Changed bytes no table claims are reported as Unmapped hex rows, never
+ * dropped, so the list is complete. */
+VIEW_RENDER.changes = async (body) => {
+  body.innerHTML = `<div style="padding:12px 16px">
+    <p class="note" style="text-transform:none;max-width:70ch">Compare the disc you have open
+    (including any edits made in this session) against a pristine, unmodified copy of the
+    game. Every differing table field is listed with its old and new values. Changes in
+    places no table covers (code patches, overlays) are shown as <b>Unmapped</b> hex rows
+    rather than hidden. Only the front slice of the base disc is read, the same slice the
+    editor itself works on. The comparison runs in the Python engine and can take a few
+    seconds on a large diff.</p>
+    <div class="row" style="padding:8px 0">
+      <button class="mini" id="chgPick">Choose pristine base ISO…</button>
+      <span class="note" id="chgBaseName">no base chosen yet</span>
+      <button class="mini primary" id="chgRun" disabled>Compare</button>
+    </div>
+    <input type="file" id="chgFile" accept=".iso,.bin,.img" style="display:none">
+    <div id="chgOut"></div></div>`;
+  let baseFile = null;
+  $("chgPick").onclick = () => $("chgFile").click();
+  $("chgFile").onchange = () => {
+    baseFile = $("chgFile").files[0] || null;
+    $("chgBaseName").textContent = baseFile ? baseFile.name : "no base chosen yet";
+    $("chgRun").disabled = !baseFile;
+  };
+  $("chgRun").onclick = async () => {
+    const out = $("chgOut");
+    out.innerHTML = `<span class="note">comparing…</span>`;
+    try {
+      const slice = new Uint8Array(await baseFile.slice(0, ISO_END).arrayBuffer());
+      pyodide.FS.writeFile("/base.bin", slice);
+      const rep = JSON.parse(window.PYISO.changes());
+      if (rep.error) { out.innerHTML = `<span class="bad">${esc(rep.error)}</span>`; return; }
+      const s = rep.summary;
+      if (!rep.rows.length) {
+        out.innerHTML = `<p class="ok" style="padding:6px 0">No differences in the front slice.
+          This disc matches the base everywhere the editor can see.</p>`;
+        return;
+      }
+      const ORDER = ["Characters","Spells","Runes","Rune prices","Heal prices","Gear",
+        "Enemies","MP growth","Skill effects","Unites","Char names","Field models","Unmapped"];
+      const groups = new Map();
+      for (const r of rep.rows) { if (!groups.has(r.group)) groups.set(r.group, []); groups.get(r.group).push(r); }
+      const ordered = [...ORDER.filter(g => groups.has(g)), ...[...groups.keys()].filter(g => !ORDER.includes(g))];
+      out.innerHTML = `<p class="note" style="text-transform:none;padding:6px 0">
+          ${s.fields} field change${s.fields === 1 ? "" : "s"}, ${s.totalBytes} changed bytes in ${s.runs} run${s.runs === 1 ? "" : "s"}${
+          s.unmappedBytes ? `, ${s.unmappedBytes} of them in unmapped places` : ""}${
+          s.sizeMismatch ? " (the two images differ in size; only the shared length was compared)" : ""}.</p>`
+        + ordered.map(g => `<div class="subhd">${esc(g)}</div>` + groups.get(g).map(r =>
+            r.group === "Unmapped"
+              ? `<div class="note" style="text-transform:none;padding:2px 0">0x${r.off.toString(16).toUpperCase()} (${r.len} bytes)<br>
+                   <span style="opacity:.75">base:</span> <code>${esc(r.old)}</code><br>
+                   <span style="opacity:.75">this disc:</span> <code>${esc(r.new)}</code></div>`
+              : `<div style="padding:2px 0"><b>${esc(r.label)}</b>
+                   <span class="note" style="text-transform:none">@0x${r.off.toString(16).toUpperCase()}</span><br>
+                   ${esc(r.old)} <span class="note">→</span> <b>${esc(r.new)}</b></div>`).join("")).join("");
+    } catch (e) {
+      out.innerHTML = `<span class="bad">${esc(e.message || e)}</span>`;
+    }
+  };
+};
+
 VIEW_RENDER.ref = async (body) => {
   const ref = JSON.parse(window.PYISO.reference());
   const cats = Object.keys(ref);
@@ -1633,10 +1701,78 @@ function exportRecipe() {
   downloadBlob(new TextEncoder().encode(JSON.stringify(mod, null, 0)), "edits.s5mod.json", "application/json");
   toast(`Exported recipe: ${patches.length} run(s).`, "ok");
 }
+/* .xdelta export/import (VCDIFF, web/vcdiff.js; CLI twin Editor/s5vcdiff.py).
+ * A recipe can only express field edits the engine can name; an .xdelta is the
+ * standard binary form of the same changed runs and also captures what a
+ * recipe cannot (overlay rewrites, arbitrary byte changes made elsewhere). */
+function exportXdelta() {
+  if (!ORIG || !isoFile) return;
+  if (typeof Vcdiff === "undefined") { toast("VCDIFF module didn't load — reload the page.", "bad"); return; }
+  const cur = pyodide.FS.readFile(ISO_PATH);
+  const runs = DiffCore.diffRuns(ORIG, cur, 0);
+  if (!runs.length) { toast("No changes to export.", "ok"); return; }
+  let patch;
+  try { patch = Vcdiff.buildXdelta(isoFile.size, runs.map(r => ({ off: r.off, data: r.bytes }))); }
+  catch (e) { toast("Couldn't build the xdelta patch: " + (e.message || e), "bad"); return; }
+  downloadBlob(patch, "edits.xdelta", "application/octet-stream");
+  const nb = runs.reduce((s, r) => s + r.len, 0);
+  toast(`Exported .xdelta patch (${patch.length} bytes, ${nb} byte(s) changed). Apply ONLY to a pristine ` +
+    `SLUS-212.91 ISO — this patch has no integrity check, so a wrong or already-modified source corrupts ` +
+    `silently (use the .s5mod recipe for source-verified edits). Apply with xdelta3 or the CLI: ` +
+    `s5patch.py xdelta-apply PRISTINE --patch edits.xdelta --out out.iso`, "warn");
+}
+
+/* Apply an .xdelta: decode only the windows the patch actually changes
+ * (plan() provenance narrows them without reading the whole disc), stage the
+ * resulting byte runs into the slice like any other edit. A patch that
+ * changes bytes beyond the front slice is refused whole — the CLI applies
+ * those. Mirrors the Suikoden IV editor's applyXdelta. */
+async function importXdelta(f) {
+  if (!isoFile) { toast("Load an ISO first.", "bad"); return; }
+  try {
+    const patch = new Uint8Array(await f.arrayBuffer());
+    const wins = [];
+    const total = Vcdiff.eachWindow(patch, (w) => wins.push(w));
+    if (total !== isoFile.size) {
+      toast(`This patch builds a ${total} byte file, but the loaded disc is ${isoFile.size} bytes — it was made for a different image.`, "bad"); return; }
+    if (wins.some((w) => w.fromTarget)) {
+      toast("This patch uses VCD_TARGET windows, which this editor can't apply. Use xdelta3 or the CLI instead.", "bad"); return; }
+    const edits = [];
+    for (const w of wins) {
+      if (!w.plan().length) continue;
+      const src = await readRange(w.sourceStart, w.sourceLen);
+      const out = w.decode(src);      // verifies the window's adler32 when the patch carries one
+      const cur = await readRange(w.targetStart, w.targetLen);
+      for (let i = 0; i < out.length;) {
+        if (out[i] === cur[i]) { i++; continue; }
+        const from = i;
+        while (i < out.length && out[i] !== cur[i]) i++;
+        edits.push({ off: w.targetStart + from, bytes: out.subarray(from, i) });
+      }
+    }
+    if (!edits.length) { toast("This patch changes nothing on this disc — it may already be applied.", "ok"); return; }
+    const bad = edits.filter((e) => e.off + e.bytes.length > ISO_END);
+    if (bad.length) {
+      const n = bad.reduce((a, e) => a + e.bytes.length, 0);
+      toast(`This patch changes ${n} byte(s) beyond the editor's front slice (first at 0x${bad[0].off.toString(16).toUpperCase()}) — nothing was applied. ` +
+        `Apply it with the CLI instead: s5patch.py xdelta-apply PRISTINE --patch patch.xdelta --out out.iso`, "bad"); return; }
+    const slice = pyodide.FS.readFile(ISO_PATH);
+    for (const e of edits) slice.set(e.bytes, e.off);
+    pyodide.FS.writeFile(ISO_PATH, slice);
+    const n = edits.reduce((a, e) => a + e.bytes.length, 0);
+    isoEdits["xdelta"] = { label: `Imported .xdelta patch (${edits.length} run(s))`, group: "Imported", to: "staged" };
+    if (curView) selectView(curView);
+    updateIsoToolbar(); captureUndoStep();
+    toast(`Applied patch — ${n} byte(s) in ${edits.length} run(s). Review, then Save to write.`, "ok");
+  } catch (e) { toast("Could not apply patch: " + (e.message || e), "bad"); }
+}
+
 function importRecipe() {
-  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,.s5mod,application/json";
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,.s5mod,.xdelta,application/json";
   inp.onchange = async () => {
     const f = inp.files[0]; if (!f) return;
+    const head = new Uint8Array(await f.slice(0, 3).arrayBuffer());
+    if (head[0] === 0xD6 && head[1] === 0xC3 && head[2] === 0xC4) { importXdelta(f); return; }
     try {
       const mod = JSON.parse(await f.text());
       const r = JSON.parse(window.PYISO.importmod(JSON.stringify(mod)));

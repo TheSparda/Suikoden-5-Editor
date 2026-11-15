@@ -65,7 +65,7 @@ async function boot(){
 
     setBoot("Loading the editor engines…", 45);
     pyodide.FS.mkdirTree("/editor");
-    const modules = ["s5save.py","s5patch.py","s5fields.py"];
+    const modules = ["s5save.py","s5patch.py","s5fields.py","s5changes.py"];
     await Promise.all(modules.map(async (m) => {
       const src = await (await fetch(`${EDITOR_DIR}/${m}`)).text();
       pyodide.FS.writeFile(`/editor/${m}`, src);
@@ -113,6 +113,7 @@ function isoGlueHandles(){
   const g = (n) => pyodide.globals.get(n);
   return {
     load:g("iso_load"), verify:g("iso_verify"), maps:g("iso_maps"), reference:g("iso_reference"),
+    changes:g("iso_changes"),
     chars:g("iso_chars"), char:g("iso_char"), setchar:g("iso_setchar"),
     spellnames:g("iso_spellnames"), spell:g("iso_spell"), setspell:g("iso_setspell"),
     runes:g("iso_runes"), rune:g("iso_rune"), setrune:g("iso_setrune"),
@@ -163,6 +164,7 @@ sys.path.insert(0, "/editor")
 import s5fields as F
 import s5patch as P
 import s5save as SV
+import s5changes as CH
 SV.BACKUPS = False; P.BACKUPS = False   # no real files in the browser FS
 
 # ===== Save editor =====
@@ -231,6 +233,14 @@ def iso_verify():
     try:
         with P.Iso(ISO) as g: reg = P.region_of(g)
         return json.dumps({"ok": reg is not None, "region": reg, "regionName": F.REGION_NAMES.get(reg, "")})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_changes():
+    # Decoded diff of the open disc (/iso.bin) against a pristine base disc
+    # whose front slice the page wrote to /base.bin (Editor/s5changes.py).
+    try:
+        cur = open(ISO, "rb").read()
+        base = open("/base.bin", "rb").read()
+        return json.dumps(CH.diff_report(cur, base))
     except Exception as e: return json.dumps({"error": str(e)})
 
 def _setter(fn):
