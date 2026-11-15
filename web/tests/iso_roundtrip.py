@@ -220,6 +220,35 @@ def main():
         back = {eid: h.ru(P.enemy_addr(eid) + 0x02, 2) for eid in SEED}
     chk("restore puts every enemy back exactly", back == before, str(back))
 
+    # ---- Character growth scaler (issue #13): the starting-stat scaler's other
+    # half. It must scale ONLY the growth fields (stats offsets 9-17), remember a
+    # baseline so re-applying never compounds, and restore exactly.
+    with P.Iso(slice_path, writable=True) as h:
+        a11 = P.table_addr("stats", 11)
+        for i in range(9): h.wu(a11 + 9 + i, 1, 10 + i)     # Dinn growths: 10..18
+    chk("iso_growthscale ok", json.loads(g["iso_growthscale"](2.0)).get("ok") is True)
+    with P.Iso(slice_path) as h:
+        grew = [h.ru(a11 + 9 + i, 1) for i in range(9)]
+        base_stats = [h.ru(a11 + i, 1) for i in range(9)]
+    chk("growths doubled", grew == [20 + 2 * i for i in range(9)], str(grew))
+    chk("starting stats untouched by the growth scaler",
+        base_stats == [88, 30, 5, 5, 5, 1, 5, 10, 5], str(base_stats))
+    json.loads(g["iso_growthscale"](2.0))                    # re-apply: no compounding
+    with P.Iso(slice_path) as h:
+        chk("re-applying the growth scaler does not compound",
+            [h.ru(a11 + 9 + i, 1) for i in range(9)] == grew)
+    chk("out-of-range growth factor is refused",
+        "error" in json.loads(g["iso_growthscale"](0.05)))
+    with P.Iso(slice_path) as h:
+        chk("the refused factor wrote nothing",
+            [h.ru(a11 + 9 + i, 1) for i in range(9)] == grew)
+    chk("iso_gsrestore ok", json.loads(g["iso_gsrestore"]()).get("count") == 120)
+    with P.Iso(slice_path) as h:
+        chk("growth restore is exact",
+            [h.ru(a11 + 9 + i, 1) for i in range(9)] == [10 + i for i in range(9)])
+    chk("growth restore with no baseline is a no-op",
+        json.loads(g["iso_gsrestore"]()).get("count") == 0)
+
     # ---- Gear sheets (issue #25): one CSV dataset per armor slot, keyed by the
     # equip id the Gear tab shows. Signed stat bonuses must round-trip as signed
     # (a Speed penalty of -7 is real data, not an error), and out-of-range values
@@ -305,8 +334,12 @@ def main():
     chk("iso_exportmod recipe", em.get("ok") is True and em["mod"]["patchCount"] > 0)
     # the recipe offset for the Dinn HP write must be the verified absolute ISO offset
     off_hp = F.TABLES["stats"][0] + 11 * F.TABLES["stats"][1]  # + 0 (HP)
-    offs = {p["off"] for p in em["mod"]["patches"]}
-    chk("recipe includes Dinn HP offset", off_hp in offs, hex(off_hp))
+    # It may sit inside a longer run rather than start one: once the growth scaler
+    # (issue #13) has also written the growth bytes, the journal coalesces the whole
+    # stats block into a single run, so check coverage, not run starts.
+    covered = any(p["off"] <= off_hp < p["off"] + len(p["new"]) // 2
+                  for p in em["mod"]["patches"])
+    chk("recipe includes Dinn HP offset", covered, hex(off_hp))
 
     # ---- field models: the swap is a pointer repoint, and Reset must restore it exactly
     mods = json.loads(g["iso_models"]())
@@ -345,6 +378,6 @@ if __name__ == "__main__":
     finally:
         try: os.remove(slice_path)
         except OSError: pass
-        for side in (".s5mod.json", ".hardmode.json", ".enemyscale.json"):
+        for side in (".s5mod.json", ".hardmode.json", ".enemyscale.json", ".growthscale.json"):
             try: os.remove(slice_path + side)
             except OSError: pass

@@ -1082,6 +1082,17 @@ VIEW_RENDER.balance = async (body) => {
     </div>
     <div id="hmMsg" class="note"></div>
 
+    <div class="subhd" style="margin:22px 0 4px">Character growth</div>
+    <p class="note">Scale every character's <b>per-level growth</b> (what each stat gains on a level-up) by a
+      factor. The multiplier above only changes starting stats; this one only changes growth (issue #13).
+      The baseline is remembered, so re-applying doesn't compound. Applies to a new game.</p>
+    <div class="row">
+      <label>Factor <input type="number" id="gsFactor" value="1.5" min="0.1" max="10" step="0.1" style="width:90px"></label>
+      <button id="gsApply">Apply multiplier</button>
+      <button class="ghost" id="gsRestore">Restore original</button>
+    </div>
+    <div id="gsMsg" class="note"></div>
+
     <div class="subhd" style="margin:22px 0 4px">Enemies</div>
     <p class="note">Scale every enemy's <b>combat stats</b> — HP, Attack, Technique, Accuracy, Magic, Evasion,
       PDF, MDF, Speed, Luck. Potch, skill-point rewards, elemental affinities and item drops are left untouched.
@@ -1133,6 +1144,25 @@ VIEW_RENDER.balance = async (body) => {
       if (r.error) { toast(r.error, "bad"); return; }
       delete isoEdits["balance"];
       $("hmMsg").textContent = `Restored ${r.count} characters.`; updateIsoToolbar(); captureUndoStep();
+    } finally { spin(false); }
+  };
+  $("gsApply").onclick = async () => {
+    spin(true);
+    try {
+      const r = JSON.parse(window.PYISO.growthscale(+$("gsFactor").value));
+      if (r.error) { toast(r.error, "bad"); return; }
+      isoEdits["growthscale"] = { label: `Growth ×${$("gsFactor").value} (all per-level growth)`, group: "Balance", to: "applied" };
+      $("gsMsg").textContent = `Scaled ${r.count} characters' growth.`; updateIsoToolbar(); captureUndoStep();
+    } finally { spin(false); }
+  };
+  $("gsRestore").onclick = async () => {
+    spin(true);
+    try {
+      const r = JSON.parse(window.PYISO.gsrestore());
+      if (r.error) { toast(r.error, "bad"); return; }
+      delete isoEdits["growthscale"];
+      $("gsMsg").textContent = r.count ? `Restored ${r.count} characters.` : "Nothing to restore.";
+      updateIsoToolbar(); captureUndoStep();
     } finally { spin(false); }
   };
 };

@@ -125,6 +125,7 @@ function isoGlueHandles(){
     pakdecode:g("iso_pakdecode"), paktextures:g("iso_paktextures"), pakfaces:g("iso_pakfaces"),
     paksheet:g("iso_paksheet"), pakzip:g("iso_pakzip"), pakmodelinfo:g("iso_pakmodelinfo"),
     hardmode:g("iso_hardmode"), hmrestore:g("iso_hmrestore"),
+    growthscale:g("iso_growthscale"), gsrestore:g("iso_gsrestore"),
     enemyscale:g("iso_enemyscale"), esrestore:g("iso_esrestore"),
     csvdatasets:g("iso_csvdatasets"), csvexport:g("iso_csvexport"), csvimport:g("iso_csvimport"),
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
@@ -587,6 +588,12 @@ def iso_hardmode(factor):
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_hmrestore():
     try: return json.dumps({"ok": True, "count": P.hardmode_restore(ISO)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_growthscale(factor):
+    try: return json.dumps({"ok": True, "count": P.growth_scale(ISO, float(factor))})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_gsrestore():
+    try: return json.dumps({"ok": True, "count": P.growth_scale_restore(ISO)})
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_enemyscale(factor, hp_factor):
     try:

@@ -189,6 +189,12 @@ ok("app.js exposes the model adapters", appSrc.includes("def iso_models") && app
        .every((ds) => psrc.includes(`"${ds}"`)) && psrc.includes("_CSV_GEAR"));
   ok("gear CSV caps signed fields to their own range (issue #25)",
      psrc.includes("def _csv_field_ranges") && psrc.includes("write_armor_field"));
+  ok("s5patch defines the growth scaler (issue #13)",
+     psrc.includes("def growth_scale") && psrc.includes("def growth_scale_restore")
+     && psrc.includes("_GS_STATS"));
+  ok("glue exposes the growth scaler adapters",
+     appSrc.includes("def iso_growthscale") && appSrc.includes("def iso_gsrestore"));
+  ok("iso.js wires the growth scaler", isoSrc.includes('$("gsApply")') && isoSrc.includes('$("gsRestore")'));
   ok("the enemy scaler leaves rewards and drops alone",
      /_ES_STATS = \[f for f in F\.ENEMY_FIELDS if f\[0\] in/.test(psrc) &&
      !/_ES_STATS[\s\S]{0,220}Potch/.test(psrc));

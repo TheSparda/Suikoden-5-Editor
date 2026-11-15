@@ -2315,6 +2315,50 @@ def hardmode_restore(iso_path):
     return len(base)
 
 
+# ---- Character growth scaler (issue #13): the other half of the stats table.
+# Hard Mode above scales the 9 STARTING stats and deliberately leaves the 9
+# per-level growth fields (offsets 9-17) alone, which is exactly what #13 asks
+# to be able to scale. Same baseline-sidecar discipline: originals are stored
+# once, re-applying scales the ORIGINALS instead of compounding, Restore exact.
+_GS_STATS = [f for f in F.TABLES["stats"][2] if f[3] == "num" and f[1] >= 9]  # 9 growth fields @off 9-17 (u8)
+
+def _gs_sidecar(iso_path): return iso_path + ".growthscale.json"
+
+def growth_scale(iso_path, factor):
+    """Multiply all characters' per-level stat growths by `factor` (0.1..10).
+    Stores a baseline on first apply. Returns count of characters touched."""
+    factor = float(factor)
+    if not (0.1 <= factor <= 10): raise ValueError("factor must be between 0.1 and 10")
+    chars = [c["id"] for c in F.load_characters()]
+    side = _gs_sidecar(iso_path)
+    base = {}
+    if os.path.exists(side):
+        base = _json.load(open(side))
+    backup(iso_path)
+    with Iso(iso_path, writable=True) as g:
+        for cid in chars:
+            a = table_addr("stats", cid); key = str(cid)
+            if key not in base:
+                base[key] = [g.ru(a + off, w) for (_, off, w, _k) in _GS_STATS]
+            for i, (_, off, w, _k) in enumerate(_GS_STATS):
+                v = int(base[key][i] * factor)
+                g.wu(a + off, w, max(0, min((1 << 8*w) - 1, v)))
+    _json.dump(base, open(side, "w"))
+    return len(chars)
+
+def growth_scale_restore(iso_path):
+    side = _gs_sidecar(iso_path)
+    if not os.path.exists(side): return 0
+    base = _json.load(open(side))
+    with Iso(iso_path, writable=True) as g:
+        for key, vals in base.items():
+            a = table_addr("stats", int(key))
+            for i, (_, off, w, _k) in enumerate(_GS_STATS):
+                g.wu(a + off, w, vals[i])
+    os.remove(side)
+    return len(base)
+
+
 # ---- Enemy scaler: the same baseline trick, applied to every enemy's COMBAT stats.
 # Rewards (potch / skill points), elemental affinities and item drops are deliberately
 # left alone — scaling those changes the economy, not the difficulty. Each stat is u16,
@@ -2530,6 +2574,11 @@ def main(argv=None):
         else: n = hardmode_apply(a.iso, a.factor); print(f"scaled stats of {n} chars x{a.factor}")
         return 0
     add("hardmode", _hm, [(("--factor",), dict(type=float, default=0.5)), (("--restore",), dict(action="store_true"))])
+    def _gs(a):
+        if a.restore: n = growth_scale_restore(a.iso); print(f"restored {n} chars")
+        else: n = growth_scale(a.iso, a.factor); print(f"scaled growths of {n} chars x{a.factor}")
+        return 0
+    add("growthscale", _gs, [(("--factor",), dict(type=float, default=1.5)), (("--restore",), dict(action="store_true"))])
     add("overlays", _overlays)
     add("overlay-dump", _overlaydump, [(("--name",), dict(required=True)), (("--out",), dict(required=True))])
     add("overlay-set", _overlayset, [(("--name",), dict(required=True)), (("--image",), dict(required=True))])
