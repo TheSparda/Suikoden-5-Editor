@@ -1031,12 +1031,17 @@ def _set_words(iso):
     raw = iso.rd(F.SET_DETECT_OFF, F.SET_DETECT_LEN)
     return list(struct.unpack("<%dI" % (F.SET_DETECT_LEN // 4), raw))
 
-def _set_trace(ws, entry, det_v):
+def _set_trace(ws, entry, det_v, seed_regs=None):
     """Follow fall-through from `entry` (a vaddr), tracking registers, until the set
     index is returned. Returns (members, index). $v1/$v0 are seeded with the
-    function-wide convention (head/body id) so blocks entered mid-chain resolve."""
+    function-wide convention (head/body id) so blocks entered mid-chain resolve.
+    `seed_regs` carries register values that are already live at `entry` — for a
+    block entered through the dispatch chain, the `li` that held the head id is
+    still live and may be compared against ANOTHER slot later in the block
+    (Pale Moon: head id 22 is loaded once in the dispatch and reused for the
+    accessory compare, because the Casque and the Necklace share equip id 22)."""
     at = lambda va: ws[(va - det_v) // 4]
-    regs = {}                      # reg -> (value, file offset of the `li`)
+    regs = dict(seed_regs or {})   # reg -> (value, file offset of the `li`)
     loaded = {3: 68, 2: 69}        # reg -> live-struct offset it was loaded from
     members, idx, va = [], None, entry
     for _ in range(160):
@@ -1074,10 +1079,13 @@ def _set_effects(iso, handler_vaddr):
     fo = handler_vaddr - F.VADDR_DELTA
     hw = list(struct.unpack("<28I", iso.rd(fo, 112)))
     out, pend, stop_after = [], None, None
+    slti_imms = set()                                       # imm of every slti seen so far
     for k, w in enumerate(hw):
         fk = fo + k * 4
         op = w >> 26; rs = (w >> 21) & 31; rt = (w >> 16) & 31; imm = w & 0xFFFF
-        if op in (0x21, 0x25, 0x24, 0x20):                  # lh/lhu/lbu/lb -> read target
+        if op == 0x0A:                                      # slti -> a range guard
+            slti_imms.add(imm)
+        elif op in (0x21, 0x25, 0x24, 0x20):                # lh/lhu/lbu/lb -> read target
             pend = {"charOff": _s16(imm), "width": "h" if op in (0x21, 0x25) else "b"}
         elif op == 0x09 and rs == 0 and rt != 0:            # li -> a "set" style effect
             pend = {"setval": (imm, fk)}
@@ -1085,9 +1093,20 @@ def _set_effects(iso, handler_vaddr):
             pend.update({"kind": "add", "value": _s16(imm), "immOff": fk}); out.append(pend); pend = None
         elif op in (0x28, 0x29, 0x2B):                      # sb/sh/sw -> commits a li
             if pend and "setval" in pend:
-                out.append({"kind": "set", "charOff": _s16(imm),
+                coff, val = _s16(imm), pend["setval"][0]
+                # A li+store sitting in a branch's delay slot, storing value V to a
+                # field the handler already ADDs to, right after an slti guard
+                # against V+1, is not a bonus — it is the game's CAP on that field
+                # (Samurai: Double Critical is clamped to 100, issue #29). Report
+                # it as a read-only "cap" instead of an editable "set" effect.
+                prev = hw[k - 1] if k else 0
+                in_delay = (prev >> 26) == 2 or ((prev >> 26) in (4, 5)
+                             and ((prev >> 21) & 31) == 0 and ((prev >> 16) & 31) == 0)
+                is_cap = (in_delay and (val + 1) in slti_imms
+                          and any(e.get("kind") == "add" and e.get("charOff") == coff for e in out))
+                out.append({"kind": "cap" if is_cap else "set", "charOff": coff,
                             "width": {0x28: "b", 0x29: "h", 0x2B: "w"}[op],
-                            "value": pend["setval"][0], "immOff": pend["setval"][1]})
+                            "value": val, "immOff": pend["setval"][1]})
                 pend = None
         elif (op in (4, 5) and rs == 0 and rt == 0) or op == 2 or (op == 0 and (w & 0x3F) == 8):
             stop_after = k + 1                              # MIPS: the delay slot still runs
@@ -1212,12 +1231,12 @@ def read_sets(iso):
     det_v = F.SET_DETECT_OFF + F.VADDR_DELTA
     ws = _set_words(iso)
     at = lambda va: ws[(va - det_v) // 4]
-    # dispatch map: `beq $v1,<li head id>, target`
+    # dispatch map: `beq $v1,<li head id>, target` -> (head id, li file offset, li reg)
     disp, dregs = {}, {}
     for k in range(F.SET_DETECT_LEN // 4):
         va = det_v + k * 4; w = ws[k]
         op = w >> 26; rs = (w >> 21) & 31; rt = (w >> 16) & 31; imm = w & 0xFFFF
-        if op == 0x09 and rs == 0: dregs[rt] = (imm, va - F.VADDR_DELTA)
+        if op == 0x09 and rs == 0: dregs[rt] = (imm, va - F.VADDR_DELTA, rt)
         elif op == 4 and (rs == 3 or rt == 3):
             other = rt if rs == 3 else rs
             if other in dregs: disp[va + 4 + _s16(imm) * 4] = dregs[other]
@@ -1230,16 +1249,40 @@ def read_sets(iso):
     def score(m):
         if sum(1 for x in m if x["slot"] == "head") > 1: return -1   # a dispatch chain
         return len({x["slot"] for x in m}) * 100 + len(m)
-    best = {}
+    # A set's block can be entered at several points (its dispatch target, or a
+    # fall-through part-way in), and each entry point's trace sees only part of
+    # the member compares — Pale Moon's dispatch trace found head/body/arm/foot
+    # but not the accessory, a mid-block trace found the accessory but not the
+    # head, and the tie between them silently dropped the Casque (issue #26).
+    # So keep every credible candidate and UNION their members: dispatch-entry
+    # traces first (they own the head compare), then by score.
+    cands = {}
     for t in sorted(targets):
         if not (det_v <= t < det_v + F.SET_DETECT_LEN): continue
-        m, i = _set_trace(ws, t, det_v)
+        seed = None
+        if t in disp:
+            hid, ho, hreg = disp[t]; seed = {hreg: (hid, ho)}
+        m, i = _set_trace(ws, t, det_v, seed_regs=seed)
         if i is None or i >= F.SET_COUNT: continue
         if t in disp and not any(x["slot"] == "head" for x in m):
-            hid, ho = disp[t]; m = [{"slot": "head", "id": hid, "off": ho}] + m
+            hid, ho, _ = disp[t]; m = [{"slot": "head", "id": hid, "off": ho}] + m
         sc = score(m)
         if sc < 200: continue
-        if i not in best or sc > best[i][2]: best[i] = (m, t, sc)
+        cands.setdefault(i, []).append((t in disp, sc, t, m))
+    best = {}
+    for i, lst in cands.items():
+        lst.sort(key=lambda c: (not c[0], -c[1], c[2]))
+        merged, seen = [], set()
+        for _, _, _, m in lst:
+            for mem in m:
+                # accessories may legitimately repeat (two slots); other slots
+                # take the first (highest-priority) trace's id
+                key = (mem["slot"], mem["id"]) if mem["slot"] == "accessory" else (mem["slot"],)
+                if key in seen: continue
+                seen.add(key); merged.append(mem)
+        order = {"head": 0, "body": 1, "arm": 2, "foot": 3, "accessory": 4}
+        merged.sort(key=lambda mem: order.get(mem["slot"], 9))
+        best[i] = (merged, lst[0][2], lst[0][1])
     jt = list(struct.unpack("<%dI" % F.SET_COUNT, iso.rd(F.SET_JT_OFF, F.SET_COUNT * 4)))
     names = _set_names()
     out = []
@@ -1290,6 +1333,7 @@ def write_set_bonus(iso, set_index, effect_index, value):
     s = next((x for x in data["sets"] if x["index"] == int(set_index)), None)
     if not s: raise KeyError("no set %s" % set_index)
     eff = s["effects"][int(effect_index)]
+    if eff.get("kind") == "cap": raise ValueError("that value is the game's built-in cap on the field, not an editable bonus")
     if eff.get("immOff") is None: raise ValueError("this effect isn't a simple numeric bonus")
     v = int(value)
     if not (-32768 <= v <= 65535): raise ValueError("value out of range")

@@ -169,12 +169,12 @@ def open_save(path):
     try:
         if _individual(path):
             s = SV.read_individual_save(path)
-            if not s: return json.dumps({"error": "no Suikoden V save found in that file"})
+            if not s: return json.dumps({"error": "no Suikoden V save found in that file (supported formats: memory-card images .ps2/.mc2/.mcd/.bin, .psu, .cbs, .xps/.sps)"})
             s["individual"] = True; s["editable"] = True; s.setdefault("meta", {"title": ""})
             saves = [s]
         else:
             saves = SV.read_all_saves(path)
-        if not saves: return json.dumps({"error": "no Suikoden V save found in that file"})
+        if not saves: return json.dumps({"error": "no Suikoden V save found in that file (supported formats: memory-card images .ps2/.mc2/.mcd/.bin, .psu, .cbs, .xps/.sps)"})
         return json.dumps({"saves": saves})
     except Exception as e:
         return json.dumps({"error": "could not read save: " + str(e)})
@@ -648,7 +648,7 @@ function wireSaveInputs(){
 async function pickViaFS(){
   try{
     const [h] = await window.showOpenFilePicker({ types: [{ description: "PS2 save",
-      accept: { "application/octet-stream": [".ps2",".mc2",".mcd",".bin",".psu",".psv",".cbs",".xps",".sps",".max"] } }] });
+      accept: { "application/octet-stream": [".ps2",".mc2",".mcd",".bin",".psu",".cbs",".xps",".sps"] } }] });
     saveHandle = h; const f = await h.getFile(); openFile(f, h);
   }catch(e){ if(e && e.name !== "AbortError") toast("Could not open file: " + e.message, "bad"); }
 }

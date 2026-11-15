@@ -56,6 +56,11 @@ EXPECT_MEMBERS = {
     "Guardian":   [("head",21),("body",55),("arm",22),("foot",17),("accessory",19)],
     "Classic":    [("body",24),("arm",1),("foot",16),("accessory",23)],
     "Sun":        [("head",25),("body",46),("arm",24),("foot",22),("accessory",49)],
+    # Pale Moon's head compare lives in the dispatch chain and its id (22) is
+    # reused for the accessory compare — both must survive the trace (#26).
+    "Pale Moon":  [("head",22),("body",41),("arm",21),("foot",19),("accessory",22)],
+    "Samurai":    [("head",20),("body",53),("arm",36),("foot",29)],
+    "Windspun":   [("head",32),("body",68),("arm",37),("foot",30),("accessory",4),("accessory",48)],
 }
 for nm, want in EXPECT_MEMBERS.items():
     got = [(m["slot"], m["id"]) for m in sets[nm]["members"]]
@@ -73,6 +78,13 @@ for nm, want in EXPECT_BONUS.items():
     chk("%s bonus matches the guide" % nm, got[:len(want)] == want, str(got))
 chk("Fish sets Water affinity to 6 (== rank S)",
     [(e["kind"], e["charOff"], e["value"]) for e in sets["Fish"]["effects"]] == [("set", 256, 6)])
+# Samurai's third decoded row is the game's CAP on Double Critical (a guarded
+# li+store in a branch delay slot), not a third bonus — it must decode as a
+# read-only "cap", never as an editable "set" (#29).
+chk("Samurai Double Critical cap decodes as cap, not a bonus",
+    [(e["kind"], e["charOff"], e["value"]) for e in sets["Samurai"]["effects"]]
+    == [("add", 304, 10), ("add", 305, 10), ("cap", 305, 100)],
+    str([(e["kind"], e["charOff"], e["value"]) for e in sets["Samurai"]["effects"]]))
 chk("Sun grants 8 x +5 (all stats)",
     len(sets["Sun"]["effects"]) == 8 and all(e["value"] == 5 for e in sets["Sun"]["effects"]))
 chk("Windspun uses float math (read-only)",

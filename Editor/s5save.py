@@ -462,7 +462,12 @@ class MemCard:
         length = struct.unpack_from("<I", buf, off + 4)[0]
         cluster = struct.unpack_from("<I", buf, off + 0x10)[0]
         name = buf[off+0x40:off+0x40+32].split(b"\x00")[0].decode("ascii", "replace")
-        return {"mode": mode, "is_dir": bool(mode & 0x0020), "length": length,
+        # DF_EXISTS (0x8000): the entry is in use. When the PS2 deletes a save it
+        # only clears this bit — the dirent, name and data stay on the card until
+        # the space is reused, so scans must skip entries without it or deleted
+        # saves come back from the dead (issue #31).
+        return {"mode": mode, "is_dir": bool(mode & 0x0020),
+                "exists": bool(mode & 0x8000), "length": length,
                 "cluster": cluster, "name": name}
     def _listdir(self, dir_cluster, count):
         data = self._chain(dir_cluster, count * 512); out = []
@@ -478,11 +483,11 @@ class MemCard:
         # prefix=None matches every known Suikoden V region (US/PAL/JP); a caller
         # may still pass one explicit folder prefix to narrow the scan.
         return [{"folder": e["name"], "cluster": e["cluster"], "length": e["length"]}
-                for e in self.root_entries() if e["is_dir"] and
+                for e in self.root_entries() if e["is_dir"] and e["exists"] and
                 (e["name"].startswith(prefix) if prefix else is_s5_folder(e["name"]))]
     def read_file(self, dir_cluster, dir_len, filename):
         for e in self._listdir(dir_cluster, dir_len):
-            if e["name"] == filename and not e["is_dir"]:
+            if e["name"] == filename and not e["is_dir"] and e["exists"]:
                 return self._chain(e["cluster"], e["length"])[:e["length"]]
         return None
     # write support (in-place, same length; refreshes ECC)
@@ -508,7 +513,7 @@ class MemCard:
     def write_file(self, dir_cluster, dir_len, filename, new_content):
         ent = None
         for e in self._listdir(dir_cluster, dir_len):
-            if e["name"] == filename and not e["is_dir"]: ent = e; break
+            if e["name"] == filename and not e["is_dir"] and e["exists"]: ent = e; break
         if ent is None: raise KeyError(f"{filename} not found")
         if len(new_content) != ent["length"]:
             raise ValueError("in-place write only (length changed)")

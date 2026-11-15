@@ -73,7 +73,7 @@ def pick_save_dialog():
         from tkinter import filedialog
         root = tk.Tk(); root.withdraw(); root.attributes("-topmost", True)
         path = filedialog.askopenfilename(title="Select a PS2 save / memory card",
-            filetypes=[("PS2 saves", "*.ps2 *.psu *.psv *.bin *.mcd *.mcr *.max *.cbs *.sps *.xps"),
+            filetypes=[("PS2 saves", "*.ps2 *.psu *.bin *.mcd *.mcr *.cbs *.sps *.xps"),
                        ("All files", "*.*")])
         root.update(); root.destroy()
         return {"path": path} if path else {"cancelled": True}
@@ -1915,7 +1915,7 @@ class H(http.server.BaseHTTPRequestHandler):
                             s["card"] = card["name"]; s["cardPath"] = card["path"]; saves.append(s)
                     except Exception: pass
                 # 2) standalone save files (.xps / .sps / .cbs)
-                exts = (".xps", ".sps", ".cbs", ".psu", ".psv", ".max")
+                exts = (".xps", ".sps", ".cbs", ".psu")
                 for r in roots:
                     if not r or not os.path.isdir(r): continue
                     for dp, _, files in os.walk(r):
@@ -1965,7 +1965,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 except Exception as e:
                     return self._send(200, json.dumps({"error": "could not read save: " + str(e)}))
                 if not saves:
-                    return self._send(200, json.dumps({"error": "no Suikoden V save found in that file"}))
+                    return self._send(200, json.dumps({"error": "no Suikoden V save found in that file (supported formats: memory-card images .ps2/.mc2/.mcd/.bin, .psu, .cbs, .xps/.sps)"}))
                 return self._send(200, json.dumps({"saves": saves}))
             if self.path == "/api/savewrite":
                 card = d["card"]
