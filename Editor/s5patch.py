@@ -19,6 +19,15 @@ Commands:
   ladder   <iso>                         dump the 0x4986C0 ladder
   peek     <iso> --off 0x.. --len N
   poke     <iso> --off 0x.. --u8/--u16/--hex ..
+  overlays <iso>                         list OVL/*.ROM (packed/unpacked, member types)
+  overlay-dump <iso> --name WAR --out F  write one overlay's unpacked image to F
+  overlay-set  <iso> --name WAR --image F
+                                         repack F as szl and write it back in place
+                                         (refused if it outgrows the file's sector slot;
+                                         re-extracted and byte-verified after writing)
+  overlay-verify <iso>                   unpack/repack/unpack round trip, all overlays
+  pak-list <iso> [--filter STR]          list DATA.PAK contents (substring or glob)
+  pak-extract <iso> --path P --out F     extract one DATA.PAK file (raw, streaming)
 """
 import argparse, collections, os, re, struct, sys, shutil
 import s5fields as F
@@ -789,6 +798,122 @@ def reinsert_overlay(iso, name, bin_path):
         _SUPPRESS_MOD = prev
     return {"name": name, "decSize": len(edited), "newCompSize": len(comp),
             "container": len(container), "slot": budget, "slack": budget - len(container)}
+
+
+# ---- .ROM overlays + DATA.PAK (desktop CLI) ----------------------------------
+# The codec and the archive reader live in s5rom.py / s5pak.py and are imported
+# lazily inside each command: the web editor loads this file into Pyodide with
+# only s5save/s5patch/s5fields present, so a top-level import would break it.
+
+def _overlay_entry(iso_path, name):
+    """Directory entry for OVL/<name>; the name may omit the .ROM suffix."""
+    nm = name.upper()
+    if not nm.endswith(".ROM"): nm += ".ROM"
+    for o in list_overlays(iso_path):
+        if o["name"] == nm: return o
+    raise KeyError(f"no overlay {name!r} in OVL/")
+
+def _overlays(a):
+    import s5rom
+    with Iso(a.iso) as g:
+        print(f"{'overlay':<14} {'packed':>9} {'unpacked':>9}  members")
+        for o in list_overlays(a.iso):
+            raw = g.rd(o["lba"] * _SECT, o["size"])
+            try:
+                infos = s5rom.member_info(raw)
+                types = ",".join(i["type"] for i in infos)
+                dec = str(sum(i["usize"] for i in infos))
+            except s5rom.UnsupportedMemberError:
+                types = "unsupported"; dec = "?"
+            print(f"{o['name']:<14} {o['size']:>9} {dec:>9}  {types}")
+    return 0
+
+def _overlaydump(a):
+    import s5rom
+    o = _overlay_entry(a.iso, a.name)
+    with Iso(a.iso) as g: raw = g.rd(o["lba"] * _SECT, o["size"])
+    image = s5rom.unpack_image(raw)
+    with open(a.out, "wb") as w: w.write(image)
+    print(f"{o['name']}: {len(raw)} packed -> {len(image)} unpacked -> {a.out}")
+    return 0
+
+def _overlayset(a):
+    import s5rom
+    image = open(a.image, "rb").read()
+    container = s5rom.pack_container(image, "szl")
+    o = _overlay_entry(a.iso, a.name)
+    slot = ((o["size"] + _SECT - 1) // _SECT) * _SECT   # the file's sector allocation
+    if len(container) > slot:
+        print(f"refused: repacked {o['name']} is {len(container)} bytes but its "
+              f"sector allocation is {slot} (directory size {o['size']}). "
+              f"Nothing was written.", file=sys.stderr)
+        return 2
+    backup(a.iso)
+    global _SUPPRESS_MOD
+    prev = _SUPPRESS_MOD; _SUPPRESS_MOD = True   # whole-sector write: keep it out of the .s5mod recipe, as in reinsert_overlay
+    try:
+        with Iso(a.iso, writable=True) as g:
+            g.wr(o["lba"] * _SECT, container + b"\x00" * (slot - len(container)))
+            rec_off, _ = _find_ovl_dirrec(a.iso, o["name"])
+            g.wr(rec_off + 10, len(container).to_bytes(4, "little"))
+            g.wr(rec_off + 14, len(container).to_bytes(4, "big"))
+    finally:
+        _SUPPRESS_MOD = prev
+    # prove it: re-extract from the ISO and byte-compare with the supplied image
+    o2 = _overlay_entry(a.iso, a.name)
+    with Iso(a.iso) as g: raw = g.rd(o2["lba"] * _SECT, o2["size"])
+    if s5rom.unpack_image(raw) != image:
+        print(f"FAIL: {o['name']} re-extracted from the ISO does not match the "
+              f"supplied image", file=sys.stderr)
+        return 2
+    print(f"{o['name']}: wrote {len(container)} bytes (image {len(image)}, slot "
+          f"{slot}, slack {slot - len(container)}); re-extract verified byte-identical")
+    return 0
+
+def _overlayverify(a):
+    import s5rom
+    bad = 0; total = 0
+    with Iso(a.iso) as g:
+        for o in list_overlays(a.iso):
+            total += 1
+            raw = g.rd(o["lba"] * _SECT, o["size"])
+            try:
+                img = s5rom.unpack_image(raw)
+                again = s5rom.unpack_image(s5rom.pack_container(img, "szl"))
+                ok = again == img
+                note = f"{len(raw)} packed, {len(img)} unpacked"
+            except Exception as e:
+                ok = False; note = str(e)
+            print(("PASS " if ok else "FAIL ") + o["name"] + "  " + note)
+            if not ok: bad += 1
+    print(f"{total - bad}/{total} overlays round-trip clean")
+    return 0 if not bad else 2
+
+def _pak_match(path, filt):
+    """--filter semantics: a glob when the pattern has glob characters, else a
+    case-insensitive substring match (the datapak_list convention)."""
+    if any(c in filt for c in "*?["):
+        import fnmatch
+        return fnmatch.fnmatchcase(path.lower(), filt.lower())
+    return filt.lower() in path.lower()
+
+def _paklist(a):
+    import s5pak
+    with s5pak.DataPak(a.iso) as pak:
+        entries = pak.entries()
+    if a.filter: entries = [e for e in entries if _pak_match(e["path"], a.filter)]
+    for e in entries:
+        print(f"{e['size']:>12}  LBA {e['extents'][0][0]:>8}  {e['path']}")
+    print(f"{len(entries)} files, {sum(e['size'] for e in entries)} bytes",
+          file=sys.stderr)
+    return 0
+
+def _pakextract(a):
+    import s5pak
+    with s5pak.DataPak(a.iso) as pak:
+        e = pak.extract(a.path, a.out)
+    print(f"{e['path']}: {e['size']} bytes -> {a.out}")
+    return 0
 
 
 def table_addr(table, cid):
@@ -2360,6 +2485,12 @@ def main(argv=None):
         else: n = hardmode_apply(a.iso, a.factor); print(f"scaled stats of {n} chars x{a.factor}")
         return 0
     add("hardmode", _hm, [(("--factor",), dict(type=float, default=0.5)), (("--restore",), dict(action="store_true"))])
+    add("overlays", _overlays)
+    add("overlay-dump", _overlaydump, [(("--name",), dict(required=True)), (("--out",), dict(required=True))])
+    add("overlay-set", _overlayset, [(("--name",), dict(required=True)), (("--image",), dict(required=True))])
+    add("overlay-verify", _overlayverify)
+    add("pak-list", _paklist, [(("--filter",), dict())])
+    add("pak-extract", _pakextract, [(("--path",), dict(required=True)), (("--out",), dict(required=True))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
