@@ -120,6 +120,14 @@ npm run test:all          # both
   skill ranks, recruitment, and the three inventory lists: party bag, warehouse and key
   items, with the game's own stack limits enforced). Fields whose offsets are not
   reverse-engineered yet are intentionally not exposed.
+- The save editor also carries two read-only helpers. The **health check** audits a save
+  against rules the game itself keeps (recruitment impossibilities such as Eresh and Euram
+  both set, party members whose recruit bit is clear, inventory entries judged against the
+  disc's stack-limit table, potch over the game's 99,999,999 clamp, unterminated name
+  slots) and reports findings; it changes nothing. The **recruitment guide** shows where
+  each character is found, how they join, and their missable cutoff when a guide supports
+  one (`../Editor/s5_recruit_guide.json`, built from cited sources by
+  `../Editor/build_recruit_refs.py`).
 - ISO edits apply to a **new game**. Do not use emulator save states. Back up the ISO, or
   export a recipe, before saving.
 - Keep the original file until the edited one has loaded in-game.

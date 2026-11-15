@@ -1,0 +1,547 @@
+{
+ "0": {
+  "how": "The Prince, and the protagonist. He is in the party from the start of the game.",
+  "missable": "",
+  "where": "Sol-Falena"
+ },
+ "1": {
+  "how": "Joins automatically after the Defense of Raftfleet.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "10": {
+  "how": "After the Queen's Campaign, take Jeane to the Big Hole again and meet Eresh. Go through the new passageway in the ruins and defeat the boss inside, and she joins permanently. You can leave the ruins before beating the boss to keep the other option open.",
+  "missable": "Mutually exclusive with Euram: taking Euram's route closes hers. She only becomes permanent once the boss is beaten.",
+  "where": "Big Hole (Underground Ruins)"
+ },
+ "100": {
+  "how": "Three ways. After dueling Roy, answer \"I'll do no such thing\", \"I was only trying to clear my good name...\" and \"All right, it's a deal!\", and Faylon and Faylen join. Or find the pair in the furthest room of the bandit's hideout in Ranro Mountain, return the stolen properties to Sable in two trips via the mayor's house. Or, if they were still not recruited and you choose to defend the castle, talk to them afterwards (the choices do not matter).",
+  "missable": "The clean route is the dialogue choices right after the Roy duel. The fallback routes close as the story advances, so take one of them promptly.",
+  "where": "Sable and Ranro Mountain"
+ },
+ "101": {
+  "how": "After the restoration of Lordlake, put Lun in your party, go to Raftfleet to trigger a scene with Subala, then beat her at the fishing mini-game.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "102": {
+  "how": "Joins with Haswar (see Haswar): accompany her to Lunas with Takamu in the party.",
+  "missable": "Gone once Sol-Falena is liberated.",
+  "where": "Lunas Northern Woods"
+ },
+ "103": {
+  "how": "After the coronation ceremony and HQ upgrade, meet her in Yashuna Village with Muroon in your party, go into the cave and discover the problem. She is recruited during the scene with the dwarves, regardless of your choice.",
+  "missable": "",
+  "where": "Yashuna Village"
+ },
+ "104": {
+  "how": "While on Nirva Island, approach Chisato and the crowd of children to trigger the handpuppet scene. After the coronation ceremony and HQ upgrade, bring Bernadette to Nirva Island to trigger the kidnapping event, then talk to Chisato and ask her to help. She joins after the event.",
+  "missable": "",
+  "where": "Nirva Island"
+ },
+ "105": {
+  "how": "After recruiting Lucretia, bring Cius and/or Lelei to Agate Prison and meet Takamu. Fetch his maps from the room in the basement, and he joins afterwards.",
+  "missable": "",
+  "where": "Agate Prison"
+ },
+ "106": {
+  "how": "Joins automatically after defeating him in Sable.",
+  "missable": "",
+  "where": "Sable"
+ },
+ "107": {
+  "how": "Buy 6 Salt at trade shops early in the game. When the price of Salt goes up (check prices and rumors), talk to Sairoh in Raftfleet and he will ask how to handle the salt price problem. Sell the 6 Salt to the trader immediately, then talk to Sairoh again to get him to join.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "108": {
+  "how": "You must have completed the two sidequests involving Alhazred and Isabel and Mathias, and must not have recruited Eresh. After the soldiers pull out of Rainwall, go into the city, return to your HQ and enter the Prince's room, then go back to Rainwall and talk to Euram in the Barows Mansion. Go downstairs and talk with Luserina.",
+  "missable": "Mutually exclusive with Eresh: recruiting Eresh closes his route.",
+  "where": "Rainwall (Barows Mansion)"
+ },
+ "11": {
+  "how": "Joins after the bandits in Sable are defeated. Pick the second choice when talking to him in Solis' mansion.",
+  "missable": "",
+  "where": "Sable"
+ },
+ "12": {
+  "how": "Joins automatically after Lucretia is recruited and Bahram Luger is defeated in the major battle, near the end of the second chapter.",
+  "missable": "",
+  "where": "Joins in the story"
+ },
+ "13": {
+  "how": "After relocating to Raftfleet, take Takamu through the Elven Road toward Lunas. Where Logg and Lun were caught stealing gold dust, offer to let him join. Defend him at every earlier choice involving him; if he refuses, talk to him again.",
+  "missable": "",
+  "where": "Lunas North Woods (Elven Road)"
+ },
+ "14": {
+  "how": "Joins with Haswar and Urda after the Queen's Campaign (see Haswar).",
+  "missable": "Gone once Sol-Falena is liberated.",
+  "where": "Lunas"
+ },
+ "15": {
+  "how": "After the Queen's Campaign, return to the Lunas Northern Woods with Takamu in the party, accompany Urda to Lunas, and enter the dining room in the Master's Conclave. Haswar, Isato and Urda all join.",
+  "missable": "Gone once Sol-Falena is liberated.",
+  "where": "Lunas (Master's Conclave)"
+ },
+ "16": {
+  "how": "After establishing your HQ, talk to Belcoot outside the inn in Yashuna Village, then go inside, talk to Marina and offer her a job at the HQ. Both of them join.",
+  "missable": "",
+  "where": "Yashuna Village"
+ },
+ "17": {
+  "how": "After the Tablet of Stars is summoned and Levi is recruited, talk to Norma in Raftfleet. She is looking for a powerful wizard, so bring Levi to her and ask her to join. Ernst comes with her.",
+  "missable": "",
+  "where": "Raftfleet (inn, lower room)"
+ },
+ "18": {
+  "how": "Joins with Nick: automatically if you fled HQ during the joint assault, or, if you defended HQ, after returning to Gordius with an all-male party, completing Nick's mission and answering \"It was Nick and Yoran!\".",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "19": {
+  "how": "After arriving at Port Spinacks, talk to the man at the western entrance to learn about Hershville, sail there and talk to Cathari by the exit to land. Return to Port Spinacks, talk to her again, answer \"Very well\", and take her to Lucretia in the HQ War Room.",
+  "missable": "If she is not recruited by the liberation of Stormfist, she can never be recruited.",
+  "where": "Hershville and Port Spinacks"
+ },
+ "2": {
+  "how": "Joins automatically when she is freed from Agate Prison.",
+  "missable": "",
+  "where": "Agate Prison"
+ },
+ "20": {
+  "how": "Joins automatically after the events in Gordius.",
+  "missable": "",
+  "where": "Gordius"
+ },
+ "21": {
+  "how": "Joins with Norma.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "22": {
+  "how": "After Lucretia is freed, bring Cius and Lelei to his cell in Agate Prison. He later appears at the eastern bridge of your HQ (having Lorelai and Zweig in the party may be needed). After the Twilight Ruins mission he can be recruited outside the ruins, or later in front of the Dawn Ruins, or in the last room of the Twilight Ruins if the earlier chances were missed.",
+  "missable": "",
+  "where": "Agate Prison, then the HQ bridge and the Twilight Forest"
+ },
+ "23": {
+  "how": "Joins automatically in Yashuna Village after he sends for you, following the liberation of Sable. Sharmista and Nifsara come with him.",
+  "missable": "",
+  "where": "Yashuna Village"
+ },
+ "24": {
+  "how": "Joins automatically during the recapture of Stormfist.",
+  "missable": "",
+  "where": "Stormfist"
+ },
+ "25": {
+  "how": "Joins automatically after the events on Nirva Island.",
+  "missable": "",
+  "where": "Nirva Island"
+ },
+ "26": {
+  "how": "Joins automatically after the Battle of Lelcar.",
+  "missable": "",
+  "where": "Lelcar"
+ },
+ "27": {
+  "how": "Joins automatically after the events in Gordius Village (or the events that follow choosing not to flee HQ when it is attacked).",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "28": {
+  "how": "Joins automatically after the Battle of Lelcar.",
+  "missable": "",
+  "where": "Lelcar"
+ },
+ "29": {
+  "how": "Joins automatically after the events in Gordius Village (or the events that follow choosing not to flee HQ when it is attacked).",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "3": {
+  "how": "Joins automatically after you get your headquarters.",
+  "missable": "",
+  "where": "Ceras Lake Ruins"
+ },
+ "30": {
+  "how": "Joins automatically after the Battle of Lelcar.",
+  "missable": "",
+  "where": "Lelcar"
+ },
+ "31": {
+  "how": "Joins with Nick (see Ax).",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "32": {
+  "how": "Joins automatically if you fled HQ during the joint assault. If you defended HQ, return to Gordius with an all-male party, complete his mission and answer \"It was Nick and Yoran!\". He joins later, bringing Ax and Yoran.",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "33": {
+  "how": "Two ways. After the Battle at Hatred Fortress, if you lost few soldiers and earned a Victory+, speak to him and Mueller at the inn in Raftfleet. Or, after Lordlake is restored, bring Viki (or Faylen or Norma) to meet him at the inn. Mueller joins with him.",
+  "missable": "He and Mueller move between inns as the story advances and are gone for good by the final HQ upgrade. The Godwins also hire them at some point after you capture Doraat, so recruit them before then.",
+  "where": "Raftfleet Inn (moves to Lelcar, then Doraat)"
+ },
+ "34": {
+  "how": "Joins together with Wilhelm.",
+  "missable": "Gone with Wilhelm: by the final HQ upgrade at the latest, and the Godwins hire the pair at some point after you capture Doraat.",
+  "where": "With Wilhelm"
+ },
+ "35": {
+  "how": "Joins automatically after the restoration of Lordlake.",
+  "missable": "",
+  "where": "Lordlake"
+ },
+ "36": {
+  "how": "Joins automatically after talking to Kisara on the Dahak, after freeing Lucretia from Agate Prison.",
+  "missable": "",
+  "where": "The Dahak"
+ },
+ "37": {
+  "how": "After the Tablet of Stars is called, talk to Solis in Sable and offer to help, then talk to Oboro at HQ, then Egbert at Marina's Inn, then Oboro again, then search the warehouse at Marina's Inn (near the top right corner) before time runs out. If the others catch him first, ask him to join in your jail. Requires Egbert, Oboro, Marina and Taylor to be recruited first.",
+  "missable": "",
+  "where": "Sable and the HQ warehouse"
+ },
+ "38": {
+  "how": "Speak to him after freeing Lucretia from Agate Prison and he will join.",
+  "missable": "",
+  "where": "Rainwall area"
+ },
+ "39": {
+  "how": "First speak with the guard at the entrance of the Big Hole. After the Battle of Lelcar, talk to Jeane in Lelcar's Rune Shop, then take her through the Big Hole to the sarcophagus. She joins regardless of your dialogue choices.",
+  "missable": "",
+  "where": "Lelcar (Rune Shop, Western Islet)"
+ },
+ "4": {
+  "how": "Joins automatically after the events at Gordius Village (rescuing the Dragonhorses, or the events that follow choosing not to flee HQ when it is attacked).",
+  "missable": "",
+  "where": "Gordius Village"
+ },
+ "40": {
+  "how": "After the relocation from Rainwall to Raftfleet, run Oboro's investigation of Norden to a successful end, then talk to Norden in the Raftfleet Inn and allow him to join. If missed there, he moves to Lordlake after its restoration, northwest of the town's entrance.",
+  "missable": "",
+  "where": "Raftfleet Inn (later Lordlake)"
+ },
+ "41": {
+  "how": "After Beaver Lodge is saved from the Nether Gate, visit Babbage's home in Estrise for a scene, return to HQ and talk to Boz and Luserina, agree to Euram's terms and play through the subplot. Mathias joins with her.",
+  "missable": "Her subplot cannot be finished after Godwin's troops pull out of Rainwall, and she is missed completely once Stormfist has been taken. Do the subplot early.",
+  "where": "Estrise and Haud Village"
+ },
+ "42": {
+  "how": "Joins with Isabel.",
+  "missable": "Missed with Isabel: her subplot closes when Godwin's troops pull out of Rainwall, and the pair is gone once Stormfist has been taken.",
+  "where": "With Isabel"
+ },
+ "43": {
+  "how": "Joins automatically after meeting Craig Laden for the second time in Sauronix Castle.",
+  "missable": "",
+  "where": "Sauronix Castle"
+ },
+ "44": {
+  "how": "Joins automatically after meeting Craig Laden for the second time in Sauronix Castle.",
+  "missable": "",
+  "where": "Sauronix Castle"
+ },
+ "45": {
+  "how": "Joins with Wabon.",
+  "missable": "",
+  "where": "With Wabon"
+ },
+ "46": {
+  "how": "After the restoration of Lordlake, carry a \"? Painting\" and talk to him in his appraisal shop in Haud Village, closing the appraise window each time without appraising the painting. The scene where he recognises it as a painting by Ivanov triggers at random (roughly one talk in ten), so keep talking to him until it fires, then agree to take him along.",
+  "missable": "Missable, and his window closes earlier than most guides say. It shuts before the final battle for Sol-Falena: players holding saves from after Lord Barows' death could not trigger the scene at all (one account reports 100 failed attempts), while a save from just before the New Queen's Campaign recruited him on the 12th talk. Whether the exact trigger is Barows' death or the Stormfist siege is disputed, but both are well before Sol-Falena, so a player about to start the Sol-Falena battle is already too late. The official strategy guide's claim that recruitment stays open until the Sol-Falena siege is wrong.",
+  "where": "Haud Village (appraisal shop)"
+ },
+ "47": {
+  "how": "Joins automatically after the Ceras Lake Ruins.",
+  "missable": "",
+  "where": "Ceras Lake Ruins"
+ },
+ "48": {
+  "how": "Joins automatically after the restoration of Lordlake.",
+  "missable": "",
+  "where": "Lordlake"
+ },
+ "49": {
+  "how": "Joins automatically after the fire attack at Beaver Lodge.",
+  "missable": "",
+  "where": "Beaver Lodge"
+ },
+ "5": {
+  "how": "Joins automatically after the Queen's Campaign.",
+  "missable": "",
+  "where": "Headquarters"
+ },
+ "50": {
+  "how": "Mueller must be recruited first, or Richard will not join. After Lordlake is restored, talk to Richard at the Waterfall Basin, then talk to Mueller in Marina's Inn at the HQ, then return to Richard and he joins.",
+  "missable": "",
+  "where": "Waterfall Basin"
+ },
+ "51": {
+  "how": "After the assassins destroy his mining car, Wabon joins regardless of your dialogue choices. Gunde comes with him.",
+  "missable": "",
+  "where": "The Baska Mine route"
+ },
+ "52": {
+  "how": "Joins automatically during the Rainwall Defense.",
+  "missable": "",
+  "where": "Rainwall"
+ },
+ "53": {
+  "how": "Talk to her with Miakis or Rahal in the party at her house in Sauronix Castle, when going to meet Craig. After the scene in front of the house, go back inside and ask her to join.",
+  "missable": "",
+  "where": "Sauronix Castle (her house)"
+ },
+ "54": {
+  "how": "Buy about 50,000 potch worth of armor from his shop in Lelcar (normal armor only; Rare Finds do not count). After the destruction of Lelcar, talk to him, blame yourself (the first answer) and offer him a new shop at your castle. If he does not join then, he moves to Doraat and later to Hershville, where buying more from his shop can still recruit him.",
+  "missable": "",
+  "where": "Lelcar (armor shop)"
+ },
+ "55": {
+  "how": "Joins automatically after the restoration of Lordlake.",
+  "missable": "",
+  "where": "Lordlake"
+ },
+ "56": {
+  "how": "Talk to him and offer to let him join at each of his stops; guides count four offers across Rainwall, Raftfleet, Lordlake, Lelcar, Beaver Lodge, Doraat, Raftfleet again, Sable and Stormfist. He shows up in the town where a major battle just took place, to help the injured.",
+  "missable": "His last chance is at Stormfist, after it is taken and before the battle for Sol-Falena. If he is not recruited by the liberation of Stormfist, he never appears again.",
+  "where": "Moves between towns after major battles"
+ },
+ "57": {
+  "how": "Talk to him in Raftfleet with one of the three-girl unites in your party: Viki, Faylen and Norma; or Jeane, Sialeeds and Nelis; or Jeane, Sharmista and Nelis; or Isabel, Cathari and Zerase.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "58": {
+  "how": "After meeting Craig Laden, talk to her in Port Spinacks without Belcoot in the party. After that, bring Belcoot to see her and ask her to join.",
+  "missable": "If you first talk to her with Belcoot (or Marina) in the party, she disappears for a while. Finish the Sauronix mission, then return with Belcoot and she can still be found, but do not rely on the second chance: meet her without Belcoot first.",
+  "where": "Port Spinacks"
+ },
+ "59": {
+  "how": "Take Maroon to speak with Moroon at Baska Mine at any time. Later, after Maroon, Muroon and Miroon are all recruited, speak with Meroon in Beaver Lodge with all three beavers in your party, take her to Moroon, then head back to Beaver Lodge. Moroon and Meroon both join.",
+  "missable": "Gone once Sol-Falena is liberated.",
+  "where": "Baska Mine"
+ },
+ "6": {
+  "how": "Joins automatically in Haud Village after the party escapes through the Lunas Woods.",
+  "missable": "",
+  "where": "Haud Village"
+ },
+ "60": {
+  "how": "After the Tablet of Stars is summoned, talk to him in the Big Hole and offer to let him come with you. Bergen joins with him.",
+  "missable": "",
+  "where": "Big Hole"
+ },
+ "61": {
+  "how": "Joins together with Oboro and Fuyo.",
+  "missable": "",
+  "where": "With Oboro"
+ },
+ "62": {
+  "how": "Joins with Nakula.",
+  "missable": "",
+  "where": "With Nakula"
+ },
+ "63": {
+  "how": "Joins with Belcoot.",
+  "missable": "",
+  "where": "Yashuna Village (the inn)"
+ },
+ "64": {
+  "how": "After Gizel and Lymsleia's coronation, when the HQ has upgraded, bring Sorensen to the Gear Room in the HQ. Go back to Babbage's office in Estrise, talk to him and bring him to the gears. Leave the HQ and return, then go back to the Gear Room and he joins.",
+  "missable": "",
+  "where": "Estrise and the HQ Gear Room"
+ },
+ "65": {
+  "how": "After the liberation of Sable or Doraat, talk to Logg in the HQ Tavern. Go to Hershville and enter one of the warehouses, return to the HQ, then go back to Hershville and enter the Administration building to find Haleth gone. Return to the HQ Tavern and ask him to join.",
+  "missable": "Gone once Stormfist is liberated.",
+  "where": "Hershville"
+ },
+ "66": {
+  "how": "Joins with Shula.",
+  "missable": "",
+  "where": "With Shula"
+ },
+ "67": {
+  "how": "After the coronation ceremony and HQ upgrade, return to Nirva Island with Bernadette and look at the cannons on the Lino En Kuldes, then talk with Yahr and Nelis at the inn. Take the ship back toward Estrise, offer to check out the Rune shell, go through the ship graveyard, suggest using the rune cannon against the monster and choose to destroy the Rune Cannon. Back at Nirva Island, Yahr and Nelis join.",
+  "missable": "",
+  "where": "Nirva Island"
+ },
+ "68": {
+  "how": "Joins with Yahr.",
+  "missable": "",
+  "where": "With Yahr"
+ },
+ "69": {
+  "how": "After the restoration of Lordlake, talk to him at the dock of the HQ and let him join.",
+  "missable": "",
+  "where": "HQ dock"
+ },
+ "7": {
+  "how": "Meet him at the Sable inn on your first visit. After the Sable events are over, talk to him again, then consult Oboro's agency at HQ, then return with Oboro, Shigure and Sagiri in the party and talk to him once more. Sagiri joins with him.",
+  "missable": "He leaves the inn at some point, and reports differ on the exact cutoff. Recruit him promptly after the Sable events rather than putting it off.",
+  "where": "Sable (inn, second floor)"
+ },
+ "70": {
+  "how": "While based in Rainwall, meet Alhazred by the Trading Shop to hear about the cursed book. After you have your HQ, get the Cursed Tome from the fortune teller in the Tricolor Inn in Yashuna Village (second floor), put the Tome in storage, sleep at an inn, and take it back from Chuck. Return it to the woman in the fortune teller's room, then find Alhazred by the fountain in Estrise and take him to Yashuna Village. After the fight with the Cursed Book, ask him to join at once, or find him in Estrise afterwards.",
+  "missable": "His sidequest cannot be triggered after Godwin's troops pull out of Rainwall.",
+  "where": "Rainwall, then Yashuna Village and Estrise"
+ },
+ "71": {
+  "how": "Joins with Levi.",
+  "missable": "",
+  "where": "With Levi"
+ },
+ "72": {
+  "how": "After the Doraat Siege, defeat her in the duel at the end of the Fortress and she joins.",
+  "missable": "",
+  "where": "Doraat"
+ },
+ "73": {
+  "how": "Joins with Shula.",
+  "missable": "",
+  "where": "With Shula"
+ },
+ "74": {
+  "how": "After the restoration of Lordlake, talk to Zunda in the Dwarf Camp (she is behind another dwarf, in the area reached by ladder) and take her to Lunas to see the window on the first floor of the Master's sanctuary. Getting to Lunas through the Lunas North Woods requires an elf or Takamu.",
+  "missable": "",
+  "where": "Dwarf Camp"
+ },
+ "75": {
+  "how": "After relocating to Raftfleet, talk to Babbage in Estrise. Go to the Revolving Bridge and talk to the soldier there, then return to Babbage in Estrise. Sail to the bridge, go to the top and dismantle it. Back in Estrise, Sorensen joins afterwards when you ask Babbage to join.",
+  "missable": "",
+  "where": "Estrise and the Revolving Bridge"
+ },
+ "76": {
+  "how": "After the defense of Rainwall, enter the big house in the south of Haud Village and defeat the five DoReMi elves. Capture the DoReMi Elf wandering in Haud Village afterwards, and he joins.",
+  "missable": "",
+  "where": "Haud Village (the big house in the south)"
+ },
+ "77": {
+  "how": "Joins automatically after exiting the Ceras Lake Ruins.",
+  "missable": "",
+  "where": "Ceras Lake Ruins"
+ },
+ "78": {
+  "how": "Joins automatically after the Ceras Lake Ruins.",
+  "missable": "",
+  "where": "Ceras Lake Ruins"
+ },
+ "79": {
+  "how": "Talk to her in Haud Village with Sialeeds (in her normal clothes) in the party and she will join. Having Shula or Sharmista in the party also works.",
+  "missable": "",
+  "where": "Haud Village"
+ },
+ "8": {
+  "how": "In the party from the start of the game.",
+  "missable": "",
+  "where": "Sol-Falena"
+ },
+ "80": {
+  "how": "After both Sorensen and Babbage are recruited, take Sorensen back to Babbage's Workshop in Estrise. Help Lu find the missing Revolving Bridge gear (in a crate by the door) and she joins.",
+  "missable": "",
+  "where": "Babbage's Workshop, Estrise"
+ },
+ "81": {
+  "how": "Joins automatically after the fire attack at Beaver Lodge.",
+  "missable": "",
+  "where": "Beaver Lodge"
+ },
+ "82": {
+  "how": "After the Battle of Lelcar, talk to Taylor outside Marina's Inn and allow him to interview you, then outside the Room of the Seal (on the roof), then outside Georg's room. He joins after the third interview. Leaving the castle before all three are done sends him back to the inn, and the round starts over.",
+  "missable": "",
+  "where": "Headquarters"
+ },
+ "83": {
+  "how": "Two ways. Hire him in Rainwall, then accompany Shigure and Sagiri through the Norden investigation: when Oboro speaks about employing mice, say \"That man went inside the house\", and with Norden in the tavern say \"We need to talk to you about something\". After the relocation to Raftfleet, ask him to join in his office. If the investigation did not succeed, ask him to join repeatedly as the story progresses: after Raftfleet, after HQ, after Lelcar, after Sable, and after Beaver Lodge. Fuyo and Shigure join with him.",
+  "missable": "If he is still not recruited after the Queen's Campaign, his ship is gone from Raftfleet forever.",
+  "where": "Raftfleet (his office)"
+ },
+ "84": {
+  "how": "Joins automatically after talking to Kisara on the Dahak, after freeing Lucretia from Agate Prison.",
+  "missable": "",
+  "where": "The Dahak"
+ },
+ "85": {
+  "how": "After Lordlake is restored, hear about \"The Boss\" from the beaver standing by the Beaver Lodge inn, and from Fuwalafuwalu. Then take an old character (Alhazred, Levi, Wabon or Galleon) whose level is at about 95% of the Prince's level (roughly one or two levels below) to the waterfall area in Waterfall Basin and ask Genoh to join.",
+  "missable": "",
+  "where": "Waterfall Basin"
+ },
+ "86": {
+  "how": "Joins with Moroon (see Moroon).",
+  "missable": "Gone with Moroon once Sol-Falena is liberated.",
+  "where": "Beaver Lodge"
+ },
+ "87": {
+  "how": "Give him two Hammers on two different occasions, upgrading your weapon to the max both times. If you are unable to recruit him before Wabon joins, put Wabon in your party and speak with Dongo.",
+  "missable": "",
+  "where": "Headquarters (the smithy)"
+ },
+ "88": {
+  "how": "Joins together with Oboro and Shigure.",
+  "missable": "",
+  "where": "With Oboro"
+ },
+ "89": {
+  "how": "Joins automatically after talking to Kisara on the Dahak, after freeing Lucretia from Agate Prison.",
+  "missable": "",
+  "where": "The Dahak"
+ },
+ "9": {
+  "how": "Joins automatically after Hatred Fortress is destroyed.",
+  "missable": "",
+  "where": "Lordlake"
+ },
+ "90": {
+  "how": "Joins automatically after talking to Kisara on the Dahak, after freeing Lucretia from Agate Prison.",
+  "missable": "",
+  "where": "The Dahak"
+ },
+ "91": {
+  "how": "Joins with Retso.",
+  "missable": "",
+  "where": "With Retso"
+ },
+ "92": {
+  "how": "After the coronation ceremony and HQ upgrade, talk to Retso in the Raftfleet Inn and learn about the Mythical Fish Sashimi. Catch a Weird Fish in Subala's fishing mini-game and bring it to him. Shun Min joins with him.",
+  "missable": "",
+  "where": "Raftfleet Inn"
+ },
+ "93": {
+  "how": "After the defense of Raftfleet, talk to Egbert in the tunnels underneath Agate Prison (between the Dwarf Camp and Agate Prison). Let him rant about the Godwin family without pressing any buttons until he is finished and prompts you; he offers to join at the end. If you skip his dialogue, leave the area and come back to try again.",
+  "missable": "",
+  "where": "The tunnels underneath Agate Prison"
+ },
+ "94": {
+  "how": "Joins automatically after receiving the Dawn Rune and leaving Rainwall.",
+  "missable": "",
+  "where": "Rainwall"
+ },
+ "95": {
+  "how": "After the coronation ceremony and the HQ upgrade, fight Byakuren on the bridge leaving HQ. Once Genoh or Levi has been recruited, fight her on the same bridge again and ask her to join. If you did not recruit her the first time, she comes back after every further 20 recruits.",
+  "missable": "Her appearances are limited to one per 20 recruits, so make sure Genoh or Levi is recruited before the last set of 20 recruits, or she can never be asked to join.",
+  "where": "The bridge leaving HQ"
+ },
+ "96": {
+  "how": "Joins automatically after the Defense of Raftfleet.",
+  "missable": "",
+  "where": "Raftfleet"
+ },
+ "97": {
+  "how": "After the Battle of Lelcar, talk to her at the inn in Estrise and agree to duel her. She joins afterwards.",
+  "missable": "",
+  "where": "Estrise (the inn)"
+ },
+ "98": {
+  "how": "After the meeting in Beaver Lodge, play cards with her in Estrise and lose 2,000 potch. Next, talk to her in Yashuna Village after the Battle of Lelcar. Finally, play her at cards in Raftfleet after Lymsleia's coronation. You never have to win, but agree to cover her 5,000 potch debt and she joins.",
+  "missable": "",
+  "where": "Estrise, then Yashuna Village, then Raftfleet"
+ },
+ "99": {
+  "how": "Joins with Faylen.",
+  "missable": "",
+  "where": "With Faylen"
+ }
+}

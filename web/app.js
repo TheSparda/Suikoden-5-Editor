@@ -19,6 +19,7 @@ const SAVE_PATH = "/save.bin";
 let pyodide = null;
 let PY = null;                 // save adapters { open, chars, write }
 let NAMES = null;             // { cnames, armorNames, runeNames, skillNames, rankNames }
+let GUIDE = {};               // recruit guide by character id (s5_recruit_guide.json)
 let saves = [];               // decoded saves for the current file
 let CHARDATA = {};            // per-save cached { chars:[...] }
 let ROSTER = {};              // per-save roster (recruited flags) for the party pickers
@@ -91,6 +92,7 @@ async function boot(){
 
     setBoot("Loading name tables…", 94);
     NAMES = await loadNames();
+    try{ GUIDE = await (await fetch(`${EDITOR_DIR}/s5_recruit_guide.json`)).json(); }catch(_){ GUIDE = {}; }
 
     setBoot("Ready.", 100);
     $("boot").style.display = "none";
@@ -1106,6 +1108,7 @@ function renderChar(i){
     + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" data-cf="${i}:level" data-orig="${c.level}" onchange="writeCharField(${i},'level',this.value,this)">${REVERT_BTN_SAVE}</div></div>`
     + `<div class="fld"><label>Recruited</label><div class="in"><label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} ${c.recruitable?"":'disabled title="Not recruitable"'} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">${c.recruitable?"in the roster":"not recruitable"}</span></label>${c.recruitable?REVERT_BTN_SAVE:""}</div></div>`
     + `</div>`
+    + guideHTML(idx)
     + sub("Equipment")
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
     + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot — needed to complete a 5-piece set.</div>`
@@ -1219,6 +1222,24 @@ function charFieldDisplay(field, v){
   return String(v);
 }
 
+/* ---------- recruitment guide reference ---------- */
+/* Data: Editor/s5_recruit_guide.json, built by Editor/build_recruit_refs.py
+   from the cited guide sources. Reference only; it never writes anything. */
+function guideHTML(idx){
+  const g = GUIDE[String(idx)];
+  if(!g) return "";
+  return `<div style="padding:2px 16px 4px"><div class="note" style="text-transform:none">
+    <b>Recruitment guide:</b> ${esc(g.where)}. ${esc(g.how)}</div>
+    ${g.missable ? `<div class="warnbox" style="margin:6px 0 2px">Missable: ${esc(g.missable)}</div>` : ""}
+    </div>`;
+}
+function showRecGuide(i, idx){
+  const box = $(`guidenote${i}`); if(!box) return;
+  const g = GUIDE[String(idx)];
+  box.innerHTML = g ? `<div style="padding:2px 0 4px"><b>${esc(nameOf(idx))}:</b> ${esc(g.where)}. ${esc(g.how)}
+    ${g.missable ? `<div class="warnbox" style="margin:6px 0 2px">Missable: ${esc(g.missable)}</div>` : ""}</div>` : "";
+}
+
 /* ---------- recruitment roster ---------- */
 async function openRecruit(i){
   const sv = saves[i], box = $(`recruit${i}`);
@@ -1236,10 +1257,11 @@ async function openRecruit(i){
       <span class="note">greyed = not recruitable</span>
     </div>
     <div id="pairwarn${i}"></div>
+    <div id="guidenote${i}" style="padding:4px 16px 0"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
   $(`recgrid${i}`).innerHTML = r.chars.map(c => {
     const dis = !c.recruitable;
-    return `<label class="chk" data-name="${esc(nameOf(c.idx).toLowerCase())}" style="${dis?"opacity:.4":""}">
+    return `<label class="chk" data-name="${esc(nameOf(c.idx).toLowerCase())}" style="${dis?"opacity:.4":""}" onclick="showRecGuide(${i},${c.idx})">
       <input type="checkbox" data-idx="${c.idx}" ${c.recruited?"checked":""} ${dis?"disabled":""} onchange="toggleRecruit(${i},this)">
       <span class="note" style="text-transform:none">${c.idx}: ${esc(nameOf(c.idx))}</span></label>`;
   }).join("");
