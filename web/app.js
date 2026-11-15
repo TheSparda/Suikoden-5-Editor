@@ -817,7 +817,9 @@ function partyGroup(i, party, from, to, title){
   return h + `</div>`;
 }
 /* Searchable picker (not a 120-entry native dropdown): recruited characters first,
-   already-in-party marked, unrecruited listed last and labelled as unavailable. */
+   already-in-party marked. Unrecruited characters are listed last and labelled with
+   what assigning them does: the write also sets their recruitment bit (issue #32),
+   because the game keeps party membership and the recruit bitfield in sync. */
 function partyList(i){
   const roster = ROSTER[i] || [];
   const inParty = new Map();
@@ -831,7 +833,7 @@ function partyList(i){
   for(const c of roster) if(c.recruited)
     list.push({ id: c.idx, name: nameOf(c.idx), desc: tag(c) });
   for(const c of roster) if(!c.recruited)
-    list.push({ id: c.idx, name: nameOf(c.idx), desc: "not recruited in this save" });
+    list.push({ id: c.idx, name: nameOf(c.idx), desc: "not recruited in this save (assigning also recruits them)" });
   if(!roster.length)   // roster unavailable → fall back to every known name
     for(const id of Object.keys(NAMES.cnames)) list.push({ id: +id, name: NAMES.cnames[id] });
   return list;

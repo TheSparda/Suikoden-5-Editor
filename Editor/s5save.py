@@ -357,9 +357,16 @@ def decode_gamedata(gd):
 
 def apply_gamedata_edits(gd, edits):
     """edits: {field: value}. Returns (new_gd, changed). Writable: S5_FIELDS (header) plus
-    per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft)."""
+    per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft).
+    Party assignments are applied LAST and also set the member's recruitment bit: every
+    real save keeps the two in sync (party member => bit set), so a party edit must never
+    leave a bit-clear character in the party (issue #32). Applying them last means the
+    invariant holds even if the same batch also stages a 'c<idx>_rec' clear for that
+    character; to un-recruit someone, remove them from the party in an earlier save."""
     b = bytearray(gd); changed = 0
-    for k, v in (edits or {}).items():
+    items = list((edits or {}).items())
+    items.sort(key=lambda kv: 1 if (kv[0].startswith("party") and kv[0][5:].isdigit()) else 0)
+    for k, v in items:
         if k in S5_FIELDS:
             off, w, kind = S5_FIELDS[k]
             if kind == "str":
@@ -377,6 +384,8 @@ def apply_gamedata_edits(gd, edits):
             v = int(v)
             if 0 <= slot < PARTY_SLOTS and (0 <= v < NUM_CHARS or v == PARTY_EMPTY):
                 b[PARTY_OFF+2*slot:PARTY_OFF+2*slot+2] = v.to_bytes(2, "little")
+                if v != PARTY_EMPTY:   # keep party => recruited in sync (issue #32)
+                    b[RECRUIT_BASE + (v >> 3)] |= 1 << (v & 7)
                 changed += 1
         elif _apply_char_edit(b, k, v):
             changed += 1

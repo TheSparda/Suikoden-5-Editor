@@ -52,6 +52,25 @@ chk("partySP clamped", f3["partySP"] == 999_999, f"{f3['partySP']:,}")
 # invalid party value rejected (char id must be <120 or the empty sentinel)
 gd4, ch4 = SV.apply_gamedata_edits(gd3, {"party3": 500})
 chk("bad party id rejected", ch4 == 0)
+# ---- issue #32: a party assignment also sets the member's recruitment bit, in the
+# same edit, and touches nothing else (the game keeps party => recruited in sync;
+# a bit-clear party member is a corrupted state the old write path produced).
+gd5, ch5 = SV.apply_gamedata_edits(gd, {"party4": 57})
+chk("party assign counts once", ch5 == 1, str(ch5))
+chk("party assign sets the recruit bit", SV.read_character(gd5, 57)["recruited"] == 1)
+diff = [i for i in range(len(gd)) if gd5[i] != gd[i]]
+chk("party assign touches only its slot + one bitfield byte",
+    diff == [SV.PARTY_OFF + 8, SV.PARTY_OFF + 9, SV.RECRUIT_BASE + 7], str(diff))
+chk("only the one bit flipped in that byte",
+    gd5[SV.RECRUIT_BASE + 7] == (gd[SV.RECRUIT_BASE + 7] | (1 << (57 & 7))))
+# emptying a slot never touches the bitfield
+gd6, _ = SV.apply_gamedata_edits(gd5, {"party4": SV.PARTY_EMPTY})
+chk("emptying a slot leaves the bitfield alone",
+    gd6[SV.RECRUIT_BASE:SV.RECRUIT_BASE + 15] == gd5[SV.RECRUIT_BASE:SV.RECRUIT_BASE + 15])
+# a same-batch staged un-recruit cannot undo a party assignment (party pass runs last)
+gd7, _ = SV.apply_gamedata_edits(gd, {"c57_rec": 0, "party4": 57})
+chk("party assignment wins over a same-batch un-recruit",
+    SV.read_character(gd7, 57)["recruited"] == 1)
 # regression guards on the verified constants
 chk("POTCH off", SV.S5_FIELDS["potch"][0] == 0xBC74)
 chk("PARTY off/slots", (SV.PARTY_OFF, SV.PARTY_SLOTS, SV.PARTY_EMPTY) == (0x36, 10, 0x0100))
