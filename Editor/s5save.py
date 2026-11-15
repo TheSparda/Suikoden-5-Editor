@@ -218,6 +218,30 @@ def read_inventory(gd):
         out[name] = entries
     return out
 
+def audit_snapshot(gd):
+    """Plain-data snapshot of the save's auditable state, for the web health
+    audit (web/health-core.js). All payload knowledge stays here; the audit
+    core only applies rules to this data. Name slots are the game-state
+    struct's 17-byte name fields (16 characters + terminator at most)."""
+    f = decode_gamedata(gd)
+    names = {}
+    for k, off in (("heroName", 0xBC7C), ("armyName", 0xBC8D), ("castleName", 0xBC9E)):
+        raw = gd[off:off + 17]
+        names[k] = {"bytes": raw.find(b"\x00") if b"\x00" in raw else 17}
+    return {
+        "potch": f.get("potch", 0),
+        "party": f.get("party", []),
+        "nameSlots": names,
+        "roster": [{"idx": c["idx"], "recruited": c["recruited"]}
+                   for c in read_all_characters(gd)],
+        "inventory": read_inventory(gd),
+        "counts": {nm: int.from_bytes(gd[b:b + 2], "little")
+                   for nm, (b, cap) in INV_LISTS.items()},
+        "caps": {nm: cap for nm, (b, cap) in INV_LISTS.items()},
+        "catMaxId": ITEM_CAT_MAXID,
+        "limits": STACK_LIMITS,
+    }
+
 def _apply_inv_edit(b, key, val):
     """Apply an inventory edit keyed 'inv_<list>_<slot>' to bytearray b.
     val = {"cat": c, "id": i, "qty": q} sets the entry at that slot (slot ==

@@ -85,6 +85,7 @@ async function boot(){
       chars: pyodide.globals.get("save_chars"),
       write: pyodide.globals.get("save_write"),
       invnames: pyodide.globals.get("save_item_names"),
+      audit: pyodide.globals.get("save_audit"),
     };
     window.PYISO = isoGlueHandles();     // expose ISO adapters for iso.js
 
@@ -190,6 +191,12 @@ def save_write(path, folder, edits_json):
         edits = json.loads(edits_json)
         r = SV.write_individual_save(path, edits) if _individual(path) else SV.write_save_fields(path, folder, edits)
         return json.dumps(r)
+    except Exception as e: return json.dumps({"error": str(e)})
+def save_audit(path, folder):
+    try:
+        gd = SV.read_gamedata_payload(path, folder or None)
+        if not gd: return json.dumps({"error": "could not read gamedata payload"})
+        return json.dumps({"snapshot": SV.audit_snapshot(gd)})
     except Exception as e: return json.dumps({"error": str(e)})
 def save_item_names():
     # (cat, id) -> display name for the inventory editor: the editor's verified
@@ -746,6 +753,7 @@ function renderSaves(){
       : `<button class="ghost" onclick="openChars(${i})">Characters (equipment &amp; runes)…</button>
          <button class="ghost" onclick="openRecruit(${i})">Recruitment…</button>
          <button class="ghost" onclick="openInv(${i})">Inventory…</button>
+         <button class="ghost" onclick="openHealth(${i})">Health check…</button>
          <span class="note">Change fields freely — nothing is written to your file until you press Save.</span>`;
     return `<div class="sec">
       <div class="card-hd">${esc(sv.folder)} ${badge}
@@ -781,6 +789,7 @@ function renderSaves(){
       <div id="chars${i}" class="note" style="margin:0 14px 8px"></div>
       <div id="recruit${i}" style="margin:0 14px 10px"></div>
       <div id="inv${i}" style="margin:0 14px 10px"></div>
+      <div id="health${i}" style="margin:0 14px 10px"></div>
     </div>`;
   }).join("");
   wireSaveHeaderInputs();
@@ -890,6 +899,31 @@ async function writeInvField(i, list, slot, val){
     renderInv(i);
   }catch(e){ toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
   finally{ spin(false); }
+}
+
+/* ---------- save health audit ---------- */
+async function openHealth(i){
+  const box = $(`health${i}`);
+  if(box._open){ box._open = false; box.innerHTML = ""; return; }
+  box._open = true; box.innerHTML = `<span class="note">checking this save against the game's own rules…</span>`;
+  let r;
+  try{ r = JSON.parse(PY.audit(SAVE_PATH, saves[i].folder || "")); }
+  catch(e){ box.innerHTML = `<span class="bad">${esc(e.message || e)}</span>`; return; }
+  if(r.error){ box.innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
+  const findings = HealthCore.audit(r.snapshot, { charName: (id) => nameOf(id) });
+  if(!findings.length){
+    box.innerHTML = `<div class="subhd">Health check</div>
+      <div class="ok" style="padding:2px 0 8px">No problems found. This save matches every rule the game itself keeps.</div>`;
+    return;
+  }
+  const c = HealthCore.counts(findings);
+  const sevTag = (s) => s === "error" ? `<span class="bad"><b>Error</b></span>`
+    : s === "warn" ? `<span style="color:var(--warn)"><b>Warning</b></span>` : `<span class="note"><b>Note</b></span>`;
+  box.innerHTML = `<div class="subhd">Health check <span class="note">${c.error} error${c.error === 1 ? "" : "s"}, ${c.warn} warning${c.warn === 1 ? "" : "s"}</span></div>`
+    + findings.map((f) => `<div style="padding:4px 0;border-bottom:1px solid var(--line)">
+        ${sevTag(f.sev)} <b>${esc(f.title)}</b>
+        <div class="note" style="padding-top:2px">${esc(f.detail)}</div></div>`).join("")
+    + `<div class="fnote" style="padding:6px 0 8px">The audit only reports states the game itself never writes (proven against the game's code and real saves). It changes nothing.</div>`;
 }
 
 /* ---------- active party ---------- */
