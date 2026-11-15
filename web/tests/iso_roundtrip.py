@@ -71,11 +71,17 @@ def main():
         json.dumps([{"field": "DEF", "value": 10}]))).get("ok") is True)
     chk("iso_mp groups", "groups" in json.loads(g["iso_mp"]()))
     chk("iso_setmp ok", json.loads(g["iso_setmp"](0, 0, 42)).get("ok") is True)
-    chk("iso_setprice ok", json.loads(g["iso_setprice"](0, "buy", 500)).get("ok") is True)
+    chk("iso_prices removed (#30)", "iso_prices" not in g and "iso_setprice" not in g)
+    chk("weapon growth present for id 80 (#22)",
+        "weapon growth" in json.loads(g["iso_char"](80))["tables"])
+    chk("weapon growth gated for id 81 (#22)",
+        "weapon growth" not in json.loads(g["iso_char"](81))["tables"])
+    chk("weapon growth write blocked for id 81 (#22)",
+        "error" in json.loads(g["iso_setchar"](json.dumps({"id": 81}),
+            json.dumps([{"table": "weapon growth", "field": "Sharpen Lv1 attack", "value": 5}]))))
     chk("iso_reference dict", isinstance(json.loads(g["iso_reference"]()), dict))
     chk("iso_enemies", "enemies" in json.loads(g["iso_enemies"]()))
     chk("iso_runes", "runes" in json.loads(g["iso_runes"]()))
-    chk("iso_prices", "prices" in json.loads(g["iso_prices"]()))
     chk("iso_skillfx", "skills" in json.loads(g["iso_skillfx"]()))
     chk("iso_setname ok", json.loads(g["iso_setname"](0, "Test")).get("ok") is True)
     chk("iso_hardmode ok", json.loads(g["iso_hardmode"](2.0)).get("ok") is True)

@@ -805,32 +805,23 @@ def read_character(iso, cid):
     # In PAL, the char sub-section tables (starting equipment/items) aren't offset-mapped
     # yet — skip them so we never surface wrong data.
     skip = set(F.GATED_IN_PAL) if F.REGION == "pal" else set()
+    # Issue #22: the weapon growth table has records for ids 0..80 only. Past
+    # the table sits an unrelated data block, so never surface it as growth.
+    if cid >= F.WEAPON_GROWTH_COUNT: skip.add("weapon growth")
     return {t: read_table(iso, t, cid) for t in F.TABLES if t not in skip}
 
 
 def write_field(iso, table, cid, label, value):
+    if table == "weapon growth" and cid >= F.WEAPON_GROWTH_COUNT:
+        raise KeyError(f"no weapon growth record for character {cid}")
     for (l, o, w, k) in F.TABLES[table][2]:
         if l == label:
             iso.wu(table_addr(table, cid) + o, w, value); return True
     raise KeyError(f"no field {label!r} in {table}")
 
 
-def read_prices(iso, limit=0):
-    out = []
-    n = F.PRICE_COUNT if not limit else min(limit, F.PRICE_COUNT)
-    for i in range(n):
-        base = F.PRICE_BASE + i * F.PRICE_STRIDE
-        rec = {"index": i, "off": base}
-        for name, off, w in F.PRICE_FIELDS:
-            rec[name] = iso.ru(base + off, w)
-        out.append(rec)
-    return out
-
-def write_price(iso, index, field, value):
-    off = next((o for (n, o, w) in F.PRICE_FIELDS if n == field), None)
-    w = next((w for (n, o, w) in F.PRICE_FIELDS if n == field), None)
-    if off is None: raise KeyError(field)
-    iso.wu(F.PRICE_BASE + index * F.PRICE_STRIDE + off, w, value)
+# (read_prices/write_price removed in v1.17.6, issue #30: the "prices" table was
+# the Arm armor table read one record late. See the note in s5fields.py.)
 
 def read_rune_prices(iso):
     out = []
@@ -1902,7 +1893,6 @@ CSV_DATASETS = {
     "enemies":          "Enemies — stats/rewards/affinities/drops",
     "spells":           "Spells — element / power / target / status",
     "runes":            "Runes — which spells each rune teaches",
-    "prices":           "Prices — item buy/sell",
     "skillfx":          "Skill effects — magnitude per rank (E..SS)",
     "mp":               "MP growth — thresholds per magic level",
 }
@@ -1941,6 +1931,7 @@ def _csv_rows(iso_path, dataset):
             labels = [l for (l, o, w, k) in F.TABLES[t][2]]
             rows = []
             for c in F.load_characters():
+                if t == "weapon growth" and c["id"] >= F.WEAPON_GROWTH_COUNT: continue
                 vals = [f["value"] for f in read_table(g, t, c["id"])]
                 rows.append([c["id"], c["name"]] + vals)
             return ["id"], labels, rows
@@ -1970,16 +1961,6 @@ def _csv_rows(iso_path, dataset):
                 # there is nothing on the disc to write back, so they stay out of the sheet.
                 if r.get("synthetic"): continue
                 rows.append([r["id"], r["name"]] + [f["value"] for f in read_rune(g, r["id"])])
-            return ["id"], labels, rows
-        if dataset == "prices":
-            try: items = F.res_json("s5_item_names.json")
-            except Exception: items = {}
-            labels = [n for (n, o, w) in F.PRICE_FIELDS]
-            rows = []
-            for r in read_prices(g):
-                e = items.get(str(r["index"])) if isinstance(items, dict) else None
-                nm = (e.get("name") if isinstance(e, dict) else e) or f"Item {r['index']}"
-                rows.append([r["index"], nm] + [r[n] for n in labels])
             return ["id"], labels, rows
         if dataset == "skillfx":
             rows = [[r["id"], r["name"]] + r["values"] for r in read_skillfx(g)]
@@ -2011,8 +1992,6 @@ def _csv_field_widths(dataset):
         return {l: w for (l, o, w, k) in F.SPELL_FIELDS}
     if dataset == "runes":
         return {l: w for (l, o, w, k) in F.RUNE_GRANT_FIELDS}
-    if dataset == "prices":
-        return {n: w for (n, o, w) in F.PRICE_FIELDS}
     if dataset == "skillfx":
         return {r: 2 for r in F.SKILLFX_RANKS}
     if dataset == "mp":
@@ -2115,8 +2094,6 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                         write_spell_field(g, rid, label, val)
                     elif dataset == "runes":
                         write_rune_field(g, rid, label, val)
-                    elif dataset == "prices":
-                        write_price(g, rid, label, val)
                     elif dataset == "skillfx":
                         write_skillfx(g, rid, labels.index(label), val)
                     elif dataset == "mp":
@@ -2383,18 +2360,6 @@ def main(argv=None):
         else: n = hardmode_apply(a.iso, a.factor); print(f"scaled stats of {n} chars x{a.factor}")
         return 0
     add("hardmode", _hm, [(("--factor",), dict(type=float, default=0.5)), (("--restore",), dict(action="store_true"))])
-    def _prices(a):
-        with Iso(a.iso) as g:
-            for r in read_prices(g, a.limit):
-                if r["buy"] or r["sell"]: print(f"  #{r['index']:3d} buy={r['buy']:>7} sell={r['sell']:>7}")
-        return 0
-    add("prices", _prices, [(("--limit",), dict(type=int, default=0))])
-    def _setprice(a):
-        backup(a.iso)
-        with Iso(a.iso, writable=True) as g: write_price(g, a.index, a.field, a.value)
-        print(f"price #{a.index} {a.field}={a.value}"); return 0
-    add("set-price", _setprice, [(("--index",), dict(type=int, required=True)),
-        (("--field",), dict(required=True, choices=["buy", "sell"])), (("--value",), dict(type=int, required=True))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])

@@ -3,7 +3,7 @@
  * Does NOT reimplement the field tables: it reuses the desktop engine (s5patch.py +
  * s5fields.py) UNCHANGED inside Pyodide (glue + handles set up by app.js), operating on
  * a ~6.6 MB TRUNCATED FRONT-SLICE of the ISO written to Pyodide's /iso.bin. Every
- * editable table (serial, stats, gear, spells, runes, prices, enemies, unites, MP,
+ * editable table (serial, stats, gear, spells, runes, rune/heal prices, enemies, unites, MP,
  * skill effects, names) lives below that offset, so absolute-seek reads/writes work on
  * the slice exactly as on the full disc. On Save we diff the edited slice against the
  * pristine one and write ONLY the changed byte-runs back into the real 4 GB file in
@@ -43,7 +43,6 @@ const ISO_VIEWS = [
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
   { id: "passive",  label: "Passives" },
-  { id: "price",    label: "Prices" },
   { id: "runeprice",label: "Rune prices" },
   { id: "healprice",label: "Heal prices" },
   { id: "enemy",    label: "Enemies" },
@@ -336,7 +335,6 @@ async function applyIsoWrite(el, value) {
     else if (view === "rune") res = window.PYISO.setrune(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "gear") res = window.PYISO.setgear(JSON.stringify({ slot: ident.slot, id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "enemy") res = window.PYISO.setenemy(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
-    else if (view === "price") res = window.PYISO.setprice(ident.index, field, +value);
     else if (view === "runeprice") res = window.PYISO.setruneprice(ident.index, field, +value);
     else if (view === "healprice") res = window.PYISO.sethealprice(ident.index, field, +value);
     else if (view === "mp") res = window.PYISO.setmp(ident.group, ident.idx, +value);
@@ -404,6 +402,11 @@ function renderCharTables(cid) {
       renderField(f, { view: "char", ident: JSON.stringify({ id: cid }), table,
         key: `char:${cid}:${table}:${f.label}`, prefix: `${name} · `, group: name })).join("") + `</div>`;
   }
+  if (!("weapon growth" in r.tables))   // issue #22: the table only covers ids 0-80
+    h += `<div class="subhd">weapon growth</div>
+      <div class="note" style="margin:0 14px">No weapon growth data is stored for this character:
+      the game's weapon growth table only has records for the first 81 characters (ids 0-80),
+      so there is nothing to show or edit here.</div>`;
   $("isoCbody").innerHTML = h;
 }
 /* Preset: set every equipable-skill cap for a character to one grade (staged, undoable). */
@@ -885,7 +888,6 @@ function priceView(loadFn, view, cols) {
 }
 function rowFor(view, p, cols) {
   let nm = p.name, desc = "";
-  if (!nm && view === "price") { const it = itemInfo(p.index); nm = it.name; desc = it.desc; }
   nm = nm || ("#" + p.index);
   const nameCell = desc ? `${esc(nm)}<div class="fnote">${esc(desc)}</div>` : esc(nm);
   return `<tr data-name="${esc((nm + " " + desc).toLowerCase())}"><td class="note">${p.index}</td><td>${nameCell}</td>` +
@@ -970,8 +972,6 @@ VIEW_RENDER.passive = async (body) => {
       perks above are confirmed <b>not</b> to work.</div>`;
 };
 
-VIEW_RENDER.price = priceView(() => window.PYISO.prices(), "price",
-  [{ field: "buy", label: "Buy", group: "Item prices" }, { field: "sell", label: "Sell", group: "Item prices" }]);
 VIEW_RENDER.runeprice = priceView(() => window.PYISO.runeprices(), "runeprice",
   [{ field: "buy", label: "Buy", group: "Rune prices" }, { field: "sell", label: "Sell", group: "Rune prices" }]);
 VIEW_RENDER.healprice = priceView(() => window.PYISO.healprices(), "healprice",

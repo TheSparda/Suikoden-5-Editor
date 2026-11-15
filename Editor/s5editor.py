@@ -3,7 +3,7 @@
 Suikoden V (USA, SLUS-21291) editor — local web app.
 
 Runs an HTTP server on your machine and opens a browser tab. Nothing is uploaded.
-ISO editing (characters/stats/skills/equipment/runes/prices/Hard Mode/names/text) and
+ISO editing (characters/stats/skills/equipment/runes/rune+heal prices/Hard Mode/names/text) and
 PS2 save editing (hero/castle name + New Game Plus).
 """
 import http.server, json, os, socketserver, webbrowser, threading
@@ -312,12 +312,8 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
  </section>
 
  <section class=panel id=p-price>
-  <h2>Item &amp; Equipment Prices</h2>
-  <p class=sub>Buy / sell prices (verified vs stat guide; sell = buy ÷ 2). Records in item-id order.</p>
   <div class=row><button onclick=loadPrices()>Load prices</button>
-   <input id=pricefilter size=12 placeholder="min buy…" oninput=priceShow()>
-   <span id=pricenote class=note></span></div>
-  <div class=scroll id=prices></div>
+   <span class=note>Shop prices live in the rune and healing-item tables below; gear prices are in the Gear tab. (There is no separate item price table in the game data.)</span></div>
   <h2 style="margin-top:18px">Rune (Orb) Prices</h2>
   <p class=sub>Buy / sell for each rune orb (verified vs the rune guide; sell = buy ÷ 2; event-only orbs have buy 0).</p>
   <div class=row><input id=runepricefilter size=14 placeholder="filter rune…" oninput=runePriceShow()>
@@ -521,7 +517,7 @@ function applyRegionGate(){const pal=REGION==='pal';
  // if the active tab was just hidden, fall back to Characters
  const act=document.querySelector('nav button.on');
  if(pal&&act&&act.hasAttribute('data-palgate'))showTab('char');}
-let CHARS=[], CUR=null, ORIG={}, REF={}, PRICES=[], MAPS={items:{},runes:{},armor:{head:{},body:{},glove:{},foot:{}},held:{},ranks:[],grades:[],elements:{},targets:{}};
+let CHARS=[], CUR=null, ORIG={}, REF={}, MAPS={items:{},runes:{},armor:{head:{},body:{},glove:{},foot:{}},held:{},ranks:[],grades:[],elements:{},targets:{}};
 let SPELLS=[], SCUR=null, SORIG={};
 let _busy=0;
 function ctrl(r,key){const v=r.value;
@@ -783,10 +779,10 @@ async function saveGear(){if(!needIso())return;const edits=[];
  const s=await j('/api/setgear',{iso:iso(),slot:gslot(),id:GCUR,edits});
  if(s.error)toast('Error: '+s.error,'bad');else{toast('Saved '+edits.length+' field(s)','ok');loadGearItem()}}
 
-async function loadPrices(){if(!needIso())return;const s=await j('/api/prices',{iso:iso()});
- if(s.error){toast(s.error,'bad');return}PRICES=s.prices.filter(p=>p.buy||p.sell);priceShow();toast('Loaded '+PRICES.length+' priced items','ok');
+async function loadPrices(){if(!needIso())return;
  const rp=await j('/api/runeprices',{iso:iso()});if(!rp.error){RUNEPRICES=rp.prices||[];runePriceShow();}
- const hp=await j('/api/healprices',{iso:iso()});if(!hp.error){HEALPRICES=hp.prices||[];healPriceShow();}}
+ const hp=await j('/api/healprices',{iso:iso()});if(!hp.error){HEALPRICES=hp.prices||[];healPriceShow();}
+ toast('Loaded rune and healing-item prices','ok')}
 let RUNEPRICES=[], HEALPRICES=[];
 function healPriceShow(){const f=(document.getElementById('healpricefilter').value||'').toLowerCase();
  const rows=HEALPRICES.filter(p=>!f||p.name.toLowerCase().includes(f));
@@ -808,17 +804,6 @@ function runePriceShow(){const f=(document.getElementById('runepricefilter').val
  document.getElementById('runeprices').innerHTML=h+'</tbody></table>';}
 async function setRunePrice(inp){const r=await j('/api/setruneprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
  inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Rune #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
-function priceShow(){const min=parseInt(document.getElementById('pricefilter').value||'0')||0;
- const rows=PRICES.filter(p=>p.buy>=min);
- document.getElementById('pricenote').textContent=rows.length+' items';
- let h='<table><thead><tr><th>#</th><th>Item</th><th>Buy</th><th>Sell</th></tr></thead><tbody>';
- rows.slice(0,400).forEach(p=>{const it=MAPS.items[p.index];h+=`<tr><td class=note>${p.index}</td>`+
-  `<td>${it?it.name:'<span class=note>—</span>'}${it&&it.desc?' <span class=note>· '+it.desc+'</span>':''}</td>`+
-  `<td><input type=number value=${p.buy} data-i=${p.index} data-f=buy size=8 onchange=setPrice(this)></td>`+
-  `<td><input type=number value=${p.sell} data-i=${p.index} data-f=sell size=8 onchange=setPrice(this)></td></tr>`});
- document.getElementById('prices').innerHTML=h+'</tbody></table>';}
-async function setPrice(inp){const r=await j('/api/setprice',{iso:iso(),index:parseInt(inp.dataset.i),field:inp.dataset.f,value:parseInt(inp.value)});
- inp.classList.toggle('chg',!r.error);if(r.error)toast(r.error,'bad');else toast('Price #'+inp.dataset.i+' '+inp.dataset.f+' saved','ok')}
 
 // ---- MP growth: 4 magic-level rows x 9 MP-cost thresholds ----
 let MPFIELDS=[];
@@ -1503,18 +1488,6 @@ class H(http.server.BaseHTTPRequestHandler):
                 with P.Iso(iso, writable=True) as g:
                     for e in d.get("edits", []):
                         P.write_enemy_field(g, int(d["id"]), e["field"], int(e["value"]))
-                return self._send(200, json.dumps({"ok": True}))
-            if self.path == "/api/prices":
-                if not os.path.exists(iso):
-                    return self._send(200, json.dumps({"error": "open the ISO first"}))
-                with P.Iso(iso) as g: pr = P.read_prices(g)
-                return self._send(200, json.dumps({"prices": pr}))
-            if self.path == "/api/setprice":
-                if not os.path.exists(iso):
-                    return self._send(200, json.dumps({"error": "open the ISO first"}))
-                P.backup(iso)
-                with P.Iso(iso, writable=True) as g:
-                    P.write_price(g, int(d["index"]), d["field"], int(d["value"]))
                 return self._send(200, json.dumps({"ok": True}))
             if self.path == "/api/runeprices":
                 if not os.path.exists(iso):

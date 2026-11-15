@@ -17,7 +17,7 @@ copy.
 > runs, but every new feature lands in the web editor. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.17.5**.
+Current release: **v1.17.6**.
 
 > 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md) — what every
 > editable value means, its scale and its limits, table by table, plus the ISO offsets if
@@ -216,10 +216,12 @@ effect id, so this is an on/off switch, not a rate slider (the encounter-rate *v
 in map script data, not in the executable). The Raven Rune's dungeon evasion would be a fine
 addition but has no forceable gate, so it is deliberately excluded.
 
-### Prices, Rune prices, Heal prices
+### Rune prices, Heal prices
 
-Three filterable tables: buy and sell for items and equipment, rune (orb) prices, and
-healing-item prices, each row labelled with its real English name.
+Two filterable tables: rune (orb) prices and healing-item prices, each row labelled
+with its real English name. Gear prices live in the Gear tab. (A standalone "Prices"
+table shipped until v1.17.5. It turned out to be the gloves table read one record
+late, so it was removed in v1.17.6: see issue #30.)
 
 ### Enemies
 
@@ -273,11 +275,11 @@ is exact, and anything past a field's ceiling is capped rather than failing.
 
 ### Excel / CSV
 
-Export any of **eleven data tables** as CSV, bulk-edit it in Excel, Sheets or LibreOffice,
+Export any of **ten data tables** as CSV, bulk-edit it in Excel, Sheets or LibreOffice,
 and import it back:
 
 `Characters — stats & growths`, `— elemental affinities`, `— equipable-skill caps`,
-`— weapon growth`, `— starting equipment`, `Enemies`, `Spells`, `Runes`, `Prices`,
+`— weapon growth`, `— starting equipment`, `Enemies`, `Spells`, `Runes`,
 `Skill effects`, `MP growth`.
 
 `Spells` is all 106 spell records (element, power / heal, target, status). `Runes` is the

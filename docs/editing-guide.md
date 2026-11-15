@@ -427,12 +427,17 @@ call at `0x436548`; Prosperity and Godspeed are checked some other way that hasn
 
 ## Prices
 
-Three separate tables, because the game stores them separately:
+The game stores prices in separate tables, not one master list:
 
-- **Prices** — 148 item/equipment records, buy and sell as u32.
 - **Rune prices** — 70 orb records. Buy and sell are 3-byte little-endian values.
   **PAL uses a different stride here** (80 rather than 76); the editor handles it.
 - **Heal prices** — 41 healing-item records, same 3-byte layout.
+- **Gear prices** — buy and sell (u32) at the start of each record in the per-slot
+  Gear tables.
+
+There is no standalone item price table. A "Prices" table shipped until v1.17.5
+at 0x49433C; it was the Gear (arm) table read one record late, so its rows were
+glove prices wearing item names. Removed in v1.17.6 (issue #30).
 
 Sell is conventionally half of buy, but the two are independent fields — set them however you
 like. Event-only orbs ship with a buy price of 0.
@@ -582,13 +587,12 @@ move (and the rune-price stride).
 | Character stats + growth | 0x48A970 | 0x48FB60 | 0x12 | one per character id |
 | Character affinities | 0x48B530 | 0x490720 | 0x0E | one per character id |
 | Equipable skill caps | 0x4B2731 | 0x4B80D1 | 0x31 | 113 |
-| Weapon growth | 0x4987C0 | 0x49D9B0 | 0x60 | 376 |
+| Weapon growth | 0x4987C0 | 0x49D9B0 | 0x60 | 81 (character ids 0-80 only) |
 | Starting equipment / items | 0x493112 | 0x498302 | 0x18 | one per character id |
 | Enemies | 0x49F0DC | 0x4A42CC | 0x7C | 219 |
 | Skill effects | 0x4AEB1C | 0x4B44BC | 0x24 | 165 |
 | Spells | 0x4E87F0 | 0x4FC950 | 0x54 | 106 |
 | Rune → spell grants | 0x4E6D16 | 0x4FAE76 | 0x46 | 26 |
-| Item prices | 0x49433C | 0x49952C | 0x94 | 148 |
 | Rune (orb) prices | 0x4E24FC | 0x4F0B20 | 0x4C (PAL 0x50) | 70 |
 | Healing-item prices | 0x4CCFD0 | 0x4D2980 | 0x58 | 41 |
 | MP growth | 0x4986C0 | 0x49D8B0 | 0x14 | 4 groups |
