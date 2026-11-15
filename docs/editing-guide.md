@@ -608,6 +608,20 @@ Honest list of the gaps, so you know where the map ends:
   is zero padding for all 120 characters. The flag bytes stay uneditable until their
   meaning is pinned down; writing them on a guess could seal or unseal slots in ways the
   editor could not describe honestly.
+- **Unique (Epic) skills in the normal skill slots** (issue #16): already how the game
+  works, so there is nothing to add. The four Epic skills (Divine Right, Zen Sword,
+  Sacred Oath, Royal Paradise) are ordinary entries in the 48-skill array: they have
+  caps and ranks like any other skill, they occupy the same two equipped-slot bytes
+  (+0xF2/+0xF3), and real saves use them there (the Prince slots Royal Paradise). The
+  Save editor already edits their ranks and slots, and the ISO editor edits their caps.
+  The one skill that cannot be offered is index 26, the unnamed slot between Freeze and
+  Barrage: it has no name in any of the game's lists (47 named skills), no character has
+  a nonzero cap for it (0 of 113), and no save record ranks or slots it. Its two
+  skill-effect rows carry real magnitudes (an activation row identical to Barrage's and
+  a target-count row that differs only at SS rank), so it looks like a reserved or
+  cut weapon-class skill, but nothing verifies that the game would honor it in an
+  equip slot, so it stays hidden rather than being offered on a guess.
+
 ---
 
 ## Appendix: table addresses
