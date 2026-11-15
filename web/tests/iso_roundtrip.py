@@ -341,6 +341,40 @@ def main():
                   for p in em["mod"]["patches"])
     chk("recipe includes Dinn HP offset", covered, hex(off_hp))
 
+    # ---- Sacrificial Buddha in Starting Items (issue #27): it has no name copy in
+    # the held-item pools, so the catalog entry uses the item database's own name
+    # pointer for it. That pointer is verified against the real disc: entry 9 of the
+    # stride-4 name-pointer table (file 0x491FB4) must be the catalog value, and the
+    # string it points at must be the Buddha's JP name right after Jizo's.
+    held = mp["held"]
+    chk("Buddha is in the starting-items catalog", held.get("5129416") == "Sacrificial Buddha",
+        str(held.get("5129416")))
+    chk("Jizo catalog pointer unchanged", held.get("5133800") == "Sacrificial Jizo")
+    real_iso = os.environ.get("S5_ISO") or os.path.join(WEB, "..", "ISO", "suikoden5-us.iso")
+    if os.path.exists(real_iso):
+        with open(real_iso, "rb") as fh:
+            fh.seek(0x491FB4 + 9 * 4)
+            tab9 = int.from_bytes(fh.read(4), "little")
+            fh.seek(0x491FB4 + 8 * 4)
+            tab8 = int.from_bytes(fh.read(4), "little")
+            fh.seek(tab9 - 0x52700)
+            nm9 = fh.read(16).split(b"\x00")[0]
+            fh.seek(tab8 - 0x52700)
+            nm8 = fh.read(16).split(b"\x00")[0]
+        chk("catalog Buddha pointer is the item name-table entry 9", tab9 == 5129416, hex(tab9))
+        chk("entry 9 names the Buddha (JP)", nm9.decode("shift_jis") == "身代わり如来",
+            nm9.decode("shift_jis"))
+        chk("entry 8 names the Jizo (JP)", nm8.decode("shift_jis") == "身代わり地蔵",
+            nm8.decode("shift_jis"))
+    else:
+        print("SKIP Buddha pointer checks: no real ISO")
+    # and the value round-trips through the real write path on the slice
+    chk("iso_setchar starting item ok", json.loads(g["iso_setchar"](json.dumps({"id": 11}),
+        json.dumps([{"table": "starting items", "field": "Item 1", "value": 5129416}]))).get("ok") is True)
+    it1 = next(f["value"] for f in json.loads(g["iso_char"](11))["tables"]["starting items"]
+               if f["label"] == "Item 1")
+    chk("Buddha pointer persisted", it1 == 5129416, str(it1))
+
     # ---- field models: the swap is a pointer repoint, and Reset must restore it exactly
     mods = json.loads(g["iso_models"]())
     rows = mods["models"]

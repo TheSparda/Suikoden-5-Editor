@@ -14,6 +14,7 @@
   "5154744": "Cough Drop",
   "5154760": "Ice Breath Scroll",
   "5154776": "Sacrificial Jizo",
+  "5150392": "Sacrificial Buddha",
   "5154792": "Sleeping Wind Scroll",
   "7310496": "Mantle",
   "5154816": "Blazing Wall Scroll",
@@ -49,6 +50,7 @@
   "base": "0x498302",
   "stride": "0x18",
   "slots": "+0x06/+0x0a/+0x0e/+0x12 u32 name pointers (SLES_540.87)",
-  "source": "PAL JP item blob 0x4EA738.. joined to NTSC English names by JP-string identity"
+  "source": "PAL JP item blob 0x4EA738.. joined to NTSC English names by JP-string identity",
+  "buddha_note": "Sacrificial Buddha (issue #27) has no copy in the PAL blob either; 5150392 (0x4E96B8) is the item database's own name pointer for it, entry 9 of the PAL name-pointer table (file 0x4971A4), verified against the PAL disc image."
  }
 }

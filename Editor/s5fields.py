@@ -113,6 +113,9 @@ TABLES = {
     # POINTERS (into the internal item-name pool): +0x06/+0x0a/+0x0e/+0x12. 0x6DFDE8 = empty.
     # Editable only within the closed set of pointers the game already uses for held items
     # (s5_held_items.json) so every written value is a known-valid item reference.
+    # One catalog entry is sourced differently: Sacrificial Buddha (issue #27) has no
+    # name copy in the held-item pools, so its catalog pointer is the item database's own
+    # name pointer for it (see the buddha_note in s5_held_items.json).
     # Ground truth: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.
     "starting items": (0x493112, 0x18, [("Item 1", 0x06, 4, "helditem"), ("Item 2", 0x0a, 4, "helditem"),
                                         ("Item 3", 0x0e, 4, "helditem"), ("Item 4", 0x12, 4, "helditem")]),
