@@ -115,7 +115,6 @@ function isoGlueHandles(){
     gear:g("iso_gear"), gearitem:g("iso_gearitem"), setgear:g("iso_setgear"),
     setgearname:g("iso_setgearname"),
     enemies:g("iso_enemies"), enemy:g("iso_enemy"), setenemy:g("iso_setenemy"),
-    prices:g("iso_prices"), setprice:g("iso_setprice"),
     runeprices:g("iso_runeprices"), setruneprice:g("iso_setruneprice"),
     healprices:g("iso_healprices"), sethealprice:g("iso_sethealprice"),
     mp:g("iso_mp"), setmp:g("iso_setmp"), skillfx:g("iso_skillfx"), setskillfx:g("iso_setskillfx"),
@@ -339,15 +338,6 @@ def iso_enemy(eid):
     except Exception as e: return json.dumps({"error": str(e)})
 iso_setenemy = _setter(lambda g, ident, e: P.write_enemy_field(g, int(ident["id"]), e["field"], int(e["value"])))
 
-def iso_prices():
-    try:
-        with P.Iso(ISO) as g: return json.dumps({"prices": P.read_prices(g)})
-    except Exception as e: return json.dumps({"error": str(e)})
-def iso_setprice(index, field, value):
-    try:
-        with P.Iso(ISO, writable=True) as g: P.write_price(g, int(index), field, int(value))
-        return json.dumps({"ok": True})
-    except Exception as e: return json.dumps({"error": str(e)})
 def iso_runeprices():
     try:
         with P.Iso(ISO) as g: return json.dumps({"prices": P.read_rune_prices(g)})

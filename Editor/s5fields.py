@@ -58,6 +58,10 @@ def _char_stat_fields():
     f += [(lbl + " Growth", 9 + i, 1, "num") for i, lbl in enumerate(_CHAR_STATS)]
     return f
 
+# The weapon growth table (in TABLES below) has records for character ids
+# 0..WEAPON_GROWTH_COUNT-1 only. See the note on the "weapon growth" entry.
+WEAPON_GROWTH_COUNT = 81
+
 TABLES = {
     "stats":      (0x48A970, 0x12, _char_stat_fields()),
     # ---- Elemental affinities (VERIFIED @0x48B530, stride 14, char-indexed like stats).
@@ -86,9 +90,12 @@ TABLES = {
          "Trade In", "Cook", "Rune Sage", "Bard", "Perfect Pitch", "Appraisal", "Bath",
          "Tutor"])]),
     # 0x4987C0/0x60 is per-character WEAPON GROWTH (attack power at sharpen levels
-    # 1-16), edited by the game's weapon-growth data (
-    # "Found your weapon stats"). Verified: 376 varied ascending records, base+stride
-    # match the ISO. (Previously mislabeled here as "Magic thresholds".)
+    # 1-16). Verified against the full NTSC-U and PAL ISOs (2026-11-15, issue #22):
+    # the table holds only WEAPON_GROWTH_COUNT records (character ids 0..80, using
+    # just 6 distinct curves; 8 records are all-zero in the game data itself).
+    # Characters past id 80 have NO record here: the bytes beyond the table are an
+    # unrelated block, so read_character omits this table for them and write_field
+    # refuses to write it. (Previously mislabeled here as "Magic thresholds".)
     "weapon growth": (0x4987C0, 0x60, [(f"Sharpen Lv{i+1} attack", i, 1, "num") for i in range(16)]),
     # (Removed the old "skills" table — 0x48A970/0x12 is the character STATS table above.)
     # 4 armor slots equipped at new-game start (the "Starting Equipment" data:
@@ -255,13 +262,12 @@ def _healprice_names():
     except Exception: return []
 HEALPRICE_NAMES = _healprice_names()
 
-# Item/equipment PRICE table (VERIFIED vs the rune guide: buy+sell u32,
-# sell == buy/2; e.g. record 17 = 6000/3000 (Fire Rune), record 21 = 35000/17500
-# (Shield Rune)). Records are in item-id order; names live in a parallel pool.
-PRICE_BASE  = 0x49433C
-PRICE_STRIDE = 148          # 0x94
-PRICE_COUNT = 148
-PRICE_FIELDS = [("buy", 0x00, 4), ("sell", 0x04, 4)]
+# (Removed in v1.17.6, issue #30: the "item/equipment PRICE table" that used to
+# sit here at 0x49433C was never a price table. That address is Arm armor record
+# 1: the block is the gloves table (ARMOR_TABLES["arm"]) read one record late,
+# verified byte-for-byte against the full NTSC-U ISO. There is no standalone
+# item price table; real prices live in the healprice table (consumables), the
+# runeprice table (orbs) and ARMOR_TABLES (gear). Do not re-add it.)
 
 # ---- Armor stat tables (VERIFIED vs the Suikosource Armor List guide) --------
 # Four per-slot tables, stride 0x94, indexed by an internal armor-stat id (NOT the
@@ -621,7 +627,7 @@ _PAL = {
     # Phase 2 (byte-match verified): rune->spell grant, shop item prices, starting-equipment armor.
     # runegrant moved back two records (Dawn + Twilight) with the NTSC base — PAL's
     # Fire Rune record is 0x4FAF02, so the Dawn Rune is 0x4FAF02 - 2*0x46. Verified.
-    "runegrant": 0x4FAE76, "price": 0x49952C, "starting equipment": 0x498302,
+    "runegrant": 0x4FAE76, "starting equipment": 0x498302,
     # Phase 3: starting held-items share the starting-equipment record base.
     "starting items": 0x498302,
     # Phase 3: unite table (packed; byte-identical layout, Δ+0x59B0). scan-end keeps the
@@ -639,7 +645,7 @@ def _snapshot_bases():
         "starting equipment": TABLES["starting equipment"][0], "starting items": TABLES["starting items"][0],
         "spell": SPELL_BASE, "runeprice": RUNEPRICE_BASE, "runeprice_stride": RUNEPRICE_STRIDE,
         "healprice": HEALPRICE_BASE, "mp": MP_BASE, "skillfx": SKILLFX_BASE, "enemy": ENEMY_BASE,
-        "runegrant": RUNE_GRANT_BASE, "price": PRICE_BASE,
+        "runegrant": RUNE_GRANT_BASE,
         "unite": UNITE_BASE, "unite_end": UNITE_SCAN_END,
         "resource_names": RESOURCE_NAME_BASE, "model_ptr": MODEL_PTR_BASE,
         "armor_head": ARMOR_TABLES["head"][0], "armor_body": ARMOR_TABLES["body"][0],
@@ -652,7 +658,7 @@ _NTSC = _snapshot_bases()
 def set_region(region):
     """Rebind all region-variable table bases in place. No-op if unknown."""
     global REGION, SPELL_BASE, RUNEPRICE_BASE, RUNEPRICE_STRIDE, HEALPRICE_BASE
-    global MP_BASE, SKILLFX_BASE, ENEMY_BASE, RUNE_GRANT_BASE, PRICE_BASE
+    global MP_BASE, SKILLFX_BASE, ENEMY_BASE, RUNE_GRANT_BASE
     global UNITE_BASE, UNITE_SCAN_END, RESOURCE_NAME_BASE, MODEL_PTR_BASE
     b = {"ntsc-u": _NTSC, "pal": _PAL}.get(region)
     if not b:
@@ -669,7 +675,7 @@ def set_region(region):
     RUNEPRICE_BASE = b["runeprice"]; RUNEPRICE_STRIDE = b["runeprice_stride"]
     HEALPRICE_BASE = b["healprice"]
     MP_BASE = b["mp"]; SKILLFX_BASE = b["skillfx"]; ENEMY_BASE = b["enemy"]
-    RUNE_GRANT_BASE = b["runegrant"]; PRICE_BASE = b["price"]
+    RUNE_GRANT_BASE = b["runegrant"]
     UNITE_BASE = b["unite"]; UNITE_SCAN_END = b["unite_end"]
     RESOURCE_NAME_BASE = b["resource_names"]; MODEL_PTR_BASE = b["model_ptr"]
     return REGION
