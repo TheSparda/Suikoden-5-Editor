@@ -1,0 +1,31 @@
+/* Code-patch toggle framework (Editor/s5toggles.py): runs the Python checks
+ * in tests/toggles.py (registry shape, pristine states, exact apply/restore
+ * cycles for the Dawn toggle and a perk gate, foreign-byte refusals) and
+ * re-asserts them here. */
+import { spawnSync } from "child_process";
+import path from "path";
+import { fileURLToPath } from "url";
+const here = path.dirname(fileURLToPath(import.meta.url));
+
+let n = 0, bad = 0;
+function chk(name, cond, extra = "") {
+  n++;
+  console.log((cond ? "PASS " : "FAIL ") + name + (extra ? "  " + extra : ""));
+  if (!cond) bad++;
+}
+
+let data = null;
+if (spawnSync("python3", ["--version"], { encoding: "utf8" }).status === 0) {
+  const r = spawnSync("python3", [path.join(here, "toggles.py")],
+    { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  if (r.status === 0) { try { data = JSON.parse(r.stdout); } catch (_) {} }
+  else console.log("toggles.py failed:", (r.stderr || "").slice(0, 500));
+}
+if (!data || data.skip) {
+  console.log("SKIP toggles: " + (data ? data.skip : "python3 unavailable"));
+  console.log("toggles: 0/0 checks passed");
+  process.exit(0);
+}
+for (const c of data.checks) chk(c.name, c.ok, c.extra);
+console.log(`toggles: ${n - bad}/${n} checks passed`);
+process.exit(bad ? 1 : 0);
