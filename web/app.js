@@ -84,6 +84,7 @@ async function boot(){
       open:  pyodide.globals.get("open_save"),
       chars: pyodide.globals.get("save_chars"),
       write: pyodide.globals.get("save_write"),
+      invnames: pyodide.globals.get("save_item_names"),
     };
     window.PYISO = isoGlueHandles();     // expose ISO adapters for iso.js
 
@@ -190,6 +191,20 @@ def save_write(path, folder, edits_json):
         r = SV.write_individual_save(path, edits) if _individual(path) else SV.write_save_fields(path, folder, edits)
         return json.dumps(r)
     except Exception as e: return json.dumps({"error": str(e)})
+def save_item_names():
+    # (cat, id) -> display name for the inventory editor: the editor's verified
+    # drop table, plus category 15 (Trade Goods), which never drops and so is
+    # absent there; its names were read from the ELF records at 0x5238A8
+    # (ps2-re games/suikoden5/VM_HANDLERS.md section 4).
+    cats = dict(F.DROP_TABLE.get("categories", {}))
+    items = dict(F.DROP_TABLE.get("items", {}))
+    cats["15"] = "Trade Goods"
+    for i, n in enumerate(["Sugar","Salt","Soybeans","Vegetables","Fruit","Wheat",
+        "Rice","Folk Crafts","Spices","Coffee","Tea","Iron","Gold and Silver",
+        "Pearls","Miso and Soy Sauce","Beer","Wine","Sake","Golden Craftwork"], 1):
+        items[f"15:{i}"] = n
+    return json.dumps({"categories": cats, "items": items,
+                       "maxid": SV.ITEM_CAT_MAXID, "limits": SV.STACK_LIMITS})
 
 # ===== ISO editor (operates on a truncated front-slice at /iso.bin) =====
 ISO = "/iso.bin"
@@ -730,6 +745,7 @@ function renderSaves(){
       ? `<span class="note">Read-only format. Export to .xps or a memory card to edit.</span>`
       : `<button class="ghost" onclick="openChars(${i})">Characters (equipment &amp; runes)…</button>
          <button class="ghost" onclick="openRecruit(${i})">Recruitment…</button>
+         <button class="ghost" onclick="openInv(${i})">Inventory…</button>
          <span class="note">Change fields freely — nothing is written to your file until you press Save.</span>`;
     return `<div class="sec">
       <div class="card-hd">${esc(sv.folder)} ${badge}
@@ -764,6 +780,7 @@ function renderSaves(){
       <div class="card-ft">${foot}</div>
       <div id="chars${i}" class="note" style="margin:0 14px 8px"></div>
       <div id="recruit${i}" style="margin:0 14px 10px"></div>
+      <div id="inv${i}" style="margin:0 14px 10px"></div>
     </div>`;
   }).join("");
   wireSaveHeaderInputs();
@@ -795,6 +812,84 @@ function setSaveMax(i, idk, key, max){
   const el = $(`sv${i}_${idk}`); if(!el) return;
   el.value = String(max);
   stageSaveField(i, key, max, el);
+}
+
+/* ---------- inventory editor ---------- */
+let INVNAMES = null;   // {categories, items, maxid, limits} from the engine (save_item_names)
+const INV_LIST_LABEL = { bag: "Party bag", warehouse: "Warehouse (HQ storage)", keyItems: "Key items" };
+const INV_CAPS = { bag: 70, warehouse: 300, keyItems: 64 };
+function invItemName(cat, id){
+  return (INVNAMES && INVNAMES.items[`${cat}:${id}`]) || `Category ${cat} #${id}`;
+}
+function invCatName(cat){ return (INVNAMES && INVNAMES.categories[String(cat)]) || ("Category " + cat); }
+async function openInv(i){
+  const box = $(`inv${i}`);
+  if(box._open){ box._open = false; box.innerHTML = ""; return; }
+  if(!INVNAMES){
+    try{ INVNAMES = JSON.parse(PY.invnames()); }
+    catch(_){ INVNAMES = { categories: {}, items: {}, maxid: {}, limits: {} }; }
+  }
+  box._open = true;
+  renderInv(i);
+}
+function renderInv(i){
+  const box = $(`inv${i}`); if(!box || !box._open) return;
+  const inv = (saves[i].fields && saves[i].fields.inventory) || {};
+  let h = "";
+  for(const list of ["bag", "warehouse", "keyItems"]){
+    const entries = inv[list] || [];
+    h += `<div class="subhd">${INV_LIST_LABEL[list]} <span class="note">${entries.length}/${INV_CAPS[list]}</span></div>`;
+    if(!entries.length) h += `<div class="note" style="padding:2px 2px 6px">empty</div>`;
+    h += entries.map((e) => invRow(i, list, e)).join("");
+    if(entries.length < INV_CAPS[list])
+      h += `<div style="padding:2px 0 8px"><button type="button" class="ghost" onclick="pickInvItem(${i},'${list}',${entries.length})">+ Add item…</button></div>`;
+  }
+  h += `<div class="fnote" style="padding-bottom:8px">Removing an entry compacts the list, the packed shape the game itself keeps. Trade goods and antiques carry a per-item value set by the game (price paid, appraised value): it is kept when only the quantity changes and reset when the item is replaced.</div>`;
+  box.innerHTML = h;
+}
+function invRow(i, list, e){
+  const qty = e.max > 0
+    ? `<input type="number" style="width:64px" min="1" max="${e.max}" value="${e.qty}" onchange="setInvQty(${i},'${list}',${e.slot},${e.cat},${e.id},this.value)"> <span class="note">of ${e.max} max</span>`
+    : `<span class="note">single</span>`;
+  return `<div class="row" style="align-items:center;gap:8px;padding:2px 0">
+    <button type="button" class="pickbtn" onclick="pickInvItem(${i},'${list}',${e.slot})"><span class="pickbtn-name">${esc(invItemName(e.cat, e.id))}</span><span class="pickbtn-id note">${esc(invCatName(e.cat))} #${e.id}</span></button>
+    ${qty}
+    <button type="button" class="chip mini" title="Remove this entry" onclick="removeInvItem(${i},'${list}',${e.slot})">Remove</button>
+  </div>`;
+}
+function invPickerList(){
+  const list = [];
+  if(!INVNAMES) return list;
+  for(const cat of Object.keys(INVNAMES.maxid).map(Number).sort((a, b) => a - b))
+    for(let id = 1; id <= INVNAMES.maxid[cat]; id++)
+      list.push({ id: `${cat}:${id}`, name: invItemName(cat, id), desc: invCatName(cat) });
+  return list;
+}
+function pickInvItem(i, list, slot){
+  const entries = ((saves[i].fields || {}).inventory || {})[list] || [];
+  const cur = slot < entries.length ? `${entries[slot].cat}:${entries[slot].id}` : "";
+  openPicker(`Choose item (${INV_LIST_LABEL[list]})`, invPickerList(), cur, (sel) => {
+    const [cat, id] = sel.split(":").map(Number);
+    const lim = ((INVNAMES.limits || {})[String(cat)] || [])[id - 1] || 0;
+    writeInvField(i, list, slot, { cat, id, qty: lim ? 1 : 0 });
+  }, { cap: 1000 });
+}
+function setInvQty(i, list, slot, cat, id, v){ writeInvField(i, list, slot, { cat, id, qty: +v }); }
+function removeInvItem(i, list, slot){ writeInvField(i, list, slot, { cat: 0 }); }
+async function writeInvField(i, list, slot, val){
+  const sv = saves[i];
+  spin(true);
+  try{
+    const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [`inv_${list}_${slot}`]: val })));
+    if(r.error){ toast("Error: " + r.error, "bad"); return; }
+    const re = JSON.parse(PY.open(SAVE_PATH));
+    if(!re.error){ saves = re.saves; saves.forEach(s => s.card = curFileName); }
+    sEdits[`inv:${list}:${slot}`] = { label: `${INV_LIST_LABEL[list]} · ${val.cat ? invItemName(val.cat, val.id) : "entry removed"}`,
+      group: sv.folder, to: val.cat ? (val.qty ? `x${val.qty}` : "set") : "removed" };
+    updateSaveToolbar();
+    renderInv(i);
+  }catch(e){ toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
+  finally{ spin(false); }
 }
 
 /* ---------- active party ---------- */

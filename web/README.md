@@ -116,9 +116,10 @@ npm run test:all          # both
 ## Notes and limits
 
 - Save-editable fields are the verified set (hero / castle / army name, Potch, Party SP, New
-  Game Plus, active party, and per character level, armor, accessory, runes, skill slots,
-  skill ranks, recruitment). Fields whose offsets are not reverse-engineered yet are
-  intentionally not exposed.
+  Game Plus, active party, per character level, armor, accessory, runes, skill slots,
+  skill ranks, recruitment, and the three inventory lists: party bag, warehouse and key
+  items, with the game's own stack limits enforced). Fields whose offsets are not
+  reverse-engineered yet are intentionally not exposed.
 - ISO edits apply to a **new game**. Do not use emulator save states. Back up the ISO, or
   export a recipe, before saving.
 - Keep the original file until the edited one has loaded in-game.

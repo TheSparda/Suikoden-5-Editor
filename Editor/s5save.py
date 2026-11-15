@@ -159,6 +159,114 @@ RECRUIT_BASE = 0xD7CA
 # but are not recruitable stars; 112-119 are Sialeeds + the antagonists.
 NON_RECRUITABLE = set(range(109, 120))
 
+# ---- Inventory lists (VERIFIED 2026-11-15: ELF RE + two real saves).
+# The payload serializes the three item lists the script VM works with (RAM bag
+# 0xA321A0 cap 70, warehouse 0xA323E0 cap 300, key items 0xA33710 cap 64; the
+# give-item handler and append rules are in ps2-re games/suikoden5/VM_HANDLERS.md)
+# compactly after the game-state struct: bag @0xBCBC, warehouse @0xBEF8, key
+# items @0xC864. (The RAM addresses do NOT map linearly into the payload; these
+# payload bases were pinned empirically.) Each list is 8-byte slots:
+#   [+0 u32][+4 category][+5 item id][+6 quantity in this stack][+7 stack limit]
+# Slot 0's u32 is the list count (u16, high bytes zero); every later slot's u32
+# is a per-instance value (the price paid for a trade good, an antique's
+# appraised value; 0 for ordinary items). An empty slot is all-zero except the
+# category byte 0x13 (19), the end marker the append functions preset on the
+# next free slot. Verified against two real saves (US BASLUS-2129100 slot 00,
+# PAL BESLES-5408702 slot 02): 283 entries, every category/id valid, every
+# stack-limit byte equal to the master-table byte (see STACK_LIMITS), every
+# quantity inside 1..limit (limit 0 => quantity 0), counts 6/134/10 (US) and
+# 65/39/29 (PAL). The key-item list ends at 0xCA64, well clear of the
+# recruitment bitfield at 0xD7CA.
+INV_LISTS = {"bag": (0xBCBC, 70), "warehouse": (0xBEF8, 300), "keyItems": (0xC864, 64)}
+INV_EMPTY_CAT = 0x13
+# Item id ranges per category (ELF category table, VM_HANDLERS.md section 4).
+ITEM_CAT_MAXID = {1: 32, 2: 71, 3: 37, 4: 30, 5: 49, 6: 70, 7: 25, 8: 54, 9: 41,
+                  10: 12, 11: 2, 12: 6, 13: 18, 14: 24, 15: 19, 16: 20, 17: 61, 18: 12}
+# Stack limits the game's append functions copy into entry +7, by category and
+# id (index = id - 1). Only categories 7, 9, 10 and 11 carry one; every other
+# category stores 0. Source bytes in the ELF (vaddr): cat 7 record+20 of the
+# 76-stride table at 0x51EE40; cat 9 the byte at 0x51F674 + 88*id; cat 10
+# record+19 of the 76-stride table at 0x520580; cat 11 record+20 of the
+# 76-stride table at 0x5209B0. Regenerate/verify: Editor/build_stack_limits.py.
+STACK_LIMITS = {
+    7:  [4] * 25,
+    9:  [5, 3, 2, 0, 6, 6, 6, 0, 0, 0, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    10: [3] * 12,
+    11: [0, 3],
+}
+
+def stack_limit(cat, iid):
+    """The stack limit the game stores for (category, id); 0 = one per slot."""
+    t = STACK_LIMITS.get(cat)
+    return t[iid - 1] if t and 1 <= iid <= len(t) else 0
+
+def read_inventory(gd):
+    """Decode the three inventory lists. Returns {listName: [entry, ...]} with
+    entry = {slot, cat, id, qty, max, value}; only the first `count` slots of
+    each list are returned (the rest are empty-form spares). Slot 0's value is
+    reported as 0: its u32 slot is the list count, not an instance value."""
+    out = {}
+    for name, (base, cap) in INV_LISTS.items():
+        count = int.from_bytes(gd[base:base + 2], "little")
+        entries = []
+        for i in range(min(count, cap)):
+            o = base + 8 * i
+            entries.append({"slot": i, "cat": gd[o + 4], "id": gd[o + 5],
+                            "qty": gd[o + 6], "max": gd[o + 7],
+                            "value": int.from_bytes(gd[o:o + 4], "little") if i else 0})
+        out[name] = entries
+    return out
+
+def _apply_inv_edit(b, key, val):
+    """Apply an inventory edit keyed 'inv_<list>_<slot>' to bytearray b.
+    val = {"cat": c, "id": i, "qty": q} sets the entry at that slot (slot ==
+    count appends); {"cat": 0} (or 0/None) removes it and compacts the list,
+    the packed shape the game itself keeps. Editing a slot's quantity keeps
+    its per-instance value; changing the item zeroes it (a fresh instance).
+    Returns True if applied; raises ValueError on an unverified category/id,
+    an out-of-range quantity or slot, or a full list, so a bad edit fails the
+    whole write instead of landing partially."""
+    if not key.startswith("inv_"): return False
+    parts = key[4:].rsplit("_", 1)
+    if len(parts) != 2 or parts[0] not in INV_LISTS or not parts[1].isdigit():
+        raise ValueError(f"bad inventory edit key: {key}")
+    name, slot = parts[0], int(parts[1])
+    base, cap = INV_LISTS[name]
+    count = int.from_bytes(b[base:base + 2], "little")
+    if not val or not int(val.get("cat", 0)):
+        if not 0 <= slot < count:
+            raise ValueError(f"no entry at {name} slot {slot}")
+        for i in range(slot, count - 1):
+            b[base + 8 * i:base + 8 * i + 8] = b[base + 8 * (i + 1):base + 8 * (i + 1) + 8]
+        tail = base + 8 * (count - 1)
+        b[tail:tail + 8] = b"\x00\x00\x00\x00" + bytes((INV_EMPTY_CAT, 0, 0, 0))
+        b[base:base + 4] = (count - 1).to_bytes(4, "little")
+        return True
+    cat, iid, qty = int(val["cat"]), int(val["id"]), int(val.get("qty", 0))
+    if cat not in ITEM_CAT_MAXID or not 1 <= iid <= ITEM_CAT_MAXID[cat]:
+        raise ValueError(f"unverified item category/id: {cat}/{iid}")
+    mx = stack_limit(cat, iid)
+    if mx and not 1 <= qty <= mx:
+        raise ValueError(f"quantity {qty} outside 1..{mx} for item {cat}/{iid}")
+    if not mx and qty != 0:
+        raise ValueError(f"item {cat}/{iid} is one-per-slot; quantity must be 0")
+    if slot == count:
+        if count >= cap:
+            raise ValueError(f"{name} is full ({cap} entries)")
+        o = base + 8 * slot
+        if slot: b[o:o + 4] = (0).to_bytes(4, "little")
+        b[o + 4:o + 8] = bytes((cat, iid, qty, mx))
+        b[base:base + 4] = (count + 1).to_bytes(4, "little")
+    elif 0 <= slot < count:
+        o = base + 8 * slot
+        if slot and (b[o + 4], b[o + 5]) != (cat, iid):
+            b[o:o + 4] = (0).to_bytes(4, "little")   # new item: fresh instance value
+        b[o + 4:o + 8] = bytes((cat, iid, qty, mx))
+    else:
+        raise ValueError(f"slot {slot} outside {name} (count {count})")
+    return True
+
 def _char_off(idx): return CHAR_BASE + idx * CHAR_STRIDE
 
 def read_character(gd, idx):
@@ -369,6 +477,7 @@ def decode_gamedata(gd):
     # playtime display copy (read-only): h/m/s u16s
     h, m, s = (int.from_bytes(gd[PLAYTIME_OFF+2*i:PLAYTIME_OFF+2*i+2], "little") for i in range(3))
     out["playtime"] = f"{h}:{m:02d}:{s:02d}"
+    out["inventory"] = read_inventory(gd)
     return out
 
 def apply_gamedata_edits(gd, edits):
@@ -403,6 +512,9 @@ def apply_gamedata_edits(gd, edits):
                 if v != PARTY_EMPTY:   # keep party => recruited in sync (issue #32)
                     b[RECRUIT_BASE + (v >> 3)] |= 1 << (v & 7)
                 changed += 1
+        elif k.startswith("inv_"):
+            _apply_inv_edit(b, k, v)   # raises ValueError on an unverified edit
+            changed += 1
         elif _apply_char_edit(b, k, v):
             changed += 1
     return bytes(b), changed
