@@ -131,6 +131,8 @@ npm run test:all          # both
 - ISO edits apply to a **new game**. Do not use emulator save states. Back up the ISO, or
   export a recipe, before saving.
 - Keep the original file until the edited one has loaded in-game.
-- Overlay extraction, the overlay text editor, `.xdelta` patches, raw hex and boot-ELF string
-  editing stay in the CLI / retired desktop app.
+- Overlay extraction, the overlay text editor, raw hex and boot-ELF string editing stay in
+  the CLI / retired desktop app. `.xdelta` patches are the exception: the web editor
+  exports them and imports ones whose changes land in the front slice (`vcdiff.js`);
+  whole-disc create/apply stays in the CLI (`../Editor/s5vcdiff.py`).
 - First load downloads a few MB of Pyodide from a CDN; later loads are cached and offline.

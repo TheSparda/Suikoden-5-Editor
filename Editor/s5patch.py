@@ -2535,6 +2535,19 @@ def _setstring(a):
         cap = set_cstring(g, int(a.off, 0), a.text)
     print(f"wrote string @0x{int(a.off,0):X} (cap {cap} bytes)"); return 0
 
+def _xdelta_create(a):
+    import s5vcdiff
+    size, changed = s5vcdiff.create_patch(a.pristine, a.iso, a.out)
+    print(f"wrote {a.out}: {size} bytes of patch for {changed} changed bytes "
+          f"(turns the pristine disc into this one)")
+    return 0
+
+def _xdelta_apply(a):
+    import s5vcdiff
+    total = s5vcdiff.apply_patch(a.iso, a.patch, a.out)
+    print(f"wrote {a.out}: {total} bytes reconstructed from the pristine disc + patch")
+    return 0
+
 def _poke(a):
     backup(a.iso)
     with Iso(a.iso, writable=True) as g:
@@ -2586,6 +2599,10 @@ def main(argv=None):
     add("pak-list", _paklist, [(("--filter",), dict())])
     add("pak-extract", _pakextract, [(("--path",), dict(required=True)), (("--out",), dict(required=True))])
     add("peek", _peek, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=16))])
+    add("xdelta-create", _xdelta_create, [(("--pristine",), dict(required=True)),
+        (("--out",), dict(required=True))])
+    add("xdelta-apply", _xdelta_apply, [(("--patch",), dict(required=True)),
+        (("--out",), dict(required=True))])
     add("poke", _poke, [(("--off",), dict(required=True)), (("--u8",), dict(type=int)),
                         (("--u16",), dict(type=int)), (("--hex",), dict())])
     a = p.parse_args(argv)

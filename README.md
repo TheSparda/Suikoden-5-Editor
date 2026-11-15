@@ -387,7 +387,8 @@ Because the recipe is built from the byte diff rather than from a list of field 
 captures everything the web editor can do, including the code-level features (sets, passives,
 the Dawn Rune toggle, model swaps).
 
-`.xdelta` patch creation is **desktop and CLI only**; see below.
+`.xdelta` patches work in the web editor (export, plus import for patches whose changes land
+in the front slice) and in the CLI (whole-disc create and apply); see below.
 
 ## Regions
 
@@ -486,10 +487,9 @@ always did, but it is no longer where the work happens.
   editing, the Excel / CSV round-trip with its capping and wrong-sheet guard, and the enemy
   stat scaler.
 - **Still desktop and CLI only:** overlay extraction and re-insertion, the overlay text
-  editor for story and dialogue text (endings, letters, lore, newspaper), `.xdelta` patch
-  creation and application (needs `xdelta3` installed), raw hex peeking, and the boot-ELF
-  string editor. ELF string editing was deliberately dropped from the web build as
-  unreliable.
+  editor for story and dialogue text (endings, letters, lore, newspaper), raw hex peeking,
+  and the boot-ELF string editor. ELF string editing was deliberately dropped from the web
+  build as unreliable.
 - **Your files are portable.** ISOs, saves and `.s5mod` recipes move between the two
   unchanged, so you can switch mid-project.
 
@@ -497,10 +497,15 @@ always did, but it is no longer where the work happens.
 
 An `.xdelta` patch captures *any* byte difference between two ISOs, including overlay edits
 that a recipe cannot see, and it is the de-facto PS2 romhack standard. It needs a pristine
-ISO to diff against. In the desktop app, **Tools → Share / Patch**, put the pristine ISO's
-path in **Pristine ISO** and click **Create .xdelta**; a recipient supplies their pristine
-ISO plus the patch and gets a new patched ISO alongside. Install `xdelta3` first
-(`brew install xdelta`, or `sudo apt install xdelta3`).
+ISO to diff against. The editor speaks VCDIFF natively (web: `web/vcdiff.js`; CLI:
+`Editor/s5vcdiff.py`), so no `xdelta3` install is needed, and the patches stay compatible
+with `xdelta3` itself. In the web editor, **Export .xdelta** downloads a patch built from
+your session's changed bytes, and **Import recipe / patch** applies one whose changes land
+in the front slice. For whole-disc work the CLI does both directions:
+`s5patch.py xdelta-create MODIFIED.iso --pristine PRISTINE.iso --out patch.xdelta` and
+`s5patch.py xdelta-apply PRISTINE.iso --patch patch.xdelta --out out.iso`. Patches built
+with xdelta3's default secondary compression cannot be applied by the editor; re-create
+them with `xdelta3 -e -S none`.
 
 ## CLI
 
