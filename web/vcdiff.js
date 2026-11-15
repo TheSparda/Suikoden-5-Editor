@@ -98,7 +98,7 @@
   }
 
   // =========================================================================================
-  // DECODER — enough of RFC 3284 to apply real patches, so the editor can consume a mod and
+  // DECODER: enough of RFC 3284 to apply real patches, so the editor can consume a mod and
   // not just publish one. Unlike the encoder (which only has to emit one shape), this must
   // read whatever xdelta3 produced: the full default code table, all nine address modes with
   // both caches, RUN, VCD_TARGET windows, app headers and xdelta3's VCD_ADLER32 extension.
@@ -112,7 +112,7 @@
   const VCD_SOURCE = 0x01, VCD_TARGET = 0x02, VCD_ADLER32 = 0x04;   // Win_Indicator
   const NOOP = 0, ADD = 1, RUN = 2, COPY = 3;
 
-  // RFC 3284 §5.4 — the default code table, built by the spec's own algorithm rather than
+  // RFC 3284 §5.4: the default code table, built by the spec's own algorithm rather than
   // pasted as 256 magic rows (a transcription slip here would silently mis-decode patches).
   // Each entry is [inst1, size1, mode1, inst2, size2, mode2]; size 0 means "size follows in
   // the instruction stream".
@@ -135,7 +135,7 @@
   }
   let CODE_TABLE = null;
 
-  // RFC 3284 §5.3 — address cache. Modes 0/1 are self/here-relative; 2..5 read the "near"
+  // RFC 3284 §5.3: address cache. Modes 0/1 are self/here-relative; 2..5 read the "near"
   // ring; 6..8 read the "same" hash. Every decoded address feeds both caches.
   function AddrCache(nearSize, sameSize) {
     const near = new Int32Array(nearSize), same = new Int32Array(sameSize * 256);
@@ -158,7 +158,7 @@
     };
   }
 
-  // adler32 (RFC 1950) — used to verify a decoded window against the checksum xdelta3 stored.
+  // adler32 (RFC 1950), used to verify a decoded window against the checksum xdelta3 stored.
   function adler32(bytes) {
     let a = 1, b = 0;
     for (let i = 0; i < bytes.length;) {
@@ -184,7 +184,7 @@
   //   { targetStart, targetLen, sourceStart, sourceLen, fromTarget, decode(sourceBytes) }
   // and returns nothing; `decode` materialises that window's target bytes given its source
   // segment (or the already-decoded target, for a VCD_TARGET window). Splitting it this way
-  // lets a caller pull only the source ranges it actually needs — decisive for a 4 GB file
+  // lets a caller pull only the source ranges it actually needs, decisive for a 4 GB file
   // that can't be held in memory.
   function eachWindow(patch, onWindow) {
     if (patch.length < 5 || patch[0] !== 0xd6 || patch[1] !== 0xc3 || patch[2] !== 0xc4)
@@ -197,7 +197,7 @@
         "Re-create it with:  xdelta3 -e -S none -s <source> <target> <patch>");
     if (hdr & VCD_CODETABLE)
       throw new Error("This patch ships a custom code table, which this editor can't read.");
-    if (hdr & 0x04) { const n = readInt(patch, p); p.i += n; }        // app header — skip
+    if (hdr & 0x04) { const n = readInt(patch, p); p.i += n; }        // app header: skip
     if (!CODE_TABLE) CODE_TABLE = defaultCodeTable();
     const cache = AddrCache(4, 3);
 
@@ -215,7 +215,7 @@
         "can't read. Re-create it with:  xdelta3 -e -S none -s <source> <target> <patch>");
       const dlen = readInt(patch, p), ilen = readInt(patch, p), alen = readInt(patch, p);
       // xdelta3's VCD_ADLER32 extension: an adler32 of this window's TARGET bytes. Keeping it
-      // is what lets an applied patch be verified — a wrong or already-modified source disc
+      // is what lets an applied patch be verified: a wrong or already-modified source disc
       // produces different target bytes, so the checksum won't match. (The patches this editor
       // *exports* carry no checksum; the ones it applies usually do.)
       let adler = null;
@@ -241,7 +241,7 @@
         // bytes rather than from the source; those are still unchanged data, and following the
         // provenance through them is the difference between flagging a few KB and flagging
         // hundreds of MB. A COPY that happens to fetch equal bytes from a different offset is
-        // still reported — this over-reports but never under-reports, so callers must confirm
+        // still reported: this over-reports but never under-reports, so callers must confirm
         // candidates against real bytes before trusting them.
         plan() {
           const prov = new Int32Array(targetLen).fill(-1);   // absolute source position, or -1
@@ -293,7 +293,7 @@
               else {
                 // Addresses live in one space: [0, sourceLen) is the source segment,
                 // [sourceLen, ...) is the part of this window already emitted (so a COPY
-                // can reference its own output — that's how RLE-ish runs are encoded).
+                // can reference its own output, which is how RLE-ish runs are encoded).
                 let a = cache.decode(mode, sourceLen + tp, addr, ap);
                 for (let k = 0; k < size; k++, a++) out[tp++] = a < sourceLen ? src[a] : out[a - sourceLen];
               }
@@ -301,7 +301,7 @@
           }
           if (tp !== targetLen) throw new Error("vcdiff: window produced " + tp + " of " + targetLen + " bytes");
           if (adler !== null && adler32(out) !== adler)
-            throw new Error("Checksum mismatch — this patch was built against a different " +
+            throw new Error("Checksum mismatch: this patch was built against a different " +
               "source file (or the disc has already been modified).");
           return out;
         },
@@ -312,7 +312,7 @@
     return targetStart;   // total target size
   }
 
-  // Convenience whole-file decode — used by the tests and fine for small inputs. The ISO
+  // Convenience whole-file decode, used by the tests and fine for small inputs. The ISO
   // editor does NOT use this (it would mean materialising 4 GB); see applyToRange.
   function decode(source, patch) {
     const chunks = [];

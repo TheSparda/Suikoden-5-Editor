@@ -1707,7 +1707,7 @@ function exportRecipe() {
  * recipe cannot (overlay rewrites, arbitrary byte changes made elsewhere). */
 function exportXdelta() {
   if (!ORIG || !isoFile) return;
-  if (typeof Vcdiff === "undefined") { toast("VCDIFF module didn't load — reload the page.", "bad"); return; }
+  if (typeof Vcdiff === "undefined") { toast("VCDIFF module didn't load: reload the page.", "bad"); return; }
   const cur = pyodide.FS.readFile(ISO_PATH);
   const runs = DiffCore.diffRuns(ORIG, cur, 0);
   if (!runs.length) { toast("No changes to export.", "ok"); return; }
@@ -1717,7 +1717,7 @@ function exportXdelta() {
   downloadBlob(patch, "edits.xdelta", "application/octet-stream");
   const nb = runs.reduce((s, r) => s + r.len, 0);
   toast(`Exported .xdelta patch (${patch.length} bytes, ${nb} byte(s) changed). Apply ONLY to a pristine ` +
-    `SLUS-212.91 ISO — this patch has no integrity check, so a wrong or already-modified source corrupts ` +
+    `SLUS-212.91 ISO. This patch has no integrity check, so a wrong or already-modified source corrupts ` +
     `silently (use the .s5mod recipe for source-verified edits). Apply with xdelta3 or the CLI: ` +
     `s5patch.py xdelta-apply PRISTINE --patch edits.xdelta --out out.iso`, "warn");
 }
@@ -1725,7 +1725,7 @@ function exportXdelta() {
 /* Apply an .xdelta: decode only the windows the patch actually changes
  * (plan() provenance narrows them without reading the whole disc), stage the
  * resulting byte runs into the slice like any other edit. A patch that
- * changes bytes beyond the front slice is refused whole — the CLI applies
+ * changes bytes beyond the front slice is refused whole; the CLI applies
  * those. Mirrors the Suikoden IV editor's applyXdelta. */
 async function importXdelta(f) {
   if (!isoFile) { toast("Load an ISO first.", "bad"); return; }
@@ -1734,7 +1734,7 @@ async function importXdelta(f) {
     const wins = [];
     const total = Vcdiff.eachWindow(patch, (w) => wins.push(w));
     if (total !== isoFile.size) {
-      toast(`This patch builds a ${total} byte file, but the loaded disc is ${isoFile.size} bytes — it was made for a different image.`, "bad"); return; }
+      toast(`This patch builds a ${total} byte file, but the loaded disc is ${isoFile.size} bytes. It was made for a different image.`, "bad"); return; }
     if (wins.some((w) => w.fromTarget)) {
       toast("This patch uses VCD_TARGET windows, which this editor can't apply. Use xdelta3 or the CLI instead.", "bad"); return; }
     const edits = [];
@@ -1750,11 +1750,11 @@ async function importXdelta(f) {
         edits.push({ off: w.targetStart + from, bytes: out.subarray(from, i) });
       }
     }
-    if (!edits.length) { toast("This patch changes nothing on this disc — it may already be applied.", "ok"); return; }
+    if (!edits.length) { toast("This patch changes nothing on this disc; it may already be applied.", "ok"); return; }
     const bad = edits.filter((e) => e.off + e.bytes.length > ISO_END);
     if (bad.length) {
       const n = bad.reduce((a, e) => a + e.bytes.length, 0);
-      toast(`This patch changes ${n} byte(s) beyond the editor's front slice (first at 0x${bad[0].off.toString(16).toUpperCase()}) — nothing was applied. ` +
+      toast(`This patch changes ${n} byte(s) beyond the editor's front slice (first at 0x${bad[0].off.toString(16).toUpperCase()}): nothing was applied. ` +
         `Apply it with the CLI instead: s5patch.py xdelta-apply PRISTINE --patch patch.xdelta --out out.iso`, "bad"); return; }
     const slice = pyodide.FS.readFile(ISO_PATH);
     for (const e of edits) slice.set(e.bytes, e.off);
@@ -1763,7 +1763,7 @@ async function importXdelta(f) {
     isoEdits["xdelta"] = { label: `Imported .xdelta patch (${edits.length} run(s))`, group: "Imported", to: "staged" };
     if (curView) selectView(curView);
     updateIsoToolbar(); captureUndoStep();
-    toast(`Applied patch — ${n} byte(s) in ${edits.length} run(s). Review, then Save to write.`, "ok");
+    toast(`Applied patch: ${n} byte(s) in ${edits.length} run(s). Review, then Save to write.`, "ok");
   } catch (e) { toast("Could not apply patch: " + (e.message || e), "bad"); }
 }
 
