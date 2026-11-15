@@ -588,6 +588,18 @@ Honest list of the gaps, so you know where the map ends:
   scripts that handle recruitment, and that path has not been traced to a writable table.
   Until it is, there is nothing verified to write. The Save editor already edits runes and
   skills on a save in progress, which covers the same goal there.
+- **Rune slot state** (issue #6): the rune bytes themselves (+0xEC/+0xED/+0xEE in the save
+  record) are verified and editable, but the three bytes after them (+0xEF/+0xF0/+0xF1),
+  which look like per-slot flags, do not verify against the character records. Checked
+  2026-11-15 on a real save: 29 of the 360 flag bytes disagree with the rune byte they sit
+  next to, including on untouched unrecruited templates (Levi's head and right runes both
+  sit under zero flags), so they are not occupancy mirrors; and they are not innate-rune
+  markers either (Jeane's innate Charm slot reads 1 while her innate Lightning slot reads
+  0). On the ISO side there is no slot-availability field to edit either: the stats,
+  affinities and skill-cap tables are fully mapped, and the skill-cap record's 49th byte
+  is zero padding for all 120 characters. The flag bytes stay uneditable until their
+  meaning is pinned down; writing them on a guess could seal or unseal slots in ways the
+  editor could not describe honestly.
 
 ---
 
