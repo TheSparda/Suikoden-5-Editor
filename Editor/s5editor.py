@@ -1975,7 +1975,7 @@ class H(http.server.BaseHTTPRequestHandler):
                 armorNames = {"helm": armor.get("head", {}), "body": armor.get("body", {}),
                               "glove": armor.get("glove", {}), "foot": armor.get("foot", {})}
                 try:
-                    _rn = F.res_json("s5_rune_ids.json")  # equip-id-ordered
+                    _rn = F.res_json("s5_rune_save_ids.json")  # save-record id order (see s5save.py)
                     runeNames = {str(i): e for i, e in enumerate(_rn)}
                 except Exception: runeNames = {}
                 skillNames = ["Stamina","Attack","Defense","Technique","Vitality","Agility","Magic",

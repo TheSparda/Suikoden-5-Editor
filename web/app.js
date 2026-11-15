@@ -43,7 +43,7 @@ const REVERT_BTN_SAVE = `<button type="button" class="revert" title="Undo this c
 
 /* JSON tables the Pyodide engines read from /editor (s5fields.res_json opens them there). */
 const ENGINE_JSON = [
-  "s5_characters.json","s5_armor_names.json","s5_rune_ids.json","s5_rune_names.json",
+  "s5_characters.json","s5_armor_names.json","s5_rune_ids.json","s5_rune_save_ids.json","s5_rune_names.json",
   "s5_skill_names.json","s5_runeprice_names.json","s5_healprice_names.json",
   "s5_unite_names.json","s5_skilleffect_names.json","s5_drop_items.json",
   "s5_armor_stat_names.json","s5_item_names.json","s5_held_items.json",
@@ -142,7 +142,7 @@ async function loadNames(){
   const [chars, armor, runes] = await Promise.all([
     fetch(`${EDITOR_DIR}/s5_characters.json`).then(r => r.json()),
     fetch(`${EDITOR_DIR}/s5_armor_names.json`).then(r => r.json()),
-    fetch(`${EDITOR_DIR}/s5_rune_ids.json`).then(r => r.json()),
+    fetch(`${EDITOR_DIR}/s5_rune_save_ids.json`).then(r => r.json()),
   ]);
   const cnames = {}; for(const c of chars) cnames[c.id] = c.name;
   const armorNames = { helm: armor.head||{}, body: armor.body||{},

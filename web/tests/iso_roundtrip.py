@@ -375,6 +375,29 @@ def main():
                if f["label"] == "Item 1")
     chk("Buddha pointer persisted", it1 == 5129416, str(it1))
 
+    # ---- Save-space rune ids: the save editor's name list follows the rune
+    # DEFINITION table (file 0x4E6CD0, stride 0x46), whose record index is the
+    # save byte. Verified against the real disc: the records the old equip-order
+    # list could not account for (Darkness 20, White Rose 38, Fire Lizard 57,
+    # Ice Dragon 58) sit exactly where the save list puts them, the calibration
+    # anchors (Shrike 39, Godspeed 84, Sun 98) match, and the table ends at 98.
+    if os.path.exists(real_iso):
+        with open(real_iso, "rb") as fh:
+            def defname(i):
+                fh.seek(0x4E6CD0 + i * 0x46 + 4)
+                return fh.read(0x42).split(b"\x00")[0].decode("shift_jis")
+            anchors = {20: "闇の紋章", 38: "白いバラの紋章", 39: "もずの紋章",
+                       41: "はやぶさの紋章", 57: "火とかげの紋章", 58: "氷竜の紋章",
+                       84: "真神行法の紋章", 98: "太陽の紋章"}
+            for i, nm in anchors.items():
+                chk(f"definition record {i} is {nm}", defname(i) == nm, defname(i))
+            fh.seek(0x4E6CD0 + 99 * 0x46)
+            rec99 = fh.read(0x46)
+            chk("definition table ends at record 98",
+                  rec99[3] == 0 and rec99[4] == 0, rec99[:8].hex())
+    else:
+        print("SKIP definition-table checks: no real ISO")
+
     # ---- field models: the swap is a pointer repoint, and Reset must restore it exactly
     mods = json.loads(g["iso_models"]())
     rows = mods["models"]

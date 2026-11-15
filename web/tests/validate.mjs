@@ -95,6 +95,22 @@ ok("desktop editor has the pair warning too (#24)",
    editorSrc.includes("function recruitPairWarn")
    && editorSrc.includes("Checking both on purpose is allowed"));
 
+// Save-editor rune names: save bytes follow the rune DEFINITION table's order,
+// not s5_rune_ids.json (the equip/code list). The save list must be the one the
+// save editor loads, in both UIs, and its anchors are the innate-rune calibration.
+const saveRunes = JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_rune_save_ids.json"), "utf8"));
+ok("save rune list has one entry per definition record", saveRunes.length === 99, `${saveRunes.length}`);
+for (const [idx, nm] of [[13, "Star Rune"], [16, "Beast Rune"], [20, "Darkness Rune"],
+                         [38, "White Rose Rune"], [39, "Shrike Rune"], [41, "Falcon Rune"],
+                         [57, "Fire Lizard Rune"], [58, "Ice Dragon Rune"],
+                         [83, "Parent Turtle Rn"], [84, "Godspeed Rune"], [85, "Raven Rune"],
+                         [91, "Charm Rune"], [98, "Sun Rune"]])
+  ok(`save rune ${idx} is ${nm}`, saveRunes[idx] === nm, saveRunes[idx]);
+ok("save rune list has no phantom Critical/Magic",
+   !saveRunes.includes("Critical Rune") && !saveRunes.includes("Magic Rune"));
+ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
+ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
+
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
 ok("iso.js registers the Passives tab",
    /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));

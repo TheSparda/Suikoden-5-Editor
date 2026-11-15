@@ -24,6 +24,7 @@ const SHELL = [
   // Reused, unchanged from the desktop editor — single source of truth.
   "../Editor/s5save.py", "../Editor/s5patch.py", "../Editor/s5fields.py",
   "../Editor/s5_characters.json", "../Editor/s5_armor_names.json", "../Editor/s5_rune_ids.json",
+  "../Editor/s5_rune_save_ids.json",
   "../Editor/s5_rune_names.json", "../Editor/s5_skill_names.json", "../Editor/s5_runeprice_names.json",
   "../Editor/s5_healprice_names.json", "../Editor/s5_unite_names.json", "../Editor/s5_skilleffect_names.json",
   "../Editor/s5_drop_items.json", "../Editor/s5_armor_stat_names.json", "../Editor/s5_item_names.json",

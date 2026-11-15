@@ -552,6 +552,14 @@ Verified and editable:
 
 Playtime is shown read-only — it's a display cache.
 
+**Rune names in the Save editor** follow the save's own id order, which is the game's
+rune definition table order. It differs from the equip/code list used on the ISO side:
+the definition order includes the Darkness, White Rose, Fire Lizard and Ice Dragon
+runes, and it has no Critical or Magic rune. An earlier build labelled save runes with
+the equip list, which misnamed everything from Shrike onward (a Godspeed Rune displayed
+as Silence) and wrote the wrong rune when one was picked from the list. The two orders
+are now separate name files on purpose; only the save one is used here.
+
 The project's rule is that unverified save fields don't get written, so anything not on that
 list is deliberately absent rather than forgotten.
 
@@ -600,7 +608,6 @@ Honest list of the gaps, so you know where the map ends:
   is zero padding for all 120 characters. The flag bytes stay uneditable until their
   meaning is pinned down; writing them on a guess could seal or unseal slots in ways the
   editor could not describe honestly.
-
 ---
 
 ## Appendix: table addresses

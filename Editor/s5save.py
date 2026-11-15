@@ -127,6 +127,17 @@ ARMOR_SLOTS = ("helm", "body", "glove", "foot")   # +0xF4,+0xF5,+0xF6,+0xF7 (VER
 # fits the 49-entry table exactly. Needed to complete a 5-piece equipment set.
 CHAR_ACCESSORY = 0xF9
 RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED vs innate runes)
+# SAVE-SPACE rune ids (the bytes above) follow the game's rune DEFINITION table
+# (file 0x4E6CD0, stride 0x46, records 0..98; record index == save byte). That
+# order is NOT s5_rune_ids.json (the equip/code list): the definition table
+# holds four runes that list omits (Darkness 20, White Rose 38, Fire Lizard 57,
+# Ice Dragon 58) and that list inserts two runes the game does not have
+# (Critical, Magic), so labelling save bytes with it misnames everything from
+# Shrike onward (byte 84 is Godspeed, not Silence). s5_rune_save_ids.json is
+# the save-space name list. Pinned by the innate-rune calibration (Wind 9,
+# Star 13, Beast 16, Shrike 39, Falcon 41, Parent Turtle 83, Godspeed 84,
+# Raven 85, Charm 91) and cross-checked against the EN name pool and the orb
+# price list, which are in the same order.
 # CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char max == story-cap level in each save).
 # CHAR_SKILLS @+0x119: 48 skill ranks (ISO skill order), VERIFIED — 100% respect the ISO
 #   per-char equipable-skill CAPS across all saves (Zerase Magic/Incant=S, Georg physical=A).
