@@ -813,7 +813,7 @@ const fmtNum = (n) => Number(n || 0).toLocaleString();
 
 function nameFld(i, key, label, val, folder, ro, hint){
   return `<div class="fld"><label>${label}</label><div class="in">
-    <input id="sv${i}_${key}" value="${esc(val)}" maxlength="15" ${ro?"disabled":""}
+    <input id="sv${i}_${key}" value="${esc(val)}" maxlength="16" ${ro?"disabled":""}
       data-sk="sv${i}:${key}" data-orig="${esc(val)}" data-lbl="${label}" data-grp="${esc(folder)}">${ro?"":REVERT_BTN_SAVE}</div>
     <div class="fnote">${hint} · up to 15 characters</div></div>`;
 }
@@ -947,13 +947,13 @@ function partyGroup(i, party, from, to, title){
     <div class="grid" style="padding-top:6px">`;
   for(let k=from;k<to;k++){
     const val = party[k] == null ? PARTY_EMPTY : party[k];
-    const hero = k === 0;
+    const hero = val === 0;
     h += `<div class="fld"><label>Slot ${k+1}${hero?" · hero":""}</label><div class="in">
-      <button type="button" class="pickbtn" id="sv${i}_party${k}" ${hero?"disabled":""}
+      <button type="button" class="pickbtn" id="sv${i}_party${k}"
         data-sk="sv${i}:party${k}" data-orig="${val}" data-lbl="Party slot ${k+1}" data-grp="Party"
-        ${hero?'title="The hero always leads the party"':`onclick="pickParty(${i},${k})"`}>
+        onclick="pickParty(${i},${k})">
         <span class="pickbtn-name">${esc(partyDisplay(val))}</span>
-        <span class="pickbtn-id note">${val===PARTY_EMPTY?"":"#"+val}</span></button>${hero?"":REVERT_BTN_SAVE}</div></div>`;
+        <span class="pickbtn-id note">${val===PARTY_EMPTY?"":"#"+val}</span></button>${REVERT_BTN_SAVE}</div></div>`;
   }
   return h + `</div>`;
 }
@@ -994,17 +994,20 @@ function pickParty(i, slot){
 /* Warn (don't block) when one character occupies two slots — the game expects unique members. */
 function refreshPartyWarn(i){
   const box = $(`pwarn${i}`); if(!box) return;
-  const seen = new Map(), dupes = new Set();
+  const seen = new Map(), dupes = new Set(); let hasHero = false;
   for(let k=0;k<10;k++){
     const el = $(`sv${i}_party${k}`); if(!el) continue;
     const v = +(el.dataset.cur != null ? el.dataset.cur : el.dataset.orig);
     if(v === PARTY_EMPTY) continue;
+    if(v === 0) hasHero = true;
     if(seen.has(v)) dupes.add(v); else seen.set(v, k+1);
   }
-  box.innerHTML = dupes.size
-    ? `<div class="warnbox">⚠ ${[...dupes].map(v=>esc(partyDisplay(v))).join(", ")} appears in more than one slot.
-       The game expects each character once — fix this before saving.</div>`
-    : "";
+  const warns = [];
+  if(dupes.size)
+    warns.push(`${[...dupes].map(v=>esc(partyDisplay(v))).join(", ")} appears in more than one slot. The game expects each character once. Fix this before saving.`);
+  if(!hasHero)
+    warns.push(`The hero is not in the party. The game expects him in one of the slots. Add him before saving.`);
+  box.innerHTML = warns.length ? `<div class="warnbox">⚠ ${warns.join("<br>")}</div>` : "";
 }
 
 /* Header field write-through (hero/castle/army/potch/SP/NG+/party). */

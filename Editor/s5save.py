@@ -569,7 +569,7 @@ def apply_gamedata_edits(gd, edits):
         if k in S5_FIELDS:
             off, w, kind = S5_FIELDS[k]
             if kind == "str":
-                s = str(v).encode("latin1", "replace")[:w-1]
+                s = str(v).encode("latin1", "replace")[:w]
                 b[off:off+w] = s + b"\x00"*(w-len(s))
                 if k in S5_FIELD_MIRRORS:            # game-state struct copy (17B slot):
                     m = S5_FIELD_MIRRORS[k]          # the game loads THIS one back live,

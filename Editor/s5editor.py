@@ -914,9 +914,9 @@ function renderSaves(saves){const d=document.getElementById('saves');window._sav
     ? `<span class=note>Read-only format (.cbs is compressed). Export to .xps or a memory card to edit.</span>`
     : `<button onclick=saveWrite(${i})>Write to save</button> <button class=ghost onclick=openChars(${i})>Characters (equipment &amp; runes)…</button> <button class=ghost onclick=openRecruit(${i})>Recruitment…</button><span class=note>Writes hero/castle name + the cleared-game marker. A .bak is made first when backups are on (top-right toggle).</span>`;
   return `<div class=sec><div class=card-hd>${sv.folder} ${badge} <span class=note>· ${sv.card} · ${(sv.meta&&sv.meta.title)||''}</span></div><div class=grid>`+
-   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
-   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
-   `<div class=fld><label>Army name</label><div class=in><input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength=15 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Hero name</label><div class=in><input id="sv${i}_heroName" value="${esc(fl.heroName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Castle name</label><div class=in><input id="sv${i}_castleName" value="${esc(fl.castleName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
+   `<div class=fld><label>Army name</label><div class=in><input id="sv${i}_armyName" value="${esc(fl.armyName)}" maxlength=16 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Potch</label><div class=in><input type=number id="sv${i}_potch" value="${fl.potch||0}" min=0 max=99999999 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Party SP</label><div class=in><input type=number id="sv${i}_psp" value="${fl.partySP||0}" min=0 max=999999 ${ro?'disabled':''}></div></div>`+
    `<div class=fld><label>Level <span class=note>(display only)</span></label><div class=in><input type=number value="${fl.level||0}" disabled title="Save-select display level. Edit actual unit levels in the Characters panel."></div></div>`+

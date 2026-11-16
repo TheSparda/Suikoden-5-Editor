@@ -1,0 +1,3438 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="26">
+  <CheatEntries>
+	<CheatEntry>
+	  <ID>1</ID>
+	  <Description>"Activate Trainer (First Load A Game and View Main Menu, Then Activate Trainers)"</Description>
+	  <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+lua_aobscan_2("GetBasePointersAOB",process,"89 F9 83 C1 14 48 63 7C 0D 00 4C 63 05 * * * *",1,0x100000000)
+
+local CurrentSaveSymbolList = {
+"InfiniteItem",
+"InfiniteGP",
+"InfiniteHP",
+"InfinitePartySP",
+"InfiniteRuneUse",
+"InfiniteRuneUseBattle",
+"QuickLevelGain",
+"SetSPAllParty",
+"SetAllSkillsToSS",
+"SetAllPDFToMax",
+"SetAllMDFToMax",
+"SetAllAffinitiesToSAllChars",
+"TrainOnceForSSRank",
+"ForgeOnceSetsLevelToMax",
+"BlacksmithsCanForgeToMaxLevel",
+"AlliesTakeNoDamageWarBattles",
+"EnemiesInstantDeathWarBattles",
+"GPMultiplier",
+"PartySPMultiplier"
+}
+
+-- First, make sure Save Symbol List global variable is empty
+for i=#SaveSymbolList,1,-1 do
+	table.remove(SaveSymbolList,i)
+end
+
+for j=1,#CurrentSaveSymbolList do
+	-- Insert our custom symbol list for this trainer into the global variable
+	table.insert(SaveSymbolList,CurrentSaveSymbolList[j])
+end
+
+{$asm}
+
+alloc(newmem,2048)
+
+///
+label(FirstPartyCurrentHPOffset)
+registersymbol(FirstPartyCurrentHPOffset)
+label(PotchOffsetOffset)
+registersymbol(PotchOffsetOffset)
+label(PartySPOffsetOffset)
+registersymbol(PartySPOffsetOffset)
+label(FirstPartyItemOneQtyOffset)
+registersymbol(FirstPartyItemOneQtyOffset)
+label(FirstPartyExpOffset)
+registersymbol(FirstPartyExpOffset)
+label(iPartySlot)
+registersymbol(iPartySlot)
+label(FirstPartyEXPPtr)
+registersymbol(FirstPartyEXPPtr)
+label(FirstPartyItemOneQtyPtr)
+registersymbol(FirstPartyItemOneQtyPtr)
+label(FirstPartyEXPPtrOffset)
+registersymbol(FirstPartyEXPPtrOffset)
+label(FirstPartyItemOneQtyPtrOffset)
+registersymbol(FirstPartyItemOneQtyPtrOffset)
+
+///
+label(TrainOnceForSSRankOffset)
+registersymbol(TrainOnceForSSRankOffset)
+label(ForgeOnceSetsLevelToMaxOffset)
+registersymbol(ForgeOnceSetsLevelToMaxOffset)
+label(BlacksmithsCanForgeToMaxLevelOffset)
+registersymbol(BlacksmithsCanForgeToMaxLevelOffset)
+label(AlliesTakeNoDamageWarBattlesOffset1)
+registersymbol(AlliesTakeNoDamageWarBattlesOffset1)
+label(AlliesTakeNoDamageWarBattlesOffset2)
+registersymbol(AlliesTakeNoDamageWarBattlesOffset2)
+label(EnemiesInstantDeathWarBattlesOffset1)
+registersymbol(EnemiesInstantDeathWarBattlesOffset1)
+label(EnemiesInstantDeathWarBattlesOffset2)
+registersymbol(EnemiesInstantDeathWarBattlesOffset2)
+
+label(CharacterInfoOffset)
+registersymbol(CharacterInfoOffset)
+label(CharacterInfoNumPartyMembers)
+registersymbol(CharacterInfoNumPartyMembers)
+label(InfiniteItem)
+registersymbol(InfiniteItem)
+label(QuickLevelGain)
+registersymbol(QuickLevelGain)
+label(SetSPAllParty)
+registersymbol(SetSPAllParty)
+label(InfiniteRuneUse)
+registersymbol(InfiniteRuneUse)
+label(SetAllSkillsToSS)
+registersymbol(SetAllSkillsToSS)
+label(SetAllPDFToMax)
+registersymbol(SetAllPDFToMax)
+label(SetAllMDFToMax)
+registersymbol(SetAllMDFToMax)
+label(SetAllAffinitiesToSAllChars)
+registersymbol(SetAllAffinitiesToSAllChars)
+
+///
+label(BattleInfoOffset)
+registersymbol(BattleInfoOffset)
+label(BattleInfoNumPartyMembers)
+registersymbol(BattleInfoNumPartyMembers)
+label(InfiniteHP)
+registersymbol(InfiniteHP)
+label(InfiniteRuneUseBattle)
+registersymbol(InfiniteRuneUseBattle)
+
+///
+label(TrainOnceForSSRank)
+registersymbol(TrainOnceForSSRank)
+label(ForgeOnceSetsLevelToMax)
+registersymbol(ForgeOnceSetsLevelToMax)
+label(BlacksmithsCanForgeToMaxLevel)
+registersymbol(BlacksmithsCanForgeToMaxLevel)
+label(AlliesTakeNoDamageWarBattles)
+registersymbol(AlliesTakeNoDamageWarBattles)
+label(EnemiesInstantDeathWarBattles)
+registersymbol(EnemiesInstantDeathWarBattles)
+
+///
+label(SavedGP)
+registersymbol(SavedGP)
+label(GPInitialized)
+registersymbol(GPInitialized)
+label(GPMultiplier)
+registersymbol(GPMultiplier)
+label(InfiniteGP)
+registersymbol(InfiniteGP)
+
+///
+label(SavedPartySP)
+registersymbol(SavedPartySP)
+label(PartySPInitialized)
+registersymbol(PartySPInitialized)
+label(PartySPMultiplier)
+registersymbol(PartySPMultiplier)
+label(InfinitePartySP)
+registersymbol(InfinitePartySP)
+
+///
+newmem:
+FirstPartyExpOffset:
+dq FFFDC7FE
+FirstPartyItemOneQtyOffset:
+dq FFFDC82A
+PotchOffsetOffset:
+dq 38B51C10
+PartySPOffsetOffset:
+dq 4
+FirstPartyCurrentHPOffset:
+dq 9EF9C0
+
+///
+iPartySlot:
+dq 0
+FirstPartyEXPPtr:
+dq 0
+FirstPartyItemOneQtyPtr:
+dq 0
+FirstPartyEXPPtrOffset:
+dq FFFDC7FE
+FirstPartyItemOneQtyPtrOffset:
+dq FFFDC82A
+
+///
+TrainOnceForSSRankOffset:
+dq FF89D9A8
+ForgeOnceSetsLevelToMaxOffset:
+dq FF9538B8
+BlacksmithsCanForgeToMaxLevelOffset:
+dq FF966694
+AlliesTakeNoDamageWarBattlesOffset1:
+dq 84468
+AlliesTakeNoDamageWarBattlesOffset2:
+dq 59C28
+EnemiesInstantDeathWarBattlesOffset1:
+dq 84464
+EnemiesInstantDeathWarBattlesOffset2:
+dq 59C28
+
+///
+CharacterInfoOffset:
+dq 160
+CharacterInfoNumPartyMembers:
+dq #132
+InfiniteItem:
+dq 1
+QuickLevelGain:
+dq 0
+SetSPAllParty:
+dq 0
+InfiniteRuneUse:
+dq 1
+SetAllSkillsToSS:
+dq 0
+SetAllPDFToMax:
+dq 0
+SetAllMDFToMax:
+dq 0
+SetAllAffinitiesToSAllChars:
+dq 0
+
+BattleInfoOffset:
+dq 650
+BattleInfoNumPartyMembers:
+dq 6
+InfiniteHP:
+dq 0
+InfiniteRuneUseBattle:
+dq 1
+
+TrainOnceForSSRank:
+dq 0
+ForgeOnceSetsLevelToMax:
+dq 0
+BlacksmithsCanForgeToMaxLevel:
+dq 0
+AlliesTakeNoDamageWarBattles:
+dq 0
+EnemiesInstantDeathWarBattles:
+dq 0
+
+///
+GPMultiplier:
+dq #10
+InfiniteGP:
+dq 0
+GPInitialized:
+dq 0
+SavedGP:
+dq 0
+
+///
+PartySPMultiplier:
+dq #25
+InfinitePartySP:
+dq 0
+PartySPInitialized:
+dq 0
+SavedPartySP:
+dq 0
+
+[DISABLE]
+
+unregistersymbol(FirstPartyEXPOffset)
+unregistersymbol(FirstPartyItemOneQtyOffset)
+unregistersymbol(PotchOffsetOffset)
+unregistersymbol(PartySPOffsetOffset)
+unregistersymbol(FirstPartyCurrentHPOffset)
+
+///
+unregistersymbol(iPartySlot)
+unregistersymbol(FirstPartyEXPPtr)
+unregistersymbol(FirstPartyItemOneQtyPtr)
+unregistersymbol(FirstPartyEXPPtrOffset)
+unregistersymbol(FirstPartyItemOneQtyPtrOffset)
+
+///
+unregistersymbol(TrainOnceForSSRankOffset)
+unregistersymbol(ForgeOnceSetsLevelToMaxOffset)
+unregistersymbol(BlacksmithsCanForgeToMaxLevelOffset)
+unregistersymbol(AlliesTakeNoDamageWarBattlesOffset1)
+unregistersymbol(AlliesTakeNoDamageWarBattlesOffset2)
+unregistersymbol(EnemiesInstantDeathWarBattlesOffset1)
+unregistersymbol(EnemiesInstantDeathWarBattlesOffset2)
+
+///
+unregistersymbol(InjectionPointAOB)
+unregistersymbol(CharacterInfoOffset)
+unregistersymbol(CharacterInfoNumPartyMembers)
+unregistersymbol(InfiniteItem)
+unregistersymbol(QuickLevelGain)
+unregistersymbol(SetSPAllParty)
+unregistersymbol(InfiniteRuneUse)
+unregistersymbol(SetAllSkillsToSS)
+unregistersymbol(SetAllPDFToMax)
+unregistersymbol(SetAllMDFToMax)
+unregistersymbol(SetAllAffinitiesToSAllChars)
+
+///
+unregistersymbol(BattleInfoOffset)
+unregistersymbol(BattleInfoNumPartyMembers)
+unregistersymbol(InfiniteHP)
+unregistersymbol(InfiniteRuneUseBattle)
+
+///
+unregistersymbol(TrainOnceForSSRank)
+unregistersymbol(ForgeOnceSetsLevelToMax)
+unregistersymbol(BlacksmithsCanForgeToMaxLevel)
+unregistersymbol(AlliesTakeNoDamageWarBattles)
+unregistersymbol(EnemiesInstantDeathWarBattles)
+
+///
+unregistersymbol(SavedGP)
+unregistersymbol(GPMultiplier)
+unregistersymbol(GPInitialized)
+unregistersymbol(InfiniteGP)
+
+///
+unregistersymbol(SavedPartySP)
+unregistersymbol(PartySPMultiplier)
+unregistersymbol(PartySPInitialized)
+unregistersymbol(InfinitePartySP)
+
+///
+dealloc(newmem)
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Activate</Action>
+		  <Keys>
+			<Key>112</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>2</ID>
+	  <Description>"Activate Trainer 2"</Description>
+	  <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+local BaseProcessPtr = getAddressSafe(process)
+local GetBasePointersAOB = getAddressSafe("GetBasePointersAOB")
+
+if (GetBasePointersAOB ~= nil) then
+	if (GetBasePointersAOB ~= 0) then
+		local FindPotchBasePtrAdd = ReadInteger(GetBasePointersAOB+0x0D)
+		local FindPotchBasePtr = GetBasePointersAOB + FindPotchBasePtrAdd + 0x07 + 0x0A
+		local PotchBasePtrDifference = FindPotchBasePtr - BaseProcessPtr
+		
+		WritePointer(getAddressSafe("PotchOffsetOffset"),PotchBasePtrDifference)
+				
+		WritePointer(getAddressSafe("PartySPOffsetOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("PartySPOffsetOffset")))
+		WritePointer(getAddressSafe("FirstPartyCurrentHPOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("FirstPartyCurrentHPOffset")))
+		WritePointer(getAddressSafe("FirstPartyExpOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("FirstPartyExpOffset")))
+		WritePointer(getAddressSafe("FirstPartyItemOneQtyOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("FirstPartyItemOneQtyOffset")))
+		WritePointer(getAddressSafe("FirstPartyEXPPtrOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("FirstPartyEXPPtrOffset")))
+		WritePointer(getAddressSafe("FirstPartyItemOneQtyPtrOffset"),PotchBasePtrDifference + ReadInteger(getAddressSafe("FirstPartyItemOneQtyPtrOffset")))
+	end
+end
+
+if (BaseProcessPtr ~= nil) then
+	if (BaseProcessPtr ~= 0) then
+		local FirstPartyExpOffset = ReadInteger(getAddressSafe("FirstPartyExpOffset"))
+		local FirstPartyExp = FirstPartyExpOffset + BaseProcessPtr
+		registerSymbol("FirstPartyExp",FirstPartyExp)
+		
+		local FirstPartyItemOneQtyOffset = ReadInteger(getAddressSafe("FirstPartyItemOneQtyOffset"))
+		local FirstPartyItemOneQty = FirstPartyItemOneQtyOffset + BaseProcessPtr
+		registerSymbol("FirstPartyItemOneQty",FirstPartyItemOneQty)
+		
+		local PotchOffsetOffset = ReadInteger(getAddressSafe("PotchOffsetOffset"))
+		local PotchOffset = PotchOffsetOffset + BaseProcessPtr
+		registerSymbol("PotchOffset",PotchOffset)
+
+		local PartySPOffsetOffset = ReadInteger(getAddressSafe("PartySPOffsetOffset"))
+		local PartySPOffset = PartySPOffsetOffset + BaseProcessPtr
+		registerSymbol("PartySPOffset",PartySPOffset)
+
+		local FirstPartyCurrentHPOffset = ReadInteger(getAddressSafe("FirstPartyCurrentHPOffset"))
+		local FirstPartyCurrentHP = FirstPartyCurrentHPOffset + BaseProcessPtr
+		registerSymbol("FirstPartyCurrentHP",FirstPartyCurrentHP)
+		
+		local FirstPartyEXPPtrOffset = ReadInteger(getAddressSafe("FirstPartyEXPPtrOffset"))
+		local FirstPartyEXPPtr = FirstPartyEXPPtrOffset + BaseProcessPtr
+		WritePointer(getAddressSafe("FirstPartyEXPPtr"),FirstPartyEXPPtr)
+
+		local FirstPartyItemOneQtyPtrOffset = ReadInteger(getAddressSafe("FirstPartyItemOneQtyPtrOffset"))
+		local FirstPartyItemOneQtyPtr = FirstPartyItemOneQtyPtrOffset + BaseProcessPtr
+		WritePointer(getAddressSafe("FirstPartyItemOneQtyPtr"),FirstPartyItemOneQtyPtr)
+		
+	end
+end
+
+{$asm}
+
+[DISABLE]
+
+unregistersymbol(FirstPartyEXP)
+unregistersymbol(FirstPartyItemOneQty)
+unregistersymbol(PotchOffset)
+unregistersymbol(PartySPOffset)
+unregistersymbol(FirstPartyCurrentHP)
+
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Activate</Action>
+		  <Keys>
+			<Key>112</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>3</ID>
+	  <Description>"Activate Trainer 3"</Description>
+	  <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+tMainTimer = createTimer(nil, false)
+tMainTimer.OnTimer = function(fMainTimer)
+
+	local OurProcess = getAddressSafe(process)
+	local ourindex = 0
+	local FirstPartyItemOneQty = getAddressSafe("FirstPartyItemOneQty")
+	local FirstPartyExp = getAddressSafe("FirstPartyExp")
+	local CharacterInfoOffset = ReadInteger(getAddressSafe("CharacterInfoOffset"))
+	local CharacterInfoNumPartyMembers = ReadInteger(getAddressSafe("CharacterInfoNumPartyMembers"))
+	local BattleInfoOffset = ReadInteger(getAddressSafe("BattleInfoOffset"))
+	local FirstPartyCurrentHP = getAddressSafe("FirstPartyCurrentHP")
+	local BattleInfoNumPartyMembers = ReadInteger(getAddressSafe("BattleInfoNumPartyMembers"))
+	
+	if (OurProcess ~= nil) then
+		if (OurProcess ~= 0) then
+			-- First, Do Character Options
+			while (ourindex &lt; CharacterInfoNumPartyMembers) do
+				local InfiniteItem = ReadInteger(getAddressSafe("InfiniteItem"))
+				
+				if (InfiniteItem == 1) then
+					local Item1Qty = ReadBytes(FirstPartyItemOneQty + 0x01)
+					if (Item1Qty ~= 0) then
+						if (ReadBytes(FirstPartyItemOneQty) ~= Item1Qty) then
+							WriteBytes(FirstPartyItemOneQty,Item1Qty)
+						end
+					end
+
+					local Item2Qty = ReadBytes(FirstPartyItemOneQty + 0x09)
+					if (Item2Qty ~= 0) then
+						if (ReadBytes(FirstPartyItemOneQty+0x08) ~= Item2Qty) then
+							WriteBytes(FirstPartyItemOneQty+0x08,Item2Qty)
+						end
+					end
+
+					local Item3Qty = ReadBytes(FirstPartyItemOneQty + 0x11)
+					if (Item3Qty ~= 0) then
+						if (ReadBytes(FirstPartyItemOneQty+0x10) ~= Item3Qty) then
+							WriteBytes(FirstPartyItemOneQty+0x10,Item3Qty)
+						end
+					end
+
+					local Item4Qty = ReadBytes(FirstPartyItemOneQty + 0x19)
+					if (Item4Qty ~= 0) then
+						if (ReadBytes(FirstPartyItemOneQty+0x18) ~= Item4Qty) then
+							WriteBytes(FirstPartyItemOneQty+0x18,Item4Qty)
+						end
+					end
+				end
+				
+				local QuickLevelGain = ReadInteger(getAddressSafe("QuickLevelGain"))
+				
+				if (QuickLevelGain == 1) then
+					if (ReadSmallInteger(FirstPartyExp) ~= 999) then
+						WriteSmallInteger(FirstPartyExp,999)
+					end
+				end
+				
+				local SetSPAllParty = ReadInteger(getAddressSafe("SetSPAllParty"))
+				
+				if (SetSPAllParty == 1) then
+					if (ReadSmallInteger(FirstPartyExp + 0x02) ~= 5000) then
+						WriteSmallInteger(FirstPartyExp + 0x02,5000)
+					end
+				end
+				
+				local InfiniteRuneUse = ReadInteger(getAddressSafe("InfiniteRuneUse"))
+				
+				if (InfiniteRuneUse == 1) then
+					local MaxRuneUse = ReadInteger(FirstPartyExp - 0x04)
+					if (ReadInteger(FirstPartyExp - 0x08) ~= MaxRuneUse) then
+						WriteInteger(FirstPartyExp - 0x08,MaxRuneUse)
+					end
+				end
+				
+				local SetAllSkillsToSS = ReadInteger(getAddressSafe("SetAllSkillsToSS"))
+				
+				if (SetAllSkillsToSS == 1) then
+					if (ReadInteger(FirstPartyItemOneQty + 0x1E) ~= 0x07070707) then
+						WriteInteger(FirstPartyItemOneQty + 0x1E,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x22,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x26,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x2A,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x2E,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x32,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x36,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x3A,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x3E,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x42,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x46,0x07070707)
+						WriteInteger(FirstPartyItemOneQty + 0x4A,0x07070707)
+						WriteBytes(FirstPartyItemOneQty + 0x4E,07)
+					end
+				end
+				
+				local SetAllPDFToMax = ReadInteger(getAddressSafe("SetAllPDFToMax"))
+				
+				if (SetAllPDFToMax == 1) then
+					if (ReadSmallInteger(FirstPartyExp + 0xE) ~= 999) then
+						WriteSmallInteger(FirstPartyExp + 0xE,999)
+						WriteSmallInteger(FirstPartyExp + 0x11C,999)
+					end
+				end
+				
+				local SetAllMDFToMax = ReadInteger(getAddressSafe("SetAllMDFToMax"))
+				
+				if (SetAllMDFToMax == 1) then
+					if (ReadSmallInteger(FirstPartyExp + 0x10) ~= 999) then
+						WriteSmallInteger(FirstPartyExp + 0x10,999)
+						WriteSmallInteger(FirstPartyExp + 0x11E,999)
+					end
+				end
+				
+				local SetAllAffinitiesToSAllChars = ReadInteger(getAddressSafe("SetAllAffinitiesToSAllChars"))
+				
+				if (SetAllAffinitiesToSAllChars == 1) then
+					if (ReadInteger(FirstPartyExp + 0xDE) ~= 0x06060606) then
+						WriteInteger(FirstPartyExp + 0xDE,0x06060606)
+						WriteInteger(FirstPartyExp + 0xE2,0x06060606)
+						WriteInteger(FirstPartyExp + 0xE6,0x06060606)
+						WriteSmallInteger(FirstPartyExp + 0xEA,0x0606)
+						
+						WriteInteger(FirstPartyExp + 0xEC,0x06060606)
+						WriteInteger(FirstPartyExp + 0xF0,0x06060606)
+						WriteInteger(FirstPartyExp + 0xF4,0x06060606)
+						WriteSmallInteger(FirstPartyExp + 0xF8,0x0606)
+
+						WriteInteger(FirstPartyExp + 0xFA,0x06060606)
+						WriteInteger(FirstPartyExp + 0xFE,0x06060606)
+						WriteInteger(FirstPartyExp + 0x102,0x06060606)
+						WriteSmallInteger(FirstPartyExp + 0x106,0x0606)
+					end
+				end
+				
+				ourindex = ourindex + 1
+				FirstPartyExp = FirstPartyExp + CharacterInfoOffset
+				FirstPartyItemOneQty = FirstPartyItemOneQty + CharacterInfoOffset
+			end
+			
+			ourindex = 0
+			
+			-- Next, Do Battle Options
+			while (ourindex &lt; BattleInfoNumPartyMembers) do
+				local InfiniteHP = ReadInteger(getAddressSafe("InfiniteHP"))
+				
+				if (InfiniteHP == 1) then
+					if (ReadBytes(FirstPartyCurrentHP - 0x30) == 0xF0) then
+						local MaxHP = ReadSmallInteger(FirstPartyCurrentHP + 0x02)
+						if (ReadSmallInteger(FirstPartyCurrentHP) ~= MaxHP) then
+							WriteSmallInteger(FirstPartyCurrentHP,MaxHP)
+						end
+					end
+				end
+
+				local InfiniteRuneUseBattle = ReadInteger(getAddressSafe("InfiniteRuneUseBattle"))
+				
+				if (InfiniteRuneUseBattle == 1) then
+					if (ReadBytes(FirstPartyCurrentHP - 0x30) == 0xF0) then
+						local MaxRuneUseBattle = ReadInteger(FirstPartyCurrentHP + 0xB8)
+						
+						if (ReadInteger(FirstPartyCurrentHP + 0xB4) ~= MaxRuneUseBattle) then
+							WriteInteger(FirstPartyCurrentHP + 0xB4,ReadInteger(FirstPartyCurrentHP + 0xB8))
+						end
+					end
+				end
+
+				ourindex = ourindex + 1
+				FirstPartyCurrentHP = FirstPartyCurrentHP + BattleInfoOffset
+			end
+			
+			-- Finally, Do Special ASM Options
+			local TrainOnceForSSRankOffset = ReadPointer(getAddressSafe("TrainOnceForSSRankOffset"))
+			local TrainOnceForSSRank = ReadInteger(getAddressSafe("TrainOnceForSSRank"))
+			
+			if (TrainOnceForSSRank == 1) then
+				if (ReadInteger(TrainOnceForSSRankOffset + OurProcess) ~= 0x24020007) then
+					WriteInteger(TrainOnceForSSRankOffset + OurProcess,0x24020007)
+				end
+			else
+				if (ReadInteger(TrainOnceForSSRankOffset + OurProcess) ~= 0x24420001) then
+					WriteInteger(TrainOnceForSSRankOffset + OurProcess,0x24420001)
+				end				
+			end
+			
+			local ForgeOnceSetsLevelToMaxOffset = ReadPointer(getAddressSafe("ForgeOnceSetsLevelToMaxOffset"))
+			local ForgeOnceSetsLevelToMax = ReadInteger(getAddressSafe("ForgeOnceSetsLevelToMax"))
+			
+			if (ForgeOnceSetsLevelToMax == 1) then
+				if (ReadInteger(ForgeOnceSetsLevelToMaxOffset + OurProcess) ~= 0x2403000F) then
+					WriteInteger(ForgeOnceSetsLevelToMaxOffset + OurProcess,0x2403000F)
+				end	
+			else
+				if (ReadInteger(ForgeOnceSetsLevelToMaxOffset + OurProcess) ~= 0x24630001) then
+					WriteInteger(ForgeOnceSetsLevelToMaxOffset + OurProcess,0x24630001)
+				end	
+			end
+			
+			local BlacksmithsCanForgeToMaxLevelOffset = ReadPointer(getAddressSafe("BlacksmithsCanForgeToMaxLevelOffset"))
+			local BlacksmithsCanForgeToMaxLevel = ReadInteger(getAddressSafe("BlacksmithsCanForgeToMaxLevel"))
+			
+			if (BlacksmithsCanForgeToMaxLevel == 1) then
+				if (ReadInteger(BlacksmithsCanForgeToMaxLevelOffset + OurProcess) ~= 0x24130010) then
+					WriteInteger(BlacksmithsCanForgeToMaxLevelOffset + OurProcess,0x24130010)
+				end	
+			else
+				if (ReadInteger(BlacksmithsCanForgeToMaxLevelOffset + OurProcess) ~= 0x00A0982D) then
+					WriteInteger(BlacksmithsCanForgeToMaxLevelOffset + OurProcess,0x00A0982D)
+				end	
+			end
+			
+			local AlliesTakeNoDamageWarBattlesOffset1 = ReadPointer(getAddressSafe("AlliesTakeNoDamageWarBattlesOffset1"))
+			local AlliesTakeNoDamageWarBattlesOffset2 = ReadPointer(getAddressSafe("AlliesTakeNoDamageWarBattlesOffset2"))
+			local AlliesTakeNoDamageWarBattles = ReadInteger(getAddressSafe("AlliesTakeNoDamageWarBattles"))
+			
+			if (AlliesTakeNoDamageWarBattles == 1) then
+				if (ReadSmallInteger(AlliesTakeNoDamageWarBattlesOffset2 + OurProcess) == 0x6078) then
+					if (ReadInteger(AlliesTakeNoDamageWarBattlesOffset1 + OurProcess) ~= 0) then
+						WriteInteger(AlliesTakeNoDamageWarBattlesOffset1 + OurProcess,0)
+					end
+				end
+			end
+
+			local EnemiesInstantDeathWarBattlesOffset1 = ReadPointer(getAddressSafe("EnemiesInstantDeathWarBattlesOffset1"))
+			local EnemiesInstantDeathWarBattlesOffset2 = ReadPointer(getAddressSafe("EnemiesInstantDeathWarBattlesOffset2"))
+			local EnemiesInstantDeathWarBattles = ReadInteger(getAddressSafe("EnemiesInstantDeathWarBattles"))
+			
+			if (EnemiesInstantDeathWarBattles == 1) then
+				if (ReadSmallInteger(EnemiesInstantDeathWarBattlesOffset2 + OurProcess) == 0x6078) then
+					if (ReadInteger(EnemiesInstantDeathWarBattlesOffset1 + OurProcess) ~= 9999) then
+						WriteInteger(EnemiesInstantDeathWarBattlesOffset1 + OurProcess,9999)
+					end
+				end
+			end			
+		end
+	end
+	
+end
+
+tMainTimer.Interval = 100
+tMainTimer.Enabled = true
+
+{$asm}
+
+[DISABLE]
+{$lua}
+
+tMainTimer.destroy()
+
+{$asm}
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Activate</Action>
+		  <Keys>
+			<Key>112</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Save Current Trainer Values"</Description>
+      <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+--- Call Function To Save Trainer Values
+SaveTrainerValues()
+
+{$asm}
+
+[DISABLE]
+
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Toggle Activation</Action>
+		  <Keys>
+			<Key>113</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"Load Current Trainer Values"</Description>
+      <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+--- Call Function To Load Trainer Values
+LoadTrainerValues()
+
+{$asm}
+
+[DISABLE]
+
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Toggle Activation</Action>
+		  <Keys>
+			<Key>114</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"Change Slot Config Description"</Description>
+      <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+--- Call Function To Change Slot Description
+ChangeSlotDescription()
+
+{$asm}
+
+[DISABLE]
+
+</AssemblerScript>
+	  <Hotkeys>
+		<Hotkey>
+		  <Action>Toggle Activation</Action>
+		  <Keys>
+			<Key>115</Key>
+		  </Keys>
+		  <ID>0</ID>
+		</Hotkey>
+	  </Hotkeys>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>200</ID>
+	  <Description>"Potch Multiplier / Infinite Potch (Enable After Loading Save/Starting New Game, Not At Title Menu)"</Description>
+	  <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+tGPMult = createTimer(nil, false)
+tGPMult.OnTimer = function(fGPMult)
+
+  local PotchOffset = getAddressSafe("PotchOffset")
+  local GPMult = ReadQword(getAddress(getAddress("GPMultiplier")))
+  local GPInitialized = ReadQword(getAddress("GPInitialized"))
+  local GPSaved = getAddress("SavedGP")
+  local InfGP = ReadQword(getAddress("InfiniteGP"))
+  
+  if (PotchOffset ~= nil) then
+	if (PotchOffset ~= 0) then
+
+	  if (GPInitialized == 0) then
+		 WriteInteger(getAddress("GPInitialized"),1)
+		 WriteInteger(GPSaved,ReadInteger(PotchOffset))
+	  else
+		local GPDifference = ReadInteger(PotchOffset) - ReadInteger(GPSaved)
+		if (GPDifference &lt;= 0) then
+		  if (InfGP == 1) then
+			WriteInteger(PotchOffset,ReadInteger(GPSaved))
+		  else
+			WriteInteger(GPSaved,ReadInteger(PotchOffset))
+		  end
+		else
+		  local GPMultiplied = GPDifference * GPMult
+		  local NewGP = ReadInteger(GPSaved) + GPMultiplied
+		  WriteInteger(PotchOffset,NewGP)
+		  WriteInteger(GPSaved,NewGP)
+		end
+	  end		  
+
+	end
+  end
+
+end
+tGPMult.Interval = 250
+tGPMult.Enabled = true
+
+{$asm}
+
+[DISABLE]
+{$lua}
+
+tGPMult.Destroy()
+WriteInteger(getAddress("GPInitialized"),0)
+
+{$asm}
+</AssemblerScript>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>201</ID>
+	  <Description>"Infinite Potch"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfiniteGP</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>202</ID>
+	  <Description>"Potch Multiplier"</Description>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>GPMultiplier</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>210</ID>
+	  <Description>"Party SP Multiplier / Infinite Party SP (Enable After Loading Save/Starting New Game, Not At Title Menu)"</Description>
+	  <Options moHideChildren="1"/>
+	  <VariableType>Auto Assembler Script</VariableType>
+	  <AssemblerScript>[ENABLE]
+{$lua}
+
+tPartySPMult = createTimer(nil, false)
+tPartySPMult.OnTimer = function(fPartySPMult)
+
+  local PotchOffset = getAddressSafe("PotchOffset")
+  local PartySPMult = ReadQword(getAddress(getAddress("PartySPMultiplier")))
+  local PartySPInitialized = ReadQword(getAddress("PartySPInitialized"))
+  local PartySPSaved = getAddress("SavedPartySP")
+  local InfPartySP = ReadQword(getAddress("InfinitePartySP"))
+  
+  if (PotchOffset ~= nil) then
+	if (PotchOffset ~= 0) then
+
+	  if (PartySPInitialized == 0) then
+		 WriteInteger(getAddress("PartySPInitialized"),1)
+		 WriteInteger(PartySPSaved,ReadInteger(PotchOffset + 0x04))
+	  else
+		local PartySPDifference = ReadInteger(PotchOffset + 0x04) - ReadInteger(PartySPSaved)
+		if (PartySPDifference &lt;= 0) then
+		  if (InfPartySP == 1) then
+			WriteInteger(PotchOffset + 0x04,ReadInteger(PartySPSaved))
+		  else
+			WriteInteger(PartySPSaved,ReadInteger(PotchOffset + 0x04))
+		  end
+		else
+		  local PartySPMultiplied = PartySPDifference * PartySPMult
+		  local NewPartySP = ReadInteger(PartySPSaved) + PartySPMultiplied
+		  WriteInteger(PotchOffset+0x04,NewPartySP)
+		  WriteInteger(PartySPSaved,NewPartySP)
+		end
+	  end		  
+
+	end
+  end
+
+end
+tPartySPMult.Interval = 250
+tPartySPMult.Enabled = true
+
+{$asm}
+
+[DISABLE]
+{$lua}
+
+tPartySPMult.Destroy()
+WriteInteger(getAddress("PartySPInitialized"),0)
+
+{$asm}
+</AssemblerScript>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>211</ID>
+	  <Description>"Infinite Party SP"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfinitePartySP</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>212</ID>
+	  <Description>"Party SP Multiplier"</Description>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>PartySPMultiplier</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>320</ID>
+	  <Description>"Infinite Equipped Item"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfiniteItem</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>322</ID>
+	  <Description>"Infinite Rune Use (Out of Battle)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfiniteRuneUse</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>323</ID>
+	  <Description>"Quick Level Gain (Set XP to 999)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>QuickLevelGain</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>324</ID>
+	  <Description>"Set SP All Party To 5000"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>SetSPAllParty</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>325</ID>
+	  <Description>"Set Skills To SS (All Party Members)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>SetAllSkillsToSS</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>326</ID>
+	  <Description>"Set All Characters PDF To Max"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>SetAllPDFToMax</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>327</ID>
+	  <Description>"Set All Characters MDF To Max"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>SetAllMDFToMax</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>328</ID>
+	  <Description>"Set All Characters Affinities To S Rank"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>SetAllAffinitiesToSAllChars</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>301</ID>
+	  <Description>"Infinite HP (In-Battle)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfiniteHP</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>321</ID>
+	  <Description>"Infinite Rune Use (In-Battle)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>InfiniteRuneUseBattle</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>331</ID>
+	  <Description>"Train Skill Once For SS Rank (Reset and Load From Memory Card After Turning On)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>TrainOnceForSSRank</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>332</ID>
+	  <Description>"Forge Once Sets Weapon Level To Max (Reset and Load From Memory Card After Turning On)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>ForgeOnceSetsLevelToMax</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>333</ID>
+	  <Description>"Blacksmiths Can Forge To Max Level (Reset and Load From Memory Card After Turning On)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>BlacksmithsCanForgeToMaxLevel</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>334</ID>
+	  <Description>"Allies Take No Damage (War Battles) (Reset and Load From Memory Card After Turning On)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>AlliesTakeNoDamageWarBattles</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>335</ID>
+	  <Description>"Enemies Instant Death (War Battles) (Reset and Load From Memory Card After Turning On)"</Description>
+	  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">0:Off
+1:On
+</DropDownList>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>EnemiesInstantDeathWarBattles</Address>
+	</CheatEntry>				
+	<CheatEntry>
+	  <ID>410</ID>
+	  <Description>"Potch"</Description>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>PotchOffset</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>420</ID>
+	  <Description>"Party SP"</Description>
+	  <VariableType>4 Bytes</VariableType>
+	  <Address>PartySPOffset</Address>
+	</CheatEntry>
+	<CheatEntry>
+	  <ID>500</ID>
+	  <Description>"[Character Editor]"</Description>
+	  <Options moHideChildren="1"/>
+	  <GroupHeader>1</GroupHeader>
+	  <CheatEntries>
+		<CheatEntry>
+		  <ID>510</ID>
+		  <Description>"Character"</Description>
+		  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">9CC0:Alenia
+6040:Alhazred
+95E0:Arshtat
+18C0:Ax
+5800:Babbage
+A240:Bahram
+3F40:Bastan
+1600:Belcoot
+61A0:Bergen
+2260:Bernadette
+0840:Boz
+82A0:Byakuren
+1A20:Cathari
+A660:Childerich
+8F00:Chisato
+8140:Chuck
+3180:Cius
+6880:Cornelio
+0580:Craig
+A3A0:Dilber
+0F20:Dinn
+A0E0:Dolph
+77A0:Dongo
+7FE0:Egbert
+0DC0:Eresh
+1CE0:Ernst
+9480:Euram
+B160:FaSoLa
+8980:Faylen
+8820:Faylon
+9740:Ferid
+27E0:Flail
+4360:Fuwalafuwalu
+7900:Fuyo
+06E0:Galleon
+4E60:Gavaya
+74E0:Genoh
+1B80:Georg
+9F80:Gizel
+4200:Goesch
+3DE0:Gunde
+5960:Haleth
+14A0:Haswar
+4FC0:Hazuki
+3860:Isabel
+1340:Isato
+35A0:Jeane
+AA80:Jidanmb
+6CA0:Josephine
+1E40:Killey
+8400:Kisara
+1080:Kyle
+2520:Lance
+B420:LaTiDo
+ABE0:Leknaat
+7380:Lelei
+5280:Levi
+86C0:Linfa
+7A60:Logg
+40A0:Lorelai
+6E00:Lu
+02C0:Lucretia
+7BC0:Lun
+4780:Luserina
+98A0:Lymsleia
+0B00:Lyon
+A920:Maha
+56A0:Marina
+6F60:Maroon
+9E20:Marscal
+39C0:Mathias
+7640:Meroon
+6300:Miakis
+B000:MiFaSo
+8DA0:Miroon
+4A40:Mohsen
+5120:Moroon
+2EC0:Mueller
+4D00:Murad
+5EE0:Muroon
+09A0:Nakula
+5D80:Nelis
+2C00:Nick
+5AC0:Nifsara
+8560:Nikea
+3700:Norden
+1760:Norma
+7220:Oboro
+2940:Orok
+0000:Prince (Hero)
+3B20:Rahal
+0160:Raja
+48E0:Rania
+AD40:Raulbel
+32E0:Raven
+AEA0:ReMiFa
+7E80:Retso
+44C0:Richard
+3C80:Roog
+91C0:Roy
+5540:Sagiri
+9320:Sairoh
+A500:Salum
+6460:Sharmista
+53E0:Shigure
+3440:Shinro
+2100:Shoon
+1FA0:Shula
+7D20:Shun Min
+9A00:Sialeeds
+4BA0:Silva
+A7C0:Skald
+B2C0:SoLaTi
+6720:Sorensen
+8AE0:Subala
+9060:Takamu
+0C60:Talgeyl
+70C0:Taylor
+3020:Toma
+8C40:Urda
+69E0:Viki
+23C0:Volga
+4620:Wabon
+2680:Wasil
+2D60:Wilhelm
+5C20:Yahr
+2AA0:Yoran
+9B60:Zahhak
+11E0:Zegai
+0420:Zerase
+65C0:Zundam
+6B40:Zweig
+</DropDownList>
+		  <ShowAsHex>1</ShowAsHex>
+		  <VariableType>2 Bytes</VariableType>
+		  <Address>iPartySlot</Address>
+		  <CheatEntries>
+			<CheatEntry>
+			  <ID>520</ID>
+			  <Description>"Experience"</Description>
+			  <VariableType>2 Bytes</VariableType>
+			  <Address>FirstPartyExpPtr</Address>
+			  <Offsets>
+				<Offset>[iPartySlot]</Offset>
+			  </Offsets>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>521</ID>
+			  <Description>"SP"</Description>
+			  <VariableType>2 Bytes</VariableType>
+			  <Address>FirstPartyExpPtr</Address>
+			  <Offsets>
+				<Offset>[iPartySlot]+2</Offset>
+			  </Offsets>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>1700</ID>
+			  <Description>"Recruited (Set to 0x0302 or 770 in decimal to recruit)"</Description>
+			  <VariableType>2 Bytes</VariableType>
+			  <Address>FirstPartyExpPtr</Address>
+			  <Offsets>
+				<Offset>[iPartySlot]+132</Offset>
+			  </Offsets>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>1710</ID>
+			  <Description>"Equipped Skill Slot 1"</Description>
+			  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">01:Stamina
+02:Attack
+03:Defense
+04:Technique
+05:Vitality
+06:Agility
+07:Magic
+08:Magic Defense
+09:Incantation
+0A:Sword of Magic
+0B:Raging Lion
+0C:Fate Control
+0D:Karmic Effect
+0E:Armor of Gods
+0F:Swift Foot
+10:Triple Harmony
+11:All-Out Strike
+12:Untold Clarity
+13:Divine Right
+14:Zen Sword
+15:Sacred Oath
+16:Royal Paradise
+17:Thief
+18:Mow Down
+19:Pierce
+1A:Freeze
+1C:Barrage
+1D:Long Throw
+1E:Dragon Special
+1F:Forge
+20:Combat Teacher
+21:Chain Magic
+22:Analyze
+23:Potch Finder
+24:Treasure Hunt
+25:Escape Route
+26:Healing
+27:Treatment
+28:Haggle
+29:Trade In
+2A:Cook
+2B:Rune Sage
+2C:Bard
+2D:Perfect Pitch
+2E:Appraisal
+2F:Bath
+30:Tutor
+</DropDownList>
+			  <ShowAsHex>1</ShowAsHex>
+			  <VariableType>Byte</VariableType>
+			  <Address>FirstPartyExpPtr</Address>
+			  <Offsets>
+				<Offset>[iPartySlot]+24</Offset>
+			  </Offsets>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>1711</ID>
+			  <Description>"Equipped Skill Slot 2"</Description>
+			  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">01:Stamina
+02:Attack
+03:Defense
+04:Technique
+05:Vitality
+06:Agility
+07:Magic
+08:Magic Defense
+09:Incantation
+0A:Sword of Magic
+0B:Raging Lion
+0C:Fate Control
+0D:Karmic Effect
+0E:Armor of Gods
+0F:Swift Foot
+10:Triple Harmony
+11:All-Out Strike
+12:Untold Clarity
+13:Divine Right
+14:Zen Sword
+15:Sacred Oath
+16:Royal Paradise
+17:Thief
+18:Mow Down
+19:Pierce
+1A:Freeze
+1C:Barrage
+1D:Long Throw
+1E:Dragon Special
+1F:Forge
+20:Combat Teacher
+21:Chain Magic
+22:Analyze
+23:Potch Finder
+24:Treasure Hunt
+25:Escape Route
+26:Healing
+27:Treatment
+28:Haggle
+29:Trade In
+2A:Cook
+2B:Rune Sage
+2C:Bard
+2D:Perfect Pitch
+2E:Appraisal
+2F:Bath
+30:Tutor
+</DropDownList>
+			  <ShowAsHex>1</ShowAsHex>
+			  <VariableType>Byte</VariableType>
+			  <Address>FirstPartyExpPtr</Address>
+			  <Offsets>
+				<Offset>[iPartySlot]+25</Offset>
+			  </Offsets>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>1510</ID>
+			  <Description>"[Character Attributes]"</Description>
+			  <Options moHideChildren="1"/>
+			  <GroupHeader>1</GroupHeader>
+			  <CheatEntries>
+				<CheatEntry>
+				  <ID>1525</ID>
+				  <Description>"Max HP"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1526</ID>
+					  <Description>"Max HP 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]-A</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1527</ID>
+					  <Description>"Max HP 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+118</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1520</ID>
+				  <Description>"ATK"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1521</ID>
+					  <Description>"ATK 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+A</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1522</ID>
+					  <Description>"ATK 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+11A</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1530</ID>
+				  <Description>"MAG"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1531</ID>
+					  <Description>"MAG 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+C</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1532</ID>
+					  <Description>"MAG 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+122</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1540</ID>
+				  <Description>"PDF"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1541</ID>
+					  <Description>"PDF 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+E</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1542</ID>
+					  <Description>"PDF 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+11C</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1550</ID>
+				  <Description>"MDF"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1551</ID>
+					  <Description>"MDF 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+10</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1552</ID>
+					  <Description>"MDF 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+11E</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1560</ID>
+				  <Description>"TEC"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1561</ID>
+					  <Description>"TEC 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+12</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1562</ID>
+					  <Description>"TEC 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+120</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1570</ID>
+				  <Description>"ACC"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1571</ID>
+					  <Description>"ACC 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+14</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1572</ID>
+					  <Description>"ACC 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+120</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1580</ID>
+				  <Description>"EVA"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1581</ID>
+					  <Description>"EVA 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+16</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1582</ID>
+					  <Description>"EVA 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+124</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1590</ID>
+				  <Description>"SPD"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1591</ID>
+					  <Description>"SPD 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+18</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1592</ID>
+					  <Description>"SPD 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+126</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1595</ID>
+				  <Description>"LUK"</Description>
+				  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+				  <GroupHeader>1</GroupHeader>
+				  <CheatEntries>
+					<CheatEntry>
+					  <ID>1596</ID>
+					  <Description>"LUK 1"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+1A</Offset>
+					  </Offsets>
+					</CheatEntry>
+					<CheatEntry>
+					  <ID>1597</ID>
+					  <Description>"LUK 2 (Base)"</Description>
+					  <VariableType>2 Bytes</VariableType>
+					  <Address>FirstPartyExpPtr</Address>
+					  <Offsets>
+						<Offset>[iPartySlot]+128</Offset>
+					  </Offsets>
+					</CheatEntry>
+				  </CheatEntries>
+				</CheatEntry>
+			  </CheatEntries>
+			</CheatEntry>
+			<CheatEntry>
+			  <ID>1610</ID>
+			  <Description>"[Character Skills Rank (01=E,02=D,03=C,04=B,05=A,06=S,07=SS)]"</Description>
+			  <Options moHideChildren="1" moRecursiveSetValue="1"/>
+			  <GroupHeader>1</GroupHeader>
+			  <CheatEntries>
+				<CheatEntry>
+				  <ID>1621</ID>
+				  <Description>"Stamina"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+4B</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1622</ID>
+				  <Description>"Attack"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+4C</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1623</ID>
+				  <Description>"Defense"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+4D</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1624</ID>
+				  <Description>"Technique"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+4E</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1625</ID>
+				  <Description>"Vitality"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+4F</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1626</ID>
+				  <Description>"Agility"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+50</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1627</ID>
+				  <Description>"Magic"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+51</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1628</ID>
+				  <Description>"Magic Defense"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+52</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1629</ID>
+				  <Description>"Incantation"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+53</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1630</ID>
+				  <Description>"Sword of Magic"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+54</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1631</ID>
+				  <Description>"Raging Lion"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+55</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1632</ID>
+				  <Description>"Fate Control"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+56</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1633</ID>
+				  <Description>"Karmic Effect"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+57</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1634</ID>
+				  <Description>"Armor of Gods"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+58</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1635</ID>
+				  <Description>"Swift Foot"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+59</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1636</ID>
+				  <Description>"Triple Harmony"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5A</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1637</ID>
+				  <Description>"All-Out Strike"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5B</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1638</ID>
+				  <Description>"Untold Clarity"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5C</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1639</ID>
+				  <Description>"Divine Right"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5D</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1640</ID>
+				  <Description>"Zen Sword"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5E</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1641</ID>
+				  <Description>"Sacred Oath"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+5F</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1642</ID>
+				  <Description>"Royal Paradise"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+60</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1643</ID>
+				  <Description>"Thief"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+61</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1644</ID>
+				  <Description>"Mow Down"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+62</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1645</ID>
+				  <Description>"Pierce"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+63</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1646</ID>
+				  <Description>"Freeze"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+64</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1647</ID>
+				  <Description>"Barrage"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+66</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1648</ID>
+				  <Description>"Long Throw"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+67</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1649</ID>
+				  <Description>"Dragon Special"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+68</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1650</ID>
+				  <Description>"Forge"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+69</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1651</ID>
+				  <Description>"Combat Teacher"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6A</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1652</ID>
+				  <Description>"Chain Magic"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6B</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1653</ID>
+				  <Description>"Analyze"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6C</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1654</ID>
+				  <Description>"Potch Finder"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6D</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1655</ID>
+				  <Description>"Treasure Hunt"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6E</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1656</ID>
+				  <Description>"Escape Route"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+6F</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1657</ID>
+				  <Description>"Healing"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+70</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1658</ID>
+				  <Description>"Treatment"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+71</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1659</ID>
+				  <Description>"Haggle"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+72</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1660</ID>
+				  <Description>"Trade In"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+73</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1661</ID>
+				  <Description>"Cook"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+74</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1662</ID>
+				  <Description>"Rune Sage"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+75</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1663</ID>
+				  <Description>"Bard"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+76</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1664</ID>
+				  <Description>"Perfect Pitch"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+77</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1665</ID>
+				  <Description>"Appraisal"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+78</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1666</ID>
+				  <Description>"Bath"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+79</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>1667</ID>
+				  <Description>"Tutor"</Description>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyExpPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]+7A</Offset>
+				  </Offsets>
+				</CheatEntry>
+			  </CheatEntries>
+			</CheatEntry>					
+			<CheatEntry>
+			  <ID>1400</ID>
+			  <Description>"[Equipped Items] (Save and Load Game To See Changes)"</Description>
+			  <Options moHideChildren="1"/>
+			  <GroupHeader>1</GroupHeader>
+			  <CheatEntries>
+				<CheatEntry>
+				  <ID>522</ID>
+				  <Description>"Equipped Helm"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Bandana
+02:Straw Hat
+03:Raft Turban
+04:Pointy Hat
+05:Leather Hat
+06:Feather Ornament
+07:Silver Hat
+08:Feather Hat
+09:Circlet
+0A:Wizard Hat
+0B:Prosperity Hat
+0C:Crown of Destiny
+0D:Chief's Beret
+0E:Wind Hat
+0F:Gray Hat
+10:Forehead Guard
+11:Knight Headpiece
+12:Leather Helmet
+13:Skullcap
+14:Minamoto Helmet
+15:Guardian Casque
+16:Pale Moon Casque
+17:Dragon Scale Helm
+18:Flame Helmet
+19:Sun Helmet
+1A:Full Helmet
+1B:Fish Head
+1C:Iron Helm
+1D:Spiked Helm
+1E:Thunder Helm
+1F:Horn Helm
+20:Windspun Helm	
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-6</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>523</ID>
+				  <Description>"Equipped Armor"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Robe
+02:Dress
+03:Slit Dress
+04:Silk Cape
+05:Guard Robe
+06:Lunas Coat
+07:Silver Robe
+08:Guard Coat
+09:Magic Robe
+0A:Robe of Destiny
+0B:Master's Robe
+0C:Star Robe
+0D:Fog Robe
+0E:Silver White Robe
+0F:Gray Coat
+10:Fantasy Half Coat
+11:Slave Garb
+12:Clothes
+13:Poncho
+14:Beaver Happi Coat
+15:Refined Clothes
+16:Fur Clothes
+17:Martial Arts Garb
+18:Blue Jacket
+19:Military Uniform
+1A:Ninja Garb
+1B:Black Warrior Garb
+1C:Prosperity Tunic
+1D:Thunder God's Garb
+1E:Tai Chi Garb
+1F:Master's Barg
+20:Royal Garb
+21:Leather Armor
+22:Rugged Leather
+23:Knight Casual Gear
+24:Knight Full Armor
+25:Beaver Leather
+26:Zadom Leather
+27:Dragon Horse Armor
+28:Thunder Leather
+29:Pale Moon Leather
+2A:Flowing Leather
+2B:Spun Silver Armor
+2C:Fire Dragon Armor
+2D:Water Dragon Armor
+2E:Sun Armor
+2F:Chain Mail
+30:Ring Mail
+31:Scale Mail
+32:Lancer Armor
+33:Byakko Chain Mail
+34:Earth Chain Mail
+35:Taira Armor
+36:Silver Chain
+37:Guardian Chain
+38:Wind Fangs Chain
+39:Flame Array Chain
+3A:Blood Scale Mail
+3B:Half Plate
+3C:Fish Body
+3D:Plate Armor
+3E:Night Armor
+3F:Flame Armor
+40:Spiked Armor
+41:Full Plate
+42:Thun God's Armor
+43:Scrchd Earth Armor
+44:Windspun Armor
+45:Armes Armor
+46:Corruption Shell
+47:Saint's Cloak
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-5</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>524</ID>
+				  <Description>"Equipped Gloves"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Bandage
+02:Bracelet
+03:Wristbands
+04:Leather Wristbands
+05:Prosperity Armband
+06:Bone Bracelet
+07:Gold Bracelet
+08:Armlet of Destiny
+09:Magic Bracelet
+0A:Karaya Armband
+0B:Wooden Bangle
+0C:Glass Bangle
+0D:Silver Bangle
+0E:SilverWhite Bangle
+0F:Gloves
+10:Leather Gloves
+11:Knight Gloves
+12:DragonHorse Gloves
+13:Power Gloves
+14:Silk Gloves
+15:Pale Moon Gloves
+16:Guardian Gloves
+17:Chain Mail Gloves
+18:Sun Gloves
+19:Bracer
+1A:Gunner's Bracer
+1B:Silver Bracer
+1C:SilverWhite Bracer
+1D:Iron Gloves
+1E:Fish Fins
+1F:Gauntlets
+20:Flame Gauntlets
+21:Sprite Guantlets
+22:Engraved Gauntlets
+23:Iron Fists
+24:Fujiwara Gauntlets
+25:Windspun Gauntlets
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-4</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>525</ID>
+				  <Description>"Equipped Boots"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Mules
+02:Anklet
+03:Pointy Mules
+04:Glass Slippers
+05:Anklets of Destiny
+06:Bone Heels
+07:Gold Mules
+08:Silver White Mules
+09:Wooden Shoes
+0A:Kimono Socks
+0B:Sandals
+0C:Prosperity Sandals
+0D:Boots
+0E:Knight Boots
+0F:Dragon Horse Boots
+10:Long Boots
+11:Guardian Boots
+12:Magical Boots
+13:Pale Moon Boots
+14:Silver Boots
+15:Cyclone Boots
+16:Sun Boots
+17:Iron Boots
+18:Fish Tail Fin
+19:Leg Guards
+1A:Greaves
+1B:Earth Greaves
+1C:Engraved Greaves
+1D:Tachibana Greaves
+1E:Windspun Greaves
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-3</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>526</ID>
+				  <Description>"Head Rune"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Dawn Rune
+02:Twilight Rune
+03:Fire Orb
+04:Rage
+05:Lightning Orb
+06:Thunder Orb
+07:Water Orb
+08:Flowing Orb
+09:Wind Orb
+0A:Cyclone Orb
+0B:Earth Orb
+0C:Mother Earth Orb
+0D:Star Rune
+0E:Blinking Rune
+0F:DoReMe Rune
+10:Beast Rune
+11:Shield Orb
+12:Pale Gate Orb
+13:Resurrection Orb
+15:Rage Sword Orb
+16:Thunder Sword Orb
+17:Flowing Sword Orb
+18:Cyclone Sword Orb
+19:M. Earth Sword Orb
+1A:Condemnation Orb
+1B:Howling Orb
+1C:Viper Orb
+1D:Titan Orb
+1E:Unicorn Orb
+1F:Minotaur Orb
+20:Lion Orb
+21:Kite Orb
+22:Great Hawk Orb
+23:Pixie Orb
+24:Ogre Orb
+25:Red Rose
+27:Shrike
+28:Wrath
+29:Falcon
+2A:Angry Dragon
+2B:Boar
+2C:Fierce Tiger
+2D:Gadget
+2E:Mischief
+2F:Sickle
+30:Swallow
+31:Strike-Back Orb
+32:Double-Edged Orb
+33:Multi-Strike Orb
+34:Killer Orb
+35:Gale Orb
+36:Counter Orb
+37:Power Orb
+38:Magical Orb
+39:Fire Lizard Orb
+3A:Ice Dragon Orb
+3B:Fire Sealing Orb
+3C:Water Sealing Orb
+3D:Wall Orb
+3E:Waking Orb
+3F:Turtle Orb
+40:Firefly Orb
+41:Skunk Orb
+42:Alert Orb
+43:Sunbeam Orb
+44:Drain Orb
+45:Equilibrium Orb
+46:Magic Absorb Orb
+47:Boundary Orb
+48:Steel Orb
+49:Violence Orb
+4A:Fury Orb
+4B:Boost Orb
+4C:Crazed Orb
+4D:Knight Orb
+4E:Phero Orb
+4F:Fortune Orb
+50:Prosperity Orb
+51:Champion's Orb
+52:Great Firefly Orb
+53:Parent Turtle
+54:Godspeed
+55:Raven
+56:Silence Orb
+57:Poison Orb
+58:Venom Orb
+59:Sleep Orb
+5A:Hunter Orb
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-E</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>527</ID>
+				  <Description>"Right Hand Rune"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Dawn Rune
+02:Twilight Rune
+03:Fire Orb
+04:Rage
+05:Lightning Orb
+06:Thunder Orb
+07:Water Orb
+08:Flowing Orb
+09:Wind Orb
+0A:Cyclone Orb
+0B:Earth Orb
+0C:Mother Earth Orb
+0D:Star Rune
+0E:Blinking Rune
+0F:DoReMe Rune
+10:Beast Rune
+11:Shield Orb
+12:Pale Gate Orb
+13:Resurrection Orb
+15:Rage Sword Orb
+16:Thunder Sword Orb
+17:Flowing Sword Orb
+18:Cyclone Sword Orb
+19:M. Earth Sword Orb
+1A:Condemnation Orb
+1B:Howling Orb
+1C:Viper Orb
+1D:Titan Orb
+1E:Unicorn Orb
+1F:Minotaur Orb
+20:Lion Orb
+21:Kite Orb
+22:Great Hawk Orb
+23:Pixie Orb
+24:Ogre Orb
+25:Red Rose
+27:Shrike
+28:Wrath
+29:Falcon
+2A:Angry Dragon
+2B:Boar
+2C:Fierce Tiger
+2D:Gadget
+2E:Mischief
+2F:Sickle
+30:Swallow
+31:Strike-Back Orb
+32:Double-Edged Orb
+33:Multi-Strike Orb
+34:Killer Orb
+35:Gale Orb
+36:Counter Orb
+37:Power Orb
+38:Magical Orb
+39:Fire Lizard Orb
+3A:Ice Dragon Orb
+3B:Fire Sealing Orb
+3C:Water Sealing Orb
+3D:Wall Orb
+3E:Waking Orb
+3F:Turtle Orb
+40:Firefly Orb
+41:Skunk Orb
+42:Alert Orb
+43:Sunbeam Orb
+44:Drain Orb
+45:Equilibrium Orb
+46:Magic Absorb Orb
+47:Boundary Orb
+48:Steel Orb
+49:Violence Orb
+4A:Fury Orb
+4B:Boost Orb
+4C:Crazed Orb
+4D:Knight Orb
+4E:Phero Orb
+4F:Fortune Orb
+50:Prosperity Orb
+51:Champion's Orb
+52:Great Firefly Orb
+53:Parent Turtle
+54:Godspeed
+55:Raven
+56:Silence Orb
+57:Poison Orb
+58:Venom Orb
+59:Sleep Orb
+5A:Hunter Orb
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-D</Offset>
+				  </Offsets>
+				</CheatEntry>
+				<CheatEntry>
+				  <ID>528</ID>
+				  <Description>"Left Hand Rune"</Description>
+				  <DropDownList DescriptionOnly="1" DisplayValueAsItem="1">00:Nothing
+01:Dawn Rune
+02:Twilight Rune
+03:Fire Orb
+04:Rage
+05:Lightning Orb
+06:Thunder Orb
+07:Water Orb
+08:Flowing Orb
+09:Wind Orb
+0A:Cyclone Orb
+0B:Earth Orb
+0C:Mother Earth Orb
+0D:Star Rune
+0E:Blinking Rune
+0F:DoReMe Rune
+10:Beast Rune
+11:Shield Orb
+12:Pale Gate Orb
+13:Resurrection Orb
+15:Rage Sword Orb
+16:Thunder Sword Orb
+17:Flowing Sword Orb
+18:Cyclone Sword Orb
+19:M. Earth Sword Orb
+1A:Condemnation Orb
+1B:Howling Orb
+1C:Viper Orb
+1D:Titan Orb
+1E:Unicorn Orb
+1F:Minotaur Orb
+20:Lion Orb
+21:Kite Orb
+22:Great Hawk Orb
+23:Pixie Orb
+24:Ogre Orb
+25:Red Rose
+27:Shrike
+28:Wrath
+29:Falcon
+2A:Angry Dragon
+2B:Boar
+2C:Fierce Tiger
+2D:Gadget
+2E:Mischief
+2F:Sickle
+30:Swallow
+31:Strike-Back Orb
+32:Double-Edged Orb
+33:Multi-Strike Orb
+34:Killer Orb
+35:Gale Orb
+36:Counter Orb
+37:Power Orb
+38:Magical Orb
+39:Fire Lizard Orb
+3A:Ice Dragon Orb
+3B:Fire Sealing Orb
+3C:Water Sealing Orb
+3D:Wall Orb
+3E:Waking Orb
+3F:Turtle Orb
+40:Firefly Orb
+41:Skunk Orb
+42:Alert Orb
+43:Sunbeam Orb
+44:Drain Orb
+45:Equilibrium Orb
+46:Magic Absorb Orb
+47:Boundary Orb
+48:Steel Orb
+49:Violence Orb
+4A:Fury Orb
+4B:Boost Orb
+4C:Crazed Orb
+4D:Knight Orb
+4E:Phero Orb
+4F:Fortune Orb
+50:Prosperity Orb
+51:Champion's Orb
+52:Great Firefly Orb
+53:Parent Turtle
+54:Godspeed
+55:Raven
+56:Silence Orb
+57:Poison Orb
+58:Venom Orb
+59:Sleep Orb
+5A:Hunter Orb
+</DropDownList>
+				  <ShowAsHex>1</ShowAsHex>
+				  <VariableType>Byte</VariableType>
+				  <Address>FirstPartyItemOneQtyPtr</Address>
+				  <Offsets>
+					<Offset>[iPartySlot]-C</Offset>
+				  </Offsets>
+				</CheatEntry>
+			  </CheatEntries>
+			</CheatEntry>
+		  </CheatEntries>
+		</CheatEntry>
+	  </CheatEntries>
+	</CheatEntry>
+  </CheatEntries>
+<LuaScript>
+PROCESS_NAME = 'pcsx2-qt.exe'
+--------
+-------- Auto Attach
+--------
+local autoAttachTimer = nil ---- variable to hold timer object
+local autoAttachTimerInterval = 1 ---- Timer intervals are in milliseconds
+local autoAttachTimerTicks = 0 ---- variable to count number of times the timer has run
+local autoAttachTimerTickMax = 0 ---- Set to zero to disable ticks max
+local function autoAttachTimer_tick(timer) ---- Timer tick call back
+        ---- Destroy timer if max ticks is reached
+	if autoAttachTimerTickMax > 0 and autoAttachTimerTicks >= autoAttachTimerTickMax then
+		timer.destroy()
+	end
+        ---- Check if process is running
+	if getProcessIDFromProcessName(PROCESS_NAME) ~= nil then
+		timer.destroy() ---- Destroy timer
+		openProcess(PROCESS_NAME) ---- Open the process
+		pause()
+		local EnumChildWindowsPtr = getAddressSafe("EnumChildWindows")
+		WriteBytes(EnumChildWindowsPtr,0xC3)
+		unpause()
+	end
+	autoAttachTimerTicks = autoAttachTimerTicks + 1 ---- Increase ticks
+end
+autoAttachTimer = createTimer(getMainForm()) ---- Create timer with the main form as it's parent
+autoAttachTimer.Interval = autoAttachTimerInterval ---- Set timer interval
+autoAttachTimer.OnTimer = autoAttachTimer_tick ---- Set timer tick call back
+
+function lua_aobscan(name,module,bytes,index)
+  index = index - 1
+  if(module == "") then
+    local resultSet = AOBScan(bytes)
+      if(resultSet == nil) then
+        unregisterSymbol(name)
+        print(name.." not found")
+      else
+        unregisterSymbol(name)
+        registerSymbol(name,resultSet[index])
+        resultSet.destroy()
+      end
+  else
+    if(getModuleSize(module) == nil) then
+      print("Module "..module.." not found")
+    else
+      local memScanner = createMemScan()
+      local memFoundList = createFoundList(memScanner)
+      memScanner.firstScan(
+        soExactValue,vtByteArray,rtRounded,bytes,nil,
+        getAddress(module),(getAddress(module)+getModuleSize(module)),"",
+        fsmNotAligned,"",true,false,false,false)
+      memScanner.waitTillDone()
+      memFoundList.initialize()
+        if(memFoundList.Count == 0) then
+          unregisterSymbol(name)
+          print(name.." in module "..module.." not found")
+        else
+          unregisterSymbol(name)
+          registerSymbol(name,memFoundList.Address[index])
+        end
+      memScanner.destroy()
+      memFoundList.destroy()
+    end
+  end
+end
+
+function lua_aobscan_2(name,module,bytes,index,overridemodulesize)
+  index = index - 1
+  if(module == "") then
+    local resultSet = AOBScan(bytes)
+      if(resultSet == nil) then
+        unregisterSymbol(name)
+        print(name.." not found")
+      else
+        unregisterSymbol(name)
+        registerSymbol(name,resultSet[index])
+        resultSet.destroy()
+      end
+  else
+    if(getModuleSize(module) == nil) then
+      print("Module "..module.." not found")
+    else
+      local memScanner = createMemScan()
+      local memFoundList = createFoundList(memScanner)
+      memScanner.firstScan(
+        soExactValue,vtByteArray,rtRounded,bytes,nil,
+        getAddress(module),(getAddress(module)+overridemodulesize),"",
+        fsmNotAligned,"",true,false,false,false)
+      memScanner.waitTillDone()
+      memFoundList.initialize()
+        if(memFoundList.Count == 0) then
+          unregisterSymbol(name)
+          print(name.." in module "..module.." not found")
+        else
+          unregisterSymbol(name)
+          registerSymbol(name,memFoundList.Address[index])
+        end
+      memScanner.destroy()
+      memFoundList.destroy()
+    end
+  end
+end
+
+function lua_aobscan_last(name,module,bytes)
+  if(module == "") then
+    local resultSet = AOBScan(bytes)
+      if(resultSet == nil) then
+        unregisterSymbol(name)
+        print(name.." not found")
+      else
+        unregisterSymbol(name)
+        registerSymbol(name,resultSet[#resultSet])
+        resultSet.destroy()
+      end
+  else
+    if(getModuleSize(module) == nil) then
+      print("Module "..module.." not found")
+    else
+      local memScanner = createMemScan()
+      local memFoundList = createFoundList(memScanner)
+      memScanner.firstScan(
+        soExactValue,vtByteArray,rtRounded,bytes,nil,
+        getAddress(module),(getAddress(module)+getModuleSize(module)),"",
+        fsmNotAligned,"",true,false,false,false)
+      memScanner.waitTillDone()
+      memFoundList.initialize()
+        if(memFoundList.Count == 0) then
+          unregisterSymbol(name)
+          print(name.." in module "..module.." not found")
+        else
+          unregisterSymbol(name)
+          registerSymbol(name,memFoundList.Address[memFoundList.Count-1])
+        end
+      memScanner.destroy()
+      memFoundList.destroy()
+    end
+  end
+end
+
+
+-- Function By DrummerIX to find the address of an AOB that matches a particular name
+-- as there are times when CE shows a name, but you cannot go to that address by using
+-- the name by default, so we use this as a workaround
+-- It expects a name to register the found address, a module name (can be blank), the bytes to search, and the name to match
+function lua_aobscan_find_method(name,module,bytes,method_name)
+  if(module == "") then
+    local resultSet = AOBScan(bytes)
+      if(resultSet == nil) then
+        unregisterSymbol(name)
+        print(name.." not found")
+      else
+	    -- Go Through Results Looking For method_name
+		for i=0,resultSet.Count-1 do
+			local CurrentAddress = resultSet[i]
+			local CurrentName = getNameFromAddress(CurrentAddress)
+			if CurrentName ~= nil then
+				if CurrentName == method_name then
+					unregisterSymbol(name)
+					registerSymbol(name,CurrentAddress)
+				end
+			end
+		end
+		resultSet.destroy()	
+      end
+  else
+    if(getModuleSize(module) == nil) then
+      print("Module "..module.." not found")
+    else
+      local memScanner = createMemScan()
+      local memFoundList = createFoundList(memScanner)
+      memScanner.firstScan(
+        soExactValue,vtByteArray,rtRounded,bytes,nil,
+        getAddress(module),(getAddress(module)+getModuleSize(module)),"",
+        fsmNotAligned,"",true,false,false,false)
+      memScanner.waitTillDone()
+      memFoundList.initialize()
+        if(memFoundList.Count == 0) then
+          unregisterSymbol(name)
+          print(name.." in module "..module.." not found")
+        else
+		  -- Go Through Results Looking For method_name
+		  for i=0,memFoundList.Count-1 do
+			local CurrentName = getNameFromAddress(memFoundList.Address[i])
+			if CurrentName ~= nil then
+				if CurrentName == method_name then
+				  unregisterSymbol(name)
+				  registerSymbol(name,memFoundList.Address[i])
+				end
+			end
+		  end
+        end
+      memScanner.destroy()
+      memFoundList.destroy()
+    end
+  end
+end
+
+-- code by FreeER
+function getFields(param)
+  -- simplified 'classname' or 'namespace:classname' input
+  -- obviously you could just change the code to pass findClass's result
+  --local namespace,classname = param:match('(%w+):?(%w*)')
+  -- DrummerIX modified the Regex for match to account for periods in classnames (we want everything before : and then everything after :)
+  local namespace,classname = param:match('([%w%d%.]*):?([%w%d%.]*)')
+  
+  if not classname or classname == '' then namespace, classname = '', namespace end
+  local class=mono_findClass(namespace, classname)
+  local fields=mono_class_enumFields(class)
+  local result = {}
+  for _, field in ipairs(fields) do
+    local keyfieldname = field.name:gsub("&lt;","_"):gsub("&gt;","_")
+	--print(namespace,classname,keyfieldname)
+    result[keyfieldname] = field.offset
+  end
+  return result
+end
+
+-- Functions By Panraven for mono finding method by signature
+function reEscape(s)
+  local escPatChars = [[().%+-*?[^]]
+  s = s:gsub('.',function(c) if escPatChars:find(c,1,true) then return '%'..c end end)
+  return s
+end
+
+function findMethodAddrBySignature(namespace,classname,methodname,signature,check)
+  local meth = findMethodBySignature(namespace,classname,methodname,signature,check)
+  if meth~=nil and meth>0 then
+    return mono_compile_method(meth)
+  end
+end
+
+function findMethodBySignature(namespace,classname,methodname,signature,check)
+  assert(type(signature)=='string',"invalid signature")
+  signature="^"..reEscape(signature:gsub(";",","))
+  local class = mono_findClass(namespace,classname)
+  if type(class)~='number' or class==0 then return nil end
+  local methods=mono_class_enumMethods(class)
+  if type(methods)~='table' or #methods &lt; 1 then return nil end
+  if check then  print('check:'..methodname..": &lt;"..signature.."&gt; vs ") end
+  for i=1,#methods do
+   if methodname == methods[i].name then
+     local sign = mono_method_getSignature(methods[i].method)
+     if check then  print("  &gt;&gt; &lt;"..sign..'&gt;') end
+     if sign:match(signature) then
+       return methods[i].method
+     end
+   end
+  end
+end
+
+-- Test
+function tohex(n)return string.format('%X',n or 0)end 
+
+-- test
+--print('--') -- test to show/print all signature of a given function name
+--print(tohex(findMethodAddrBySignature('Assembly-CSharp','CommissionFactory','GenerateCommissionsFrequently','?',true)))
+--print('--') -- test to match a specific (third) signature of a function name
+--print(tohex(findMethodAddrBySignature('Assembly-CSharp','CommissionFactory','GenerateCommissionsFrequently','bool$',true)))
+-- the last '$' is lua match end-of-string, wthout this, the match MAY succeed on fourth one.
+-- all other character should be compare as is, including upper/lower cases.
+
+-----------------------------------------------------------------------------------------------
+--- Things below here deal with the Save and Load of Trainer Values
+-----------------------------------------------------------------------------------------------
+--- Global List Variables For Use In Save and Load Trainer State
+SaveSymbolList = {}
+
+PerformActivateList = {}
+
+CurrentlyActivatingList = {}
+
+CurrentSlotDescriptions = {}
+
+DoNotSaveDescriptions = {
+"Save Current Trainer Values",
+"Load Current Trainer Values",
+"Change Slot Config Description"
+}
+
+-- Global Variable For Our SubFolder To Store Configs In
+sConfigSubFolder = "\\CheatEvolution\\"
+
+--- Global Variables To Deal With Our Handler Function
+bPerformSaveTrainerValues = 0
+bPerformLoadTrainerValues = 0
+bPerformActivateTrainerCheats = 0
+bFinishedActivateTrainerCheats = 1
+
+bUnableToCreateFolder = 0
+
+--- Global Variable Dealing With Save Config Slot #
+iSaveConfigSlot = 1
+iMaxSaveConfigSlots = 10
+
+function LoadTrainerValues()
+
+	-- First We Ask What Slot They Want To Load
+	local mySL = CreateStringList()
+	for i,j in ipairs(CurrentSlotDescriptions) do
+		mySL.add(j)
+	end		
+
+	local result = showSelectionList('Load Trainer Values', 'Which Config Slot', mySL, false)
+
+	mySL.destroy()
+	
+	if result ~= nil then
+		if result ~= -1 then
+			iSaveConfigSlot = result + 1
+			bPerformLoadTrainerValues = 1
+			bPerformActivateTrainerCheats = 1
+			bFinishedActivateTrainerCheats = 0
+		end
+	end
+
+end
+
+function SaveTrainerValues()
+
+	-- First We Ask What Slot They Want To Load
+	local mySL = CreateStringList()
+	for i,j in ipairs(CurrentSlotDescriptions) do
+		mySL.add(j)
+	end		
+	
+	local result = showSelectionList('Save Trainer Values', 'Which Config Slot', mySL, false)
+	
+	mySL.destroy()
+	
+	if result ~= nil then
+		if result ~= -1 then
+			iSaveConfigSlot = result + 1
+			bPerformSaveTrainerValues = 1
+		end
+	end
+
+end
+	
+function WriteOutCurrentSlotDescriptions()
+
+	local baseFileName = nil
+
+	if (process ~= nil) then
+		if (string.find(string.reverse(process),"[.]") ~= nil) then
+			baseFileName = string.sub(process,1,string.len(string.reverse(process))-string.find(string.reverse(process),"[.]"))	
+		end
+	end
+
+	if (baseFileName ~= nil) then
+	
+		local ourFolder = CheckOurSaveStateFolder()
+		local filename = ourFolder .. baseFileName .. '_Slots.txt'
+	
+		local file = assert(io.open(filename, "w"))
+		for i=1,#CurrentSlotDescriptions do
+			file:write(CurrentSlotDescriptions[i] .. '\n')
+		end
+		file:close()
+	end
+
+end
+
+function ChangeSlotDescription()
+
+	-- First We Ask What Slot They Want To Load
+	local mySL = CreateStringList()
+	for i,j in ipairs(CurrentSlotDescriptions) do
+		mySL.add(j)
+	end		
+
+	local result = showSelectionList('Change Slot Description', 'Which Config Slot', mySL, false)
+	
+	mySL.destroy()
+	
+	if result ~= nil then
+		if result ~= -1 then
+			local myPrompt = 'Current Description for [Slot ' .. string.format("%d",result+1) .. '] is ' .. CurrentSlotDescriptions[result+1]
+			myPrompt = myPrompt .. '\n\nWhat do you want to change it to?'
+			
+			local newDesc = inputQuery('Change Slot Description',myPrompt,CurrentSlotDescriptions[result+1])
+			
+			if newDesc ~= nil then
+				CurrentSlotDescriptions[result+1] = newDesc
+				-- Write Out Our Changes
+				WriteOutCurrentSlotDescriptions()
+			end
+		end
+	end
+	
+	-- Deactivate This Memory Record
+	ActivateCheatRecord("Change Slot Config Description")
+	
+end
+
+function InitializeConfigSlotDescriptions()
+
+	local baseFileName = nil
+
+	if (process ~= nil) then
+		if (string.find(string.reverse(process),"[.]") ~= nil) then
+			baseFileName = string.sub(process,1,string.len(string.reverse(process))-string.find(string.reverse(process),"[.]"))	
+		end
+	end
+
+	if (baseFileName ~= nil) then
+		for i=#CurrentSlotDescriptions,1,-1 do
+			table.remove(CurrentSlotDescriptions,i)
+		end
+		
+		local ourFolder = CheckOurSaveStateFolder()
+		local filename = ourFolder .. baseFileName .. '_Slots.txt'
+		
+		if not exists(filename) and (bUnableToCreateFolder == 0) then
+			-- Create Default Slot Descriptions
+			local file = assert(io.open(filename, "w"))
+			for i=1,iMaxSaveConfigSlots do
+				if i == 1 then
+					file:write("Default\n")
+					table.insert(CurrentSlotDescriptions,"Default")
+				else
+					file:write("Slot " .. string.format("%d",i) .. "\n")
+					table.insert(CurrentSlotDescriptions,"Slot " .. string.format("%d",i))
+				end
+			end
+			file:close()
+		else
+			if (bUnableToCreateFolder == 0) then
+				-- Read In Current Slot Descriptions
+				local file = assert(io.open(filename, "r"))
+				for line in file:lines() do
+					table.insert(CurrentSlotDescriptions,line)
+				end
+			end
+		end
+	end
+
+end
+
+-- Functions Found On Internet For Dealing With CSV files
+function string:split(sSeparator, nMax, bRegexp)
+    if sSeparator == '' then
+        sSeparator = ','
+    end
+
+    if nMax and nMax &lt; 1 then
+        nMax = nil
+    end
+
+    local aRecord = {}
+
+    if self:len() > 0 then
+        local bPlain = not bRegexp
+        nMax = nMax or -1
+
+        local nField, nStart = 1, 1
+        local nFirst,nLast = self:find(sSeparator, nStart, bPlain)
+        while nFirst and nMax ~= 0 do
+            aRecord[nField] = self:sub(nStart, nFirst-1)
+            nField = nField+1
+            nStart = nLast+1
+            nFirst,nLast = self:find(sSeparator, nStart, bPlain)
+            nMax = nMax-1
+        end
+        aRecord[nField] = self:sub(nStart)
+    end
+
+    return aRecord
+end
+
+---------------------------------------------------------------------
+function read_csv(path, sep, tonum, null)
+    tonum = tonum or true
+    sep = sep or ','
+    null = null or ''
+    local csvFile = {}
+    local file = assert(io.open(path, "r"))
+    for line in file:lines() do
+        fields = line:split(sep)
+        if tonum then -- convert numeric fields to numbers
+            for i=1,#fields do
+                local field = fields[i]
+                if field == '' then
+                    field = null
+                end
+                fields[i] = tonumber(field) or field
+            end
+        end
+        table.insert(csvFile, fields)
+    end
+    file:close()
+    return csvFile
+end
+
+---------------------------------------------------------------------
+function write_csv(path, data, sep)
+    sep = sep or ','
+    local file = assert(io.open(path, "w"))
+    for i=1,#data do
+        for j=1,#data[i] do
+            if j>1 then file:write(sep) end
+            file:write(data[i][j])
+        end
+        file:write('\n')
+    end
+    file:close()
+end
+
+----- Function Written By DrummerIX for creating our table to write to CSV
+--------------------------------------------------------------------------
+--- It expects a list of symbols to enumerate and get the current value of as a Qword
+function create_symbol_table(list_of_symbols)
+
+  local csvTable = {}
+  for k,v in ipairs(list_of_symbols) do
+	local SymbolPtr = getAddressSafe(v)
+		
+	if (SymbolPtr ~= nil) then
+		if (SymbolPtr ~= 0) then
+           if (ReadBytes(SymbolPtr) ~= nil) then
+			  local line = v
+
+			  for i=0,7 do
+				  local CurrentByte = ReadBytes(SymbolPtr+i)
+
+				  line = line .. "," .. string.format("%d",CurrentByte)
+			  end
+			
+              local fields = line:split(",")
+              for i=1,#fields do
+                  local field = fields[i]
+                  if field == '' then
+                      field = null
+                  end
+                  fields[i] = tonumber(field) or field
+              end
+			  table.insert(csvTable, fields)
+            end
+		end
+	end
+  end
+
+  return csvTable
+end
+
+----- Function Written By DrummerIX for writing our table to current memory
+--------------------------------------------------------------------------
+--- It expects a table either from reading a CSV or create_symbol_table function
+--- to enumerate and write value of as a Qword
+function write_symbol_table(table_of_symbols)
+
+	for i=1,#table_of_symbols do
+		local SymbolPtr = getAddressSafe(table_of_symbols[i][1])
+		
+		if (SymbolPtr ~= nil) then
+			if (SymbolPtr ~= 0) then
+				for j=2,9 do
+					WriteBytes(SymbolPtr + (j-2),table_of_symbols[i][j])
+				end
+			end
+		end
+	end
+
+end
+
+--- Function by panraven dealing with enumerating current symbols
+--- This is helper function because we sometimes don't need every symbol saved and loaded_csv_table
+--- So this gets all symbols and you manually remove those you don't need
+function printUserDefinedSymbols()
+  local mv,sf = getMemoryViewForm()
+  if not mv.frmSymbolhandler then
+    local mvHidden
+    if not mv.Visible then mvHidden=true,mv.Show() end
+    mv.miuserdefinedsymbols:OnClick()
+    if mvHidden then mv.hide()end
+    sf = mv.frmSymbolhandler
+    sf.Hide()
+  else
+    sf = mv.frmSymbolhandler
+  end
+  if sf ~= nil then
+    local symbol
+    for i = 0, sf.Listview1.Items.Count - 1 do
+      symbol = sf.Listview1.Items.Item[i].Caption
+      print('"' .. symbol .. '",')
+    end
+  end
+end 
+
+--- Function Written By DrummerIX for help in activating cheat records in the trainer app
+--- It requires that hotkeys be defined for the cheats
+--- It expects the name of the record to activate
+function ActivateCheatRecord(mr_desc)
+
+	local al = getAddressList()
+
+	local mr = al.getMemoryRecordByDescription(mr_desc)
+	
+	if (mr ~= nil) then
+		for i = 0,mr.HotkeyCount-1 do
+			for j = 1,#mr.Hotkey[i].Keys do
+				keyDown(mr.Hotkey[i].Keys[j])
+			end
+		end
+
+		sleep(5)
+		
+		for i = 0,mr.HotkeyCount-1 do
+			for j = 1,#mr.Hotkey[i].Keys do
+				keyUp(mr.Hotkey[i].Keys[j])
+			end
+		end
+		
+		sleep(5)
+	end
+	
+end
+
+function ToggleActivateCheatRecord(mr_desc)
+
+	local al = getAddressList()
+
+	local mr = al.getMemoryRecordByDescription(mr_desc)
+	
+	if (mr ~= nil) then
+		if mr.Active == true then
+			mr.Active = false
+		else
+			mr.Active = true
+		end
+	end
+	
+end
+
+function CheckCheatRecordActive(mr_desc)
+
+	local al = getAddressList()
+
+	local mr = al.getMemoryRecordByDescription(mr_desc)
+	
+	if (mr ~= nil) then
+		return mr.Active
+	else
+		return false
+	end
+	
+end
+
+function create_active_cheat_list_table()
+
+	local al = getAddressList()
+	
+	local csvTable = {}
+
+	for i = 0,al.Count-1 do
+		if (al.MemoryRecord[i].Active) then
+		   if not (string.find(al.MemoryRecord[i].Description,"Activate Trainer")) then
+				local SaveThisRecord = true
+				for j=1,#DoNotSaveDescriptions do
+					if al.MemoryRecord[i].Description == DoNotSaveDescriptions[j] then
+						SaveThisRecord = false
+					end
+				end
+				if SaveThisRecord then
+					line = al.MemoryRecord[i].Description
+					  
+					local fields = line:split(",")
+					for i=1,#fields do
+						local field = fields[i]
+						if field == '' then
+							field = null
+						end
+						fields[i] = tonumber(field) or field
+					end
+					table.insert(csvTable, fields)  
+				end
+		   end
+		end
+	end
+
+	return csvTable
+end
+
+--- Code from Internet to deal with checking if folder exists
+function exists(file)
+   local ok, err, code = os.rename(file, file)
+   if not ok then
+      if code == 13 then
+         -- Permission denied, but it exists
+         return true
+      end
+   end
+   return ok, err
+end
+
+function isdir(path)
+   -- "/" works on both Unix and Windows
+   return exists(path.."/")
+end
+
+-- Our function to create our save state folder
+function CheckOurSaveStateFolder()
+	local myFolder = os.getenv("USERPROFILE")
+	
+	local ourPath = myFolder .. sConfigSubFolder
+	
+	if (bUnableToCreateFolder == 0) then
+		if not (isdir(myFolder .. sConfigSubFolder)) then
+		   os.execute('mkdir ' .. ourPath)
+		end
+		
+		if not (isdir(myFolder .. sConfigSubFolder)) then
+		   bUnableToCreateFolder = 1
+		   
+		   local MyMessage = string.format("Save and Load Trainer Values will not function\n until you manually create the following folder\n" .. myFolder .. sConfigSubFolder)
+		   showMessage(MyMessage)
+		end		
+	end
+	
+	return ourPath
+end
+-----------------------------------------------------------------
+
+function onMemRecPostExecute(memoryrecord, newState, succeeded)
+
+	for i=1,#PerformActivateList do
+		if memoryrecord.Description == PerformActivateList[i] then
+			table.remove(PerformActivateList,i)
+		end
+	end
+	
+	for j=1,#CurrentlyActivatingList do
+		if memoryrecord.Description == CurrentlyActivatingList[j] then
+			table.remove(CurrentlyActivatingList,j)
+		end
+	end
+
+end
+
+function StartSaveLoadTrainerValuesHandler()
+
+	if (tTrainerValues ~= nil) then
+		tTrainerValues.destroy()
+	end
+	
+	tTrainerValues = createTimer(nil, false)
+	tTrainerValues.OnTimer = function(fTrainerValues)
+	
+		-- Check If CurrentSlotDescriptions Is Empty and Initialize If So
+		if #CurrentSlotDescriptions == 0 then
+			InitializeConfigSlotDescriptions()
+		end
+		
+		local baseFileName = nil
+		
+		if (process ~= nil) then
+			if (string.find(string.reverse(process),"[.]") ~= nil) then
+				baseFileName = string.sub(process,1,string.len(string.reverse(process))-string.find(string.reverse(process),"[.]"))	
+			end
+		end
+		
+		if (baseFileName ~= nil) then
+			-- First, we check for saving values
+			if (bPerformSaveTrainerValues == 1) then
+				bPerformSaveTrainerValues = 0
+				
+				-- First, we save symbols
+				local current_csv_table = create_symbol_table(SaveSymbolList)
+
+				local ourFolder = CheckOurSaveStateFolder()
+				local filename = ourFolder .. baseFileName .. '_Symbols_' .. string.format("%d",iSaveConfigSlot) .. '.txt'
+
+				write_csv(filename,current_csv_table,",")
+				
+				-- Finally, we save current active cheat list
+				local current_active_csv_table = create_active_cheat_list_table()
+				
+				local filename2 = ourFolder .. baseFileName .. '_Active_' .. string.format("%d",iSaveConfigSlot) .. '.txt'
+				
+				write_csv(filename2,current_active_csv_table,",")
+			else
+				if CheckCheatRecordActive("Save Current Trainer Values") then
+					ActivateCheatRecord("Save Current Trainer Values")
+				end	
+			end
+
+			-- Next, we check for loading symbol values which can only be done after loading and activating cheats
+			if (bFinishedActivateTrainerCheats == 1) then
+				if (bPerformLoadTrainerValues == 1) then
+					bPerformLoadTrainerValues = 0
+					
+					local ourFolder = CheckOurSaveStateFolder()
+					local filename = ourFolder .. baseFileName .. '_Symbols_' .. string.format("%d",iSaveConfigSlot) .. '.txt'
+					
+					if exists(filename) then
+						local loaded_csv_table = read_csv(filename,",",true,null)
+
+						if (loaded_csv_table ~= nil) then
+							write_symbol_table(loaded_csv_table)
+						end
+					end
+				end
+			end
+
+			-- Next, we check for loading and activating cheats
+			if (bFinishedActivateTrainerCheats == 0) then
+				if (bPerformActivateTrainerCheats == 1) then
+					bPerformActivateTrainerCheats = 0
+
+					local ourFolder = CheckOurSaveStateFolder()
+					local filename = ourFolder .. baseFileName .. '_Active_' .. string.format("%d",iSaveConfigSlot) .. '.txt'
+					
+					if exists(filename) then
+						local loaded_csv_table = read_csv(filename,",",true,null)
+
+						if (loaded_csv_table ~= nil) then
+							-- First, make sure list is empty
+							for i=#PerformActivateList,1,-1 do
+								table.remove(PerformActivateList,i)
+							end
+							
+							for i=1,#loaded_csv_table do
+								local CurrentDesc = ""
+								for j=1,#loaded_csv_table[i] do
+									if (j &gt; 1) then
+										CurrentDesc = CurrentDesc .. "," .. loaded_csv_table[i][j]
+									else
+										CurrentDesc = CurrentDesc .. loaded_csv_table[i][j]
+									end									
+								end
+								
+								table.insert(PerformActivateList,CurrentDesc)
+							end
+						end	
+					end
+				end
+			end				
+
+			-- Finally, Loop Through The Current PerformActivateList and attempt to activate the cheat
+			if (bFinishedActivateTrainerCheats == 0) then
+				if (#PerformActivateList == 0) then
+					bFinishedActivateTrainerCheats = 1
+				else
+					for i=1,#PerformActivateList do				
+						if not CheckCheatRecordActive(PerformActivateList[i]) then
+							--if #CurrentlyActivatingList == 0 then
+								ToggleActivateCheatRecord(PerformActivateList[i])
+								--table.insert(CurrentlyActivatingList,PerformActivateList[i])
+							--end
+						else
+							table.remove(PerformActivateList,i)
+						end
+					end					
+				end
+			else
+				if CheckCheatRecordActive("Load Current Trainer Values") then
+					ActivateCheatRecord("Load Current Trainer Values")
+				end	
+			end
+			
+		end
+		
+	end
+	tTrainerValues.Interval = 500
+	tTrainerValues.Enabled = true
+
+end
+
+-- Actually Call Our Save and Load Handler function to start up the timer
+StartSaveLoadTrainerValuesHandler()
+
+------------------------------------------------------------------------------------------
+</LuaScript>  
+</CheatTable>

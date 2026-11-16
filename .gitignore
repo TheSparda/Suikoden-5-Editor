@@ -5,13 +5,13 @@
 ISO/
 
 # PS2 saves / memory cards — not distributed
-*.ps2
-*.psu
-*.psv
-*.cbs
-*.sps
-*.max
-Saves/
+# *.ps2  (tracked as test content)
+# *.psu  (tracked as test content)
+# *.psv  (tracked as test content)
+# *.cbs  (tracked as test content)
+# *.sps  (tracked as test content)
+# *.max  (tracked as test content)
+# Saves/  (tracked as test content)
 
 # Backups the editor makes before writing
 *.bak
@@ -33,7 +33,7 @@ Editor/Suikoden5_ISO_offsets.md
 Editor/s5_iso_seeks.json
 
 # Local cheat/reference files — not distributed
-Cheats/
+# Cheats/  (tracked as test content)
 
 # Editor local state
 Editor/.s5editor.json
