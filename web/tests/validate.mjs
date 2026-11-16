@@ -111,6 +111,19 @@ ok("save rune list has no phantom Critical/Magic",
 ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
 ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
 
+// Starting loadouts (#28): the ISO character panel carries a new-game-facing
+// loadout section driven by the glue's loadout adapters and the engine's
+// validated writers (rune words are signed, so they cannot ride the generic
+// numeric field path).
+ok("app.js glue defines iso_loadout (#28)", appSrc.includes("def iso_loadout"));
+ok("app.js glue defines iso_setloadout (#28)", appSrc.includes("def iso_setloadout"));
+ok("iso.js renders the starting loadout section (#28)",
+   isoSrc.includes("starting loadout (new game)") && isoSrc.includes("renderLoadoutSection"));
+ok("iso.js labels loadouts new-game-facing (#28)", isoSrc.includes("New-game-facing"));
+ok("s5patch defines the loadout engine (#28)",
+   fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def read_loadout")
+   && fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def write_loadout_skill"));
+
 // Cleared-game marker (#2/#19): the byte at 0x12 is a display marker, not an
 // NG+ or fast-forward switch (PCSX2-verified). The old claims must not return.
 const saveSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8");

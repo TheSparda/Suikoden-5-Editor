@@ -425,8 +425,140 @@ function renderCharTables(cid) {
       (Weapon id 0): it is a non-combat, support, or body-weapon unit, so there
       is no growth curve to show or edit. Give it a Weapon id (1-81) under
       starting equipment to attach one.</div>`;
+  h += renderLoadoutSection(cid, name);
   $("isoCbody").innerHTML = h;
 }
+/* ---------------- starting loadout (issue #28) ----------------
+ * The ELF tables the game builder reads at new-game time: starting runes
+ * (with unlock levels and permanent flags) and starting skill ranks merged
+ * with the caps table. New-game-facing only: existing saves carry their own
+ * record copies and are unaffected. Starting level and armor live in the
+ * starting-equipment record edited above, so they are summarized here, not
+ * duplicated. Writes go through the validated engine writers, not the
+ * generic field path, because rune words are signed s32 values. */
+let LO_CUR = null;   // the loadout payload currently rendered
+let LO_ORIG = null;  // its values as rendered (the dirty-tracking baseline)
+function loWordLabel(lo, r) {
+  if (r.kind === "rune") return r.runeName || ("#" + r.runeId);
+  if (r.kind === "unlock") return `Empty: unlocks at Lv ${r.unlockLevel}`;
+  return "Empty (no starting rune)";
+}
+function renderLoadoutSection(cid, name) {
+  let lo;
+  try { lo = JSON.parse(window.PYISO.loadout(cid)).loadout; } catch (_) { lo = null; }
+  if (!lo) return "";
+  if (lo.gated)
+    return `<div class="subhd">starting loadout (new game)</div>
+      <div class="note" style="margin:0 14px">Starting loadouts are mapped for
+      NTSC-U only. The PAL offsets of the rune and skill-rank tables are not
+      verified, so nothing is shown here rather than wrong data.</div>`;
+  LO_CUR = lo;
+  LO_ORIG = JSON.parse(JSON.stringify(lo));
+  const armorNames = (slot, v) => nameFor(slot, v);
+  let h = `<div class="subhd">starting loadout (new game)</div>
+    <div class="note" style="margin:0 14px">New-game-facing: the game builds a
+    character's record from these tables when a game starts. Existing saves
+    carry their own record copies and are not affected by edits here.
+    Starts at level ${lo.level} with armor Head ${esc(armorNames("armorhead", lo.armor[0]))} /
+    Body ${esc(armorNames("armorbody", lo.armor[1]))} / Arm ${esc(armorNames("armorarm", lo.armor[2]))} /
+    Feet ${esc(armorNames("armorfoot", lo.armor[3]))}: level and armor are edited under
+    starting equipment above (the same record bytes).</div>`;
+  h += `<div class="grid" style="padding-top:8px">` + lo.runes.map((r, s) => {
+    const lbl = { head: "Head", right: "Right hand", left: "Left hand" }[r.slot];
+    return `<div class="fld"><label>Starting rune: ${lbl}</label><div class="in">
+      <button type="button" class="pickbtn" id="loRune${s}" onclick="loPickRune(${cid},${s})">
+        <span class="pickbtn-name">${esc(loWordLabel(lo, r))}</span>
+        <span class="pickbtn-id note">word ${r.word}</span></button></div>
+      <div class="fnote"><label class="chk"><input type="checkbox" ${r.perm ? "checked" : ""}
+        onchange="loSetPerm(${cid},${s},this.checked)"> Fixed: cannot be removed</label></div></div>`;
+  }).join("") + `</div>`;
+  const eqNames = (lo.equippedSlots || []).map(id => esc(lo.skills[id - 1].name)).join(", ");
+  h += `<div class="note" style="margin:0 14px" id="loEquipped">Equipped at start: ${eqNames || "none"}
+    (derived: the two lowest-index skills with a starting rank; not stored separately).</div>`;
+  const RK = isoMAPS.ranks || [];
+  h += `<div class="grid" style="padding-top:8px">` + lo.skills.map(sk => {
+    let opts = "";
+    for (let v = 0; v <= sk.cap; v++)
+      opts += `<option value="${v}" ${v === sk.start ? "selected" : ""}>${esc(RK[v] || v)}</option>`;
+    return `<div class="fld"><label>${esc(sk.name)} start rank
+      <span class="pill">cap ${esc(RK[sk.cap] || sk.cap)}</span></label><div class="in">
+      <select data-orig="${sk.start}" onchange="loSetSkill(${cid},${sk.index},this)">
+        ${sk.cap ? opts : `<option value="0" selected>${esc(RK[0] || "None")}</option>`}</select></div>
+      <div class="fnote">effective at start: <span id="loEff${sk.index}">${esc(RK[sk.effective] || sk.effective)}</span></div></div>`;
+  }).join("") + `</div>`;
+  return h;
+}
+function loTrack(cid, name, key, label, to, origTo, el) {
+  if (String(to) === String(origTo)) { delete isoEdits[key]; if (el) markDirty(el, false); }
+  else { isoEdits[key] = { label: `${name} · ${label}`, group: name, to }; if (el) markDirty(el, true); }
+  updateIsoToolbar(); captureUndoStep();
+}
+function loPickRune(cid, slot) {
+  const lo = LO_CUR; if (!lo) return;
+  const list = [{ id: "0", name: "Empty (no starting rune)" }];
+  (lo.runeNames || []).forEach((n, i) => { if (i > 0 && n) list.push({ id: String(i), name: n }); });
+  for (let lv = 1; lv <= 99; lv++) list.push({ id: String(-lv), name: `Empty: unlocks at Lv ${lv}` });
+  const cur = lo.runes[slot];
+  openPicker("Choose starting rune (" + cur.slot + ")", list, String(cur.word), (id) => {
+    const word = +id;
+    spin(true);
+    try {
+      const r = JSON.parse(window.PYISO.setloadout(cid, "rune", slot, word));
+      if (r.error) { toast("Write rejected: " + r.error, "bad"); return; }
+      const names = lo.runeNames || [];
+      cur.word = word;
+      cur.kind = word > 0 ? "rune" : word < 0 ? "unlock" : "empty";
+      if (word > 0) { cur.runeId = word; cur.runeName = names[word] || ("#" + word); }
+      if (word < 0) cur.unlockLevel = -word;
+      const btn = $("loRune" + slot);
+      if (btn) { q(".pickbtn-name", btn).textContent = loWordLabel(lo, cur);
+                 q(".pickbtn-id", btn).textContent = "word " + word; }
+      const cname = (JSON.parse(window.PYISO.chars()).chars.find(c => c.id === cid) || {}).name || ("Char " + cid);
+      loTrack(cid, cname, `loadout:${cid}:rune:${slot}`, `starting rune (${cur.slot})`,
+        loWordLabel(lo, cur), loWordLabel(lo, LO_ORIG.runes[slot]), btn);
+    } catch (e) { toast("Write failed: " + (e.message || e), "bad"); }
+    finally { spin(false); }
+  }, {});
+}
+function loSetPerm(cid, slot, checked) {
+  spin(true);
+  try {
+    const r = JSON.parse(window.PYISO.setloadout(cid, "perm", slot, checked ? 1 : 0));
+    if (r.error) { toast("Write rejected: " + r.error, "bad"); return; }
+    if (LO_CUR) LO_CUR.runes[slot].perm = checked ? 1 : 0;
+    const cname = (JSON.parse(window.PYISO.chars()).chars.find(c => c.id === cid) || {}).name || ("Char " + cid);
+    const slotName = LO_CUR ? LO_CUR.runes[slot].slot : String(slot);
+    loTrack(cid, cname, `loadout:${cid}:perm:${slot}`, `starting rune fixed (${slotName})`,
+      checked ? "Fixed" : "Removable", LO_ORIG && LO_ORIG.runes[slot].perm ? "Fixed" : "Removable", null);
+  } catch (e) { toast("Write failed: " + (e.message || e), "bad"); }
+  finally { spin(false); }
+}
+function loSetSkill(cid, idx, sel) {
+  const value = +sel.value;
+  spin(true);
+  try {
+    const r = JSON.parse(window.PYISO.setloadout(cid, "skill", idx, value));
+    if (r.error) { toast("Write rejected: " + r.error, "bad"); sel.value = sel.dataset.orig || "0"; return; }
+    const sk = LO_CUR ? LO_CUR.skills[idx] : null;
+    if (sk) {
+      sk.start = value;
+      sk.effective = value ? value : (sk.cap ? 1 : 0);
+      const eff = $("loEff" + idx);
+      if (eff) eff.textContent = (isoMAPS.ranks || [])[sk.effective] || sk.effective;
+      const eq = LO_CUR.skills.filter(s => s.start > 0).slice(0, 2).map(s => s.name).join(", ");
+      const eqEl = $("loEquipped");
+      if (eqEl) eqEl.innerHTML = `Equipped at start: ${esc(eq) || "none"}
+        (derived: the two lowest-index skills with a starting rank; not stored separately).`;
+    }
+    const cname = (JSON.parse(window.PYISO.chars()).chars.find(c => c.id === cid) || {}).name || ("Char " + cid);
+    const nm = sk ? sk.name : ("Skill " + idx);
+    loTrack(cid, cname, `loadout:${cid}:skill:${idx}`, `${nm} start rank`,
+      (isoMAPS.ranks || [])[value] || String(value),
+      (isoMAPS.ranks || [])[LO_ORIG ? LO_ORIG.skills[idx].start : value] || String(value), sel);
+  } catch (e) { toast("Write failed: " + (e.message || e), "bad"); }
+  finally { spin(false); }
+}
+
 /* Preset: set every equipable-skill cap for a character to one grade (staged, undoable). */
 function charSkillPreset(cid, value) {
   const r = JSON.parse(window.PYISO.char(cid));

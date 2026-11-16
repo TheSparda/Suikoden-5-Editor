@@ -1022,6 +1022,140 @@ def write_field(iso, table, cid, label, value):
     raise KeyError(f"no field {label!r} in {table}")
 
 
+# ---- Starting loadouts (issue #28) ------------------------------------------
+# New-game-facing: these tables are what the builder func_002CEE90 reads when
+# it materializes a character record. Existing saves carry their own record
+# copies and are not changed by edits here. NTSC-U only (PAL bases unmapped).
+
+def _loadout_gated():
+    return F.REGION != "ntsc-u"
+
+
+def _signed32(v):
+    return v - (1 << 32) if v >= (1 << 31) else v
+
+
+def _save_rune_names():
+    try: return F.res_json("s5_rune_save_ids.json")
+    except Exception: return []
+
+
+def read_loadout(iso, cid):
+    """Decode one character's starting loadout from the ELF tables:
+    starting level + armor (the starting-equipment record), starting runes
+    with unlock levels and permanent flags (rune table words 0..5), and
+    starting skill ranks merged with the caps table. Returns
+    {"gated": True} in PAL, where these tables are not mapped."""
+    if _loadout_gated(): return {"gated": True, "id": cid}
+    if not (0 <= cid < F.LOADOUT_COUNT): raise KeyError(f"no character {cid}")
+    names = _save_rune_names()
+    eq_base, eq_stride, _ = F.TABLES["starting equipment"]
+    eq = iso.rd(eq_base + cid * eq_stride, eq_stride)
+    level_byte = eq[F.EQUIP_LEVEL_OFF]
+    rbase = F.LOADOUT_RUNE_BASE + cid * F.LOADOUT_RUNE_STRIDE
+    words = [_signed32(iso.ru(rbase + i * 4, 4)) for i in range(6)]
+    slots = ("head", "right", "left")
+    runes = []
+    for s in range(3):
+        w, perm = words[s], words[3 + s]
+        e = {"slot": slots[s], "word": w, "perm": perm}
+        if w > 0:
+            e.update({"kind": "rune", "runeId": w,
+                      "runeName": names[w] if w < len(names) else "#%d" % w})
+        elif w < 0:
+            e.update({"kind": "unlock", "unlockLevel": -w})
+        else:
+            e.update({"kind": "empty"})
+        runes.append(e)
+    sbase = F.LOADOUT_SKILL_BASE + cid * F.LOADOUT_SKILL_STRIDE
+    raw = iso.rd(sbase, F.LOADOUT_SKILL_STRIDE)
+    cap_base, cap_stride, cap_fields = F.TABLES["equipable skills"]
+    skills = []
+    for s in range(48):
+        start = raw[1 + s]
+        cap = iso.ru(cap_base + cid * cap_stride + s, 1)
+        eff = start if start else (1 if cap else 0)
+        skills.append({"index": s, "name": cap_fields[s][0], "start": start,
+                       "cap": cap, "effective": eff})
+    equipped = [s + 1 for s in range(48) if raw[1 + s] > 0][:2]
+    return {"gated": False, "id": cid,
+            "levelByte": level_byte, "level": level_byte if level_byte else 1,
+            "armor": [eq[2 + i] for i in range(4)],
+            "runes": runes, "skills": skills, "equippedSlots": equipped,
+            "runeNames": names}
+
+
+def build_loadout_enumeration(iso, cid):
+    """The loadout in the shape of the lab enumeration
+    (ps2-re loadout_work/loadouts_elf.json), for verification: level,
+    per-slot rune words decoded, derived equipped slots, and effective
+    ranks after the caps merge (nonzero only)."""
+    lo = read_loadout(iso, cid)
+    if lo.get("gated"): raise KeyError("loadouts are NTSC-U only")
+    runes = []
+    for r in lo["runes"]:
+        e = {"slot": r["slot"], "word": r["word"], "perm_flag": r["perm"]}
+        if r["kind"] == "rune":
+            e["rune_id"] = r["runeId"]; e["rune"] = r["runeName"]
+        elif r["kind"] == "unlock":
+            e["unlock_level"] = r["unlockLevel"]
+        runes.append(e)
+    ranks = {sk["name"]: sk["effective"] for sk in lo["skills"] if sk["effective"]}
+    chars = {c["id"]: c["name"] for c in F.load_characters()}
+    return {"name": chars.get(cid, "#%d" % cid), "level": lo["level"],
+            "level_byte": lo["levelByte"], "runes": runes,
+            "slots": lo["equippedSlots"],
+            "slot_names": [lo["skills"][s - 1]["name"] for s in lo["equippedSlots"]],
+            "ranks": ranks}
+
+
+def write_loadout_rune(iso, cid, slot, word):
+    """Write one rune-table slot word (s32). Positive = starting rune id in
+    save id space (must name a real save-space rune); negative -N = empty
+    slot unlocking at level N (1..99); 0 = no starting rune."""
+    if _loadout_gated(): raise KeyError("loadouts are NTSC-U only")
+    if not (0 <= cid < F.LOADOUT_COUNT): raise KeyError(f"no character {cid}")
+    if not (0 <= slot <= 2): raise KeyError(f"no rune slot {slot}")
+    word = int(word)
+    names = _save_rune_names()
+    if word > 0 and not (word < len(names)):
+        raise ValueError(f"rune id {word} is outside save id space (0..{len(names) - 1})")
+    if word < -99:
+        raise ValueError(f"unlock level {-word} is outside 1..99")
+    off = F.LOADOUT_RUNE_BASE + cid * F.LOADOUT_RUNE_STRIDE + slot * 4
+    iso.wr(off, word.to_bytes(4, "little", signed=True))
+    return True
+
+
+def write_loadout_perm(iso, cid, slot, flag):
+    """Write one rune-table permanent flag word (0 or 1)."""
+    if _loadout_gated(): raise KeyError("loadouts are NTSC-U only")
+    if not (0 <= cid < F.LOADOUT_COUNT): raise KeyError(f"no character {cid}")
+    if not (0 <= slot <= 2): raise KeyError(f"no rune slot {slot}")
+    if int(flag) not in (0, 1): raise ValueError("permanent flag must be 0 or 1")
+    off = F.LOADOUT_RUNE_BASE + cid * F.LOADOUT_RUNE_STRIDE + 12 + slot * 4
+    iso.wu(off, 4, int(flag))
+    return True
+
+
+def write_loadout_skill(iso, cid, skill_index, value):
+    """Write one starting skill rank byte, validated against the character's
+    cap for that skill (stock data never exceeds the cap; a rank above it
+    could never be equipped). Values are ranks 0..7."""
+    if _loadout_gated(): raise KeyError("loadouts are NTSC-U only")
+    if not (0 <= cid < F.LOADOUT_COUNT): raise KeyError(f"no character {cid}")
+    if not (0 <= skill_index < 48): raise KeyError(f"no skill {skill_index}")
+    value = int(value)
+    if not (0 <= value <= 7): raise ValueError("skill rank must be 0..7")
+    cap_base, cap_stride, _ = F.TABLES["equipable skills"]
+    cap = iso.ru(cap_base + cid * cap_stride + skill_index, 1)
+    if value > cap:
+        raise ValueError(f"rank {value} exceeds this character's cap {cap} for the skill")
+    off = F.LOADOUT_SKILL_BASE + cid * F.LOADOUT_SKILL_STRIDE + 1 + skill_index
+    iso.wu(off, 1, value)
+    return True
+
+
 # (read_prices/write_price removed in v1.17.6, issue #30: the "prices" table was
 # the Arm armor table read one record late. See the note in s5fields.py.)
 

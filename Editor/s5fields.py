@@ -73,6 +73,30 @@ WEAPON_GROWTH_OFF = 0x50          # growth bytes live at record +0x50..+0x5F
 EQUIP_TABLE_BASE, EQUIP_TABLE_STRIDE = 0x493110, 0x18
 EQUIP_LEVEL_OFF, EQUIP_WEAPON_OFF = 0x00, 0x01
 
+# ---- Starting loadouts (issue #28, ps2-re LOADOUTS.md) ----------------------
+# The builder func_002CEE90 materializes each character's starting record
+# from static ELF tables. Two of them are new here (the other two inputs are
+# the starting-equipment record above, for level and armor, and the
+# equipable-skill CAPS table, for the rank merge):
+#   * Rune table: vaddr 0x527100, 36 bytes per character. Words 0..2 are the
+#     head/right/left slot contents as s32: positive = starting rune id in
+#     SAVE id space (s5_rune_save_ids.json), negative -N = empty slot that
+#     unlocks at level N, 0 = no starting rune. Words 3..5 are the per-slot
+#     permanent flags (1 = rune cannot be removed). Words 6..8 are not read
+#     by the builder and are never exposed.
+#   * Skill starting-rank table: vaddr 0x503180, 49 bytes per character.
+#     Byte 0 is copied verbatim by the builder (0 for all 120 named
+#     characters; meaning unproven, never exposed). Bytes 1..48 are the
+#     starting ranks for skills 0..47 in ISO skill order. Effective rank =
+#     this byte if nonzero, else 1 if the caps table allows the skill,
+#     else 0. The two equipped starting skill slots are derived: the two
+#     lowest-index skills with a nonzero byte here.
+# NTSC-U only: the PAL bases of these two tables are not mapped, so the
+# loadout surface is gated off in PAL rather than showing wrong data.
+LOADOUT_RUNE_BASE, LOADOUT_RUNE_STRIDE = 0x4D4A00, 36
+LOADOUT_SKILL_BASE, LOADOUT_SKILL_STRIDE = 0x4B0A80, 49
+LOADOUT_COUNT = 120               # named characters (tables are sized 134)
+
 TABLES = {
     "stats":      (0x48A970, 0x12, _char_stat_fields()),
     # ---- Elemental affinities (VERIFIED @0x48B530, stride 14, char-indexed like stats).

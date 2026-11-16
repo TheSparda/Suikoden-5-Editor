@@ -115,6 +115,7 @@ function isoGlueHandles(){
     load:g("iso_load"), verify:g("iso_verify"), maps:g("iso_maps"), reference:g("iso_reference"),
     changes:g("iso_changes"),
     chars:g("iso_chars"), char:g("iso_char"), setchar:g("iso_setchar"),
+    loadout:g("iso_loadout"), setloadout:g("iso_setloadout"),
     spellnames:g("iso_spellnames"), spell:g("iso_spell"), setspell:g("iso_setspell"),
     runes:g("iso_runes"), rune:g("iso_rune"), setrune:g("iso_setrune"),
     gear:g("iso_gear"), gearitem:g("iso_gearitem"), setgear:g("iso_setgear"),
@@ -302,6 +303,20 @@ def iso_char(cid):
         return json.dumps({"tables": tbls, "weapon": weapon})
     except Exception as e: return json.dumps({"error": str(e)})
 iso_setchar = _setter(lambda g, ident, e: P.write_field(g, e["table"], int(ident["id"]), e["field"], int(e["value"])))
+
+def iso_loadout(cid):
+    try:
+        with P.Iso(ISO) as g: return json.dumps({"loadout": P.read_loadout(g, int(cid))})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setloadout(cid, kind, index, value):
+    try:
+        with P.Iso(ISO, writable=True) as g:
+            if kind == "rune": P.write_loadout_rune(g, int(cid), int(index), int(value))
+            elif kind == "perm": P.write_loadout_perm(g, int(cid), int(index), int(value))
+            elif kind == "skill": P.write_loadout_skill(g, int(cid), int(index), int(value))
+            else: return json.dumps({"error": "unknown loadout field " + str(kind)})
+        return json.dumps({"ok": True})
+    except Exception as e: return json.dumps({"error": str(e)})
 
 def iso_spellnames():
     try: return json.dumps({"spells": F.res_json("s5_spell_names.json")})
