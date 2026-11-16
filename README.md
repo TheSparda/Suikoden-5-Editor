@@ -562,6 +562,9 @@ npm run test:all          # both
   on the slice is correct.
 - **`save-fields.mjs`**: write and read-back round-trips of every save field on every
   supported format.
+- **`save-records.mjs`**: per-character record edits (runes, skill ranks and slots,
+  recruit bits, party sync) with byte-exact footprints and byte-identical round
+  trips on the real US and PAL fixture saves.
 - **`sets-unit.mjs`**, **`sets-iso.mjs`**: the armor-set decode and rewrite, checked against
   the Suikosource guide as ground truth.
 - **`runes-always.mjs`**, **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,
