@@ -113,14 +113,13 @@ ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune
 
 // Service worker shell: every module the app loads at runtime is precached
 // (health-core.js and vcdiff.js were missing; noted in the v1.17.8 ship
-// report). The cache name is NOT bumped here: that pairs with the next
-// version bump at ship time.
+// report). The cache name bumps together with the version bump at ship time.
 {
   const swSrc = fs.readFileSync(path.join(web, "sw.js"), "utf8");
   ok("sw.js precaches health-core.js", swSrc.includes('"./health-core.js"'));
   ok("sw.js precaches vcdiff.js", swSrc.includes('"./vcdiff.js"'));
-  ok("sw.js cache name unchanged (bump pairs with the version bump)",
-     swSrc.includes('const CACHE = "s5editor-v21"'));
+  ok("sw.js cache name bumped with the v1.17.9 version bump",
+     swSrc.includes('const CACHE = "s5editor-v22"'));
 }
 
 // Rune slot availability (#6, display only): the save character view shows
