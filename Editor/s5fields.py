@@ -58,9 +58,20 @@ def _char_stat_fields():
     f += [(lbl + " Growth", 9 + i, 1, "num") for i, lbl in enumerate(_CHAR_STATS)]
     return f
 
-# The weapon growth table (in TABLES below) has records for character ids
-# 0..WEAPON_GROWTH_COUNT-1 only. See the note on the "weapon growth" entry.
-WEAPON_GROWTH_COUNT = 81
+# The weapon growth table (in TABLES below) is indexed by WEAPON RECORD id
+# (the W byte in each character's starting-equipment record), not by character
+# id. It holds WEAPON_RECORD_COUNT records (0..81); record 0 is all zero and
+# means "no weapon record". See the note on the "weapon growth" entry and
+# ps2-re games/suikoden5/WEAPON_GROWTH.md (issue #22, solved).
+WEAPON_RECORD_COUNT = 82
+# Back-compat alias: older code used this name for the record count.
+WEAPON_GROWTH_COUNT = WEAPON_RECORD_COUNT
+WEAPON_TABLE_BASE, WEAPON_TABLE_STRIDE = 0x498710, 0x60
+WEAPON_GROWTH_OFF = 0x50          # growth bytes live at record +0x50..+0x5F
+# The starting-equipment record (builder base 0x4E5810 vaddr): byte +0x00 is
+# the starting level, byte +0x01 is the weapon record id W.
+EQUIP_TABLE_BASE, EQUIP_TABLE_STRIDE = 0x493110, 0x18
+EQUIP_LEVEL_OFF, EQUIP_WEAPON_OFF = 0x00, 0x01
 
 TABLES = {
     "stats":      (0x48A970, 0x12, _char_stat_fields()),
@@ -89,36 +100,58 @@ TABLES = {
          "Potch Finder", "Treasure Hunt", "Escape Route", "Healing", "Treatment", "Haggle",
          "Trade In", "Cook", "Rune Sage", "Bard", "Perfect Pitch", "Appraisal", "Bath",
          "Tutor"])]),
-    # 0x4987C0/0x60 is per-character WEAPON GROWTH (attack power at sharpen levels
-    # 1-16). Verified against the full NTSC-U and PAL ISOs (2026-11-15, issue #22):
-    # the table holds only WEAPON_GROWTH_COUNT records (character ids 0..80, using
-    # just 6 distinct curves; 8 records are all-zero in the game data itself).
-    # Characters past id 80 have NO record here: the bytes beyond the table are an
-    # unrelated block, so read_character omits this table for them and write_field
-    # refuses to write it. (Previously mislabeled here as "Magic thresholds".)
-    "weapon growth": (0x4987C0, 0x60, [(f"Sharpen Lv{i+1} attack", i, 1, "num") for i in range(16)]),
+    # WEAPON GROWTH, reframed 2026-11-16 (issue #22, ps2-re WEAPON_GROWTH.md).
+    # The old base 0x4987C0 was misaligned by 0xB0 and the table was indexed by
+    # character id, so its growth values and name labels were never a matched
+    # pair and ids 81-119 were wrongly gated off. The true table is at
+    # 0x498710 (vaddr 0x4EAE10), stride 0x60, records 0..81, indexed by the
+    # weapon record id W stored at +0x01 of the starting-equipment record.
+    # Growth is the 16 bytes at record +0x50. Record +0x00 holds the SJIS
+    # weapon type name, +0x11/+0x26/+0x3B the three stage names, +0x0F a
+    # range/class byte and +0x10 an affinity index byte: those are exposed
+    # read-only via s5patch.read_weapon_record, never as writable fields,
+    # because the gameplay semantics of +0x0F/+0x10 are unproven. Only 6
+    # distinct non-zero curves exist; 8 records (7, 8, 10, 14, 18, 33, 34, 68)
+    # have all-zero growth and are used by no unit. In TABLES the index of
+    # this table is the weapon record id; read_character / write_field
+    # translate a character id through its W byte.
+    "weapon growth": (WEAPON_TABLE_BASE, WEAPON_TABLE_STRIDE,
+                      [(f"Sharpen Lv{i+1} attack", WEAPON_GROWTH_OFF + i, 1, "num") for i in range(16)]),
     # (Removed the old "skills" table — 0x48A970/0x12 is the character STATS table above.)
-    # 4 armor slots equipped at new-game start (the "Starting Equipment" data:
-    # Head/Body/Arm/Feet). Values are armor ids; clean armor names aren't id-aligned
-    # so shown numerically.
+    # Starting-equipment record, reframed 2026-11-16 (issue #22): the builder
+    # (func_002CEE90) reads the record at 0x493110 (vaddr 0x4E5810), stride
+    # 0x18; the editor's old base 0x493112 sat 2 bytes late, hiding the first
+    # two bytes. True layout: +0x00 starting level (0 reads as level 1),
+    # +0x01 weapon record id W (see "weapon growth"), +0x02..+0x05 starting
+    # armor ids, +0x08/+0x0C/+0x10/+0x14 starting held-item pointers. The
+    # armor and item VALUES are unchanged by the reframe: base -2 and field
+    # offsets +2 cancel, so every armor/item byte sits at the same absolute
+    # address as before (ripple-audited; see the 1a commit message).
     # Four VERIFIED armor slots. The stored byte is the GAME ARMOR ID (0 = Nothing),
     # matching the verified armor id list (s5_armor_names.json):
-    #   +0 Head (33 ids), +1 Body (72), +2 Arm/gloves (38), +3 Foot (31).
-    # Ground truth: Richard = [0x11,0x24,0x11,0x0E] = Knight Headpiece / Knight Full Armor
-    # / Knight Gloves / Knight Boots (a full knight set). (slot2 was briefly "unknown" — it
-    # is the Arm/glove slot; the ELF pool lacked an "Arm -" desc prefix, but the armor id list includes it.)
-    "starting equipment": (0x493112, 0x18, [("Head", 0, 1, "armorhead"), ("Body", 1, 1, "armorbody"),
-                                            ("Arm (gloves)", 2, 1, "armorarm"), ("Feet", 3, 1, "armorfoot")]),
-    # Same 0x493112/0x18 record also holds FOUR starting held-item slots as u32 NAME
-    # POINTERS (into the internal item-name pool): +0x06/+0x0a/+0x0e/+0x12. 0x6DFDE8 = empty.
+    #   Head (33 ids), Body (72), Arm/gloves (38), Foot (31).
+    # Ground truth (byte-checked against the game-written starting records in
+    # a real save, ps2-re loadout_work templates file): Richard =
+    # [0, 51, 15, 13] = Nothing / Byakko Chain Mail / Gloves / Boots; the
+    # Prince = [1, 21, 2, 13] = Bandana / Refined Clothes / Bracelet / Boots.
+    # (An older note here claimed Richard wore a full knight set; the disc
+    # bytes and the game-written record agree that he does not.)
+    "starting equipment": (EQUIP_TABLE_BASE, EQUIP_TABLE_STRIDE,
+                           [("Starting level", EQUIP_LEVEL_OFF, 1, "num"),
+                            ("Weapon id", EQUIP_WEAPON_OFF, 1, "weaponid"),
+                            ("Head", 2, 1, "armorhead"), ("Body", 3, 1, "armorbody"),
+                            ("Arm (gloves)", 4, 1, "armorarm"), ("Feet", 5, 1, "armorfoot")]),
+    # Same record also holds FOUR starting held-item slots as u32 NAME
+    # POINTERS (into the internal item-name pool): +0x08/+0x0C/+0x10/+0x14. 0x6DFDE8 = empty.
     # Editable only within the closed set of pointers the game already uses for held items
     # (s5_held_items.json) so every written value is a known-valid item reference.
     # One catalog entry is sourced differently: Sacrificial Buddha (issue #27) has no
     # name copy in the held-item pools, so its catalog pointer is the item database's own
     # name pointer for it (see the buddha_note in s5_held_items.json).
     # Ground truth: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.
-    "starting items": (0x493112, 0x18, [("Item 1", 0x06, 4, "helditem"), ("Item 2", 0x0a, 4, "helditem"),
-                                        ("Item 3", 0x0e, 4, "helditem"), ("Item 4", 0x12, 4, "helditem")]),
+    "starting items": (EQUIP_TABLE_BASE, EQUIP_TABLE_STRIDE,
+                       [("Item 1", 0x08, 4, "helditem"), ("Item 2", 0x0C, 4, "helditem"),
+                        ("Item 3", 0x10, 4, "helditem"), ("Item 4", 0x14, 4, "helditem")]),
     # NO "potch" table. The +0x54 u16 was previously shown as "Starting Potch" — that
     # was WRONG. The game data reads 0x54 as list1_51NUD, the last of six generic
     # unlabeled "growth" NUDs (list1_31..51 -> record offsets 0x2c,0x34,0x3c,0x44,0x4c,
@@ -544,8 +577,8 @@ RANK_HELP = "skill rank byte: 0..7 (higher = better; 07 ~ SS)"
 # Per-section help, drawn from verified in-game labels.
 SECTION_HELP = {
     "stats":      "Character starting stats (HP, Attack, Technique, Magic, Evasion, PDF, MDF, Speed, Luck) plus each stat's per-level Growth. Base stats apply to a NEW GAME; growth affects level-ups. Verified byte-for-byte in-game (Dinn/Lance match exactly).",
-    "weapon growth": "Attack power of this character's weapon at each sharpen level (1-16), ascending. Verified against the game's weapon-growth data.",
-    "starting equipment": "Armor equipped at new-game start — Head / Body / Arm (gloves) / Feet. All four are dropdowns of the game's armor ids (0 = Nothing). Verified: Richard starts in a full knight set.",
+    "weapon growth": "Attack power at sharpen levels 1-16 for this character's WEAPON RECORD (the Weapon id in Starting equipment). Weapon records are shared: every character with the same Weapon id uses the same record, so an edit here changes all of them. A Weapon id of 0 means no weapon record (non-combat, support, or body-weapon unit). Verified against the game's builder and stat code (issue #22).",
+    "starting equipment": "New-game start: the character's starting level (0 = level 1), Weapon id (which shared weapon record drives Weapon growth; 0 = none, max 81), and armor equipped at start: Head / Body / Arm (gloves) / Feet, dropdowns of the game's armor ids (0 = Nothing). Verified byte-for-byte against game-written starting records.",
     "starting items": "Up to four items/accessories a unit starts holding (stored as name pointers). Choices are the closed set of items the game actually assigns; 'Nothing' clears a slot. Verified: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
     "gear":       "Armor pieces (Head / Body / Arm / Foot). Fully editable, verified vs the Armor List guide: DEF, buy/sell price, weight Type (1=Light/2=Medium/3=Heavy) + SPD penalty, stat bonuses (HP/Attack/Technique/Magic/Evasion/MDEF/Speed/Luck), proc effects (auto-heal/HP-drain/status-resist/potch/counter %), and per-element ATK & DEF for all 14 elements. The read-only summary below is just the game's own description text.",
@@ -623,16 +656,19 @@ GATED_IN_PAL = []
 # PAL bases (SLES_540.87) — see reference_s5_pal_map. NTSC bases are captured live below.
 _PAL = {
     "stats": 0x48FB60, "affinities": 0x490720, "equipable skills": 0x4B80D1,
-    "weapon growth": 0x49D9B0, "spell": 0x4FC950, "runeprice": 0x4F0B20, "runeprice_stride": 80,
+    "weapon growth": 0x49D900, "spell": 0x4FC950, "runeprice": 0x4F0B20, "runeprice_stride": 80,
     "healprice": 0x4D2980, "mp": 0x49D8B0, "skillfx": 0x4B44BC, "enemy": 0x4A42CC,   # byte-match verified vs NTSC (ids 1..219 identical)
     "armor_head": 0x49AF70, "armor_body": 0x491B90, "armor_arm": 0x499490,
     "armor_foot": 0x49C6B0, "armor_accessory": 0x4B2070,
     # Phase 2 (byte-match verified): rune->spell grant, shop item prices, starting-equipment armor.
     # runegrant moved back two records (Dawn + Twilight) with the NTSC base — PAL's
     # Fire Rune record is 0x4FAF02, so the Dawn Rune is 0x4FAF02 - 2*0x46. Verified.
-    "runegrant": 0x4FAE76, "starting equipment": 0x498302,
+    "runegrant": 0x4FAE76, "starting equipment": 0x498300,
     # Phase 3: starting held-items share the starting-equipment record base.
-    "starting items": 0x498302,
+    # (Both PAL bases shifted by the same -2 / -0xB0 reframe deltas as NTSC in
+    # the issue #22 fix: the record layout is region-identical, only the
+    # absolute bases differ, as with every other table here.)
+    "starting items": 0x498300,
     # Phase 3: unite table (packed; byte-identical layout, Δ+0x59B0). scan-end keeps the
     # same window span as NTSC (0x4D6000-0x4D3420 = 0x2BE0).
     "unite": 0x4D8DD0, "unite_end": 0x4D8DD0 + 0x2BE0,

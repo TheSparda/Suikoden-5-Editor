@@ -183,7 +183,7 @@
  },
  "_meta": {
   "source": "Suikoden5EditorV10.exe Form3ListAllArmor resource (game armor ids, 0=Nothing)",
-  "slots": "record 0x493112/0x18: +0 head, +1 body, +2 glove(hand), +3 foot"
+  "slots": "record 0x493110/0x18: +2 head, +3 body, +4 glove(hand), +5 foot (+0 starting level, +1 weapon id)"
  },
  "accessory": {
   "0": "Nothing",

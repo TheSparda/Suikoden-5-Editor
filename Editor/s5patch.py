@@ -926,19 +926,96 @@ def read_table(iso, table, cid):
             for (l, o, w, k) in F.TABLES[table][2]]
 
 
+def weapon_id_for_char(iso, cid):
+    """The weapon record id W for a character: byte +0x01 of the character's
+    starting-equipment record (issue #22). The builder table covers ids
+    0..133; the playable roster is 0..119. W is 0 for non-combat, support
+    and body-weapon units (no weapon record)."""
+    base, stride, _ = F.TABLES["starting equipment"]
+    return iso.ru(base + cid * stride + F.EQUIP_WEAPON_OFF, 1)
+
+
+def _sjis_field(raw):
+    """Decode one NUL-padded Shift-JIS string field from a weapon record."""
+    b = raw.split(b"\x00")[0]
+    try: return b.decode("cp932")
+    except Exception: return ""
+
+
+def read_weapon_record(iso, wid):
+    """One weapon record (id W, 0..81) from the reframed weapon table:
+    the 16 growth bytes (the only writable part), the SJIS type and stage
+    names as read-only labels, the +0x0F range/class byte and +0x10 affinity
+    index byte (read-only: their gameplay semantics are unproven), and the
+    list of characters whose starting-equipment record carries this W
+    (an edit to the record affects all of them)."""
+    if not (0 <= wid < F.WEAPON_RECORD_COUNT):
+        raise KeyError(f"no weapon record {wid}")
+    base = F.TABLES["weapon growth"][0] + wid * F.WEAPON_TABLE_STRIDE
+    raw = iso.rd(base, F.WEAPON_TABLE_STRIDE)
+    names = {c["id"]: c["name"] for c in F.load_characters()}
+    users = []
+    for cid in range(134):
+        if weapon_id_for_char(iso, cid) == wid and wid != 0:
+            users.append({"id": cid, "name": names.get(cid, "#%d" % cid)})
+    return {"id": wid,
+            "typeName": _sjis_field(raw[0x00:0x0F]),
+            "stageNames": [_sjis_field(raw[0x11:0x26]), _sjis_field(raw[0x26:0x3B]),
+                           _sjis_field(raw[0x3B:0x50])],
+            "rangeByte": raw[0x0F], "indexByte": raw[0x10],
+            "growth": [raw[F.WEAPON_GROWTH_OFF + i] for i in range(16)],
+            "users": users}
+
+
+def read_weapon_for_char(iso, cid):
+    """Weapon context for one character: its W byte plus the full weapon
+    record when W is nonzero (None when the character has no weapon record)."""
+    w = weapon_id_for_char(iso, cid)
+    return {"w": w, "record": read_weapon_record(iso, w) if w else None}
+
+
+def write_weapon_record(iso, wid, label, value):
+    """Write one growth field of weapon record `wid` directly (the CSV
+    sheet is keyed by weapon record id, not by character)."""
+    if not (0 <= wid < F.WEAPON_RECORD_COUNT):
+        raise KeyError(f"no weapon record {wid}")
+    for (l, o, w, k) in F.TABLES["weapon growth"][2]:
+        if l == label:
+            iso.wu(F.TABLES["weapon growth"][0] + wid * F.WEAPON_TABLE_STRIDE + o, w, value)
+            return True
+    raise KeyError(f"no field {label!r} in weapon growth")
+
+
 def read_character(iso, cid):
     # In PAL, the char sub-section tables (starting equipment/items) aren't offset-mapped
     # yet — skip them so we never surface wrong data.
     skip = set(F.GATED_IN_PAL) if F.REGION == "pal" else set()
-    # Issue #22: the weapon growth table has records for ids 0..80 only. Past
-    # the table sits an unrelated data block, so never surface it as growth.
-    if cid >= F.WEAPON_GROWTH_COUNT: skip.add("weapon growth")
-    return {t: read_table(iso, t, cid) for t in F.TABLES if t not in skip}
+    out = {}
+    for t in F.TABLES:
+        if t in skip: continue
+        if t == "weapon growth":
+            # Issue #22: growth is indexed by the character's weapon record
+            # id W, not by character id. W = 0 means no weapon record, so
+            # there is nothing to show; every other character (ids 81-119
+            # included) reads its shared record.
+            w = weapon_id_for_char(iso, cid)
+            if w: out[t] = read_table(iso, t, w)
+            continue
+        out[t] = read_table(iso, t, cid)
+    return out
 
 
 def write_field(iso, table, cid, label, value):
-    if table == "weapon growth" and cid >= F.WEAPON_GROWTH_COUNT:
-        raise KeyError(f"no weapon growth record for character {cid}")
+    if table == "weapon growth":
+        # cid is a CHARACTER id here (the character panels' write path);
+        # the byte lands in the character's shared weapon record.
+        w = weapon_id_for_char(iso, cid)
+        if not w:
+            raise KeyError(f"character {cid} has no weapon record (weapon id 0)")
+        return write_weapon_record(iso, w, label, value)
+    if table == "starting equipment" and label == "Weapon id":
+        if not (0 <= int(value) < F.WEAPON_RECORD_COUNT):
+            raise ValueError(f"weapon id must be 0..{F.WEAPON_RECORD_COUNT - 1}")
     for (l, o, w, k) in F.TABLES[table][2]:
         if l == label:
             iso.wu(table_addr(table, cid) + o, w, value); return True
@@ -2013,7 +2090,7 @@ CSV_DATASETS = {
     "char-stats":       "Characters — stats & growths",
     "char-affinities":  "Characters — elemental affinities (0=None..6=S)",
     "char-skillcaps":   "Characters — equipable-skill caps (0=None..7=SS)",
-    "char-weapon":      "Characters — weapon growth (sharpen Lv1-16 attack)",
+    "char-weapon":      "Weapon records: growth by weapon id (sharpen Lv1-16 attack)",
     "char-equipment":   "Characters — starting equipment (armor ids)",
     "enemies":          "Enemies — stats/rewards/affinities/drops",
     "spells":           "Spells — element / power / target / status",
@@ -2040,6 +2117,16 @@ def csv_legends():
     what the pickers in the tabs offer."""
     codes = lambda m: ", ".join(f"{k}={v}" for k, v in sorted(m.items()))
     out = {
+        "char-weapon": [
+            "The id column is the WEAPON RECORD id (0-81), not a character id: "
+            "each character's Weapon id (Starting equipment) picks its record, "
+            "records are shared, and one edit changes every character listed "
+            "in the row's name. Record 0 is the empty no-weapon record.",
+        ],
+        "char-equipment": [
+            "Weapon id must be 0-81 (0 = no weapon record); it is validated, "
+            "not capped. Starting level 0 means level 1.",
+        ],
         "spells": [
             "Element: " + codes(F.ELEMENT_NAMES),
             "Target: " + codes(F.TARGET_NAMES),
@@ -2076,8 +2163,19 @@ def _csv_rows(iso_path, dataset):
             t = _CSV_CHAR_TABLE[dataset]
             labels = [l for (l, o, w, k) in F.TABLES[t][2]]
             rows = []
+            if t == "weapon growth":
+                # Keyed by WEAPON RECORD id (issue #22): one row per record
+                # 0..81, named by its SJIS type name. Record 0 is the
+                # all-zero "no weapon" record, kept so the sheet covers the
+                # whole table.
+                for wid in range(F.WEAPON_RECORD_COUNT):
+                    rec = read_weapon_record(g, wid)
+                    nm = rec["typeName"] or ("Weapon record %d" % wid)
+                    users = ", ".join(u["name"] for u in rec["users"][:4])
+                    if len(rec["users"]) > 4: users += ", ..."
+                    rows.append([wid, nm + ((" (%s)" % users) if users else "")] + rec["growth"])
+                return ["id"], labels, rows
             for c in F.load_characters():
-                if t == "weapon growth" and c["id"] >= F.WEAPON_GROWTH_COUNT: continue
                 vals = [f["value"] for f in read_table(g, t, c["id"])]
                 rows.append([c["id"], c["name"]] + vals)
             return ["id"], labels, rows
@@ -2254,7 +2352,10 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
                     val = capped
                     if cur.get(label) == val: continue
                 try:
-                    if dataset in _CSV_CHAR_TABLE:
+                    if dataset == "char-weapon":
+                        # Rows are weapon record ids, not character ids.
+                        write_weapon_record(g, rid, label, val)
+                    elif dataset in _CSV_CHAR_TABLE:
                         write_field(g, _CSV_CHAR_TABLE[dataset], rid, label, val)
                     elif dataset == "enemies":
                         write_enemy_field(g, rid, label, val)

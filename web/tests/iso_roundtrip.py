@@ -45,6 +45,17 @@ def main():
         target = F.RESOURCE_NAME_BASE + (i - 1) * F.RESOURCE_NAME_STRIDE if i else F.RESOURCE_NAME_BASE - 0x18
         o = F.MODEL_PTR_BASE + i * 4
         buf[o:o + 4] = (target + F.MODEL_VADDR_DELTA).to_bytes(4, "little")
+    # ...and the reframed starting-equipment + weapon tables (issue #22):
+    # Prince (0) level 3, Weapon id 37, armor [1,21,2,13]; Maroon (81) and
+    # Muroon (69) share Weapon id 51; Raja (1) keeps Weapon id 0.
+    eqb, eqs = F.TABLES["starting equipment"][0], F.TABLES["starting equipment"][1]
+    buf[eqb + 0 * eqs + 0] = 3; buf[eqb + 0 * eqs + 1] = 37
+    buf[eqb + 0 * eqs + 2:eqb + 0 * eqs + 6] = bytes([1, 21, 2, 13])
+    buf[eqb + 81 * eqs + 1] = 51; buf[eqb + 69 * eqs + 1] = 51
+    wgb = F.TABLES["weapon growth"][0]
+    buf[wgb + 37 * 0x60 + 0x50:wgb + 37 * 0x60 + 0x60] = bytes(range(10, 170, 10))
+    buf[wgb + 51 * 0x60 + 0x50:wgb + 51 * 0x60 + 0x60] = bytes([5] * 16)
+    buf[wgb + 37 * 0x60:wgb + 37 * 0x60 + 9] = b"TESTSTAFF"
     open(slice_path, "wb").write(buf)
 
     n = [0]; bad = [0]
@@ -72,13 +83,75 @@ def main():
     chk("iso_mp groups", "groups" in json.loads(g["iso_mp"]()))
     chk("iso_setmp ok", json.loads(g["iso_setmp"](0, 0, 42)).get("ok") is True)
     chk("iso_prices removed (#30)", "iso_prices" not in g and "iso_setprice" not in g)
-    chk("weapon growth present for id 80 (#22)",
-        "weapon growth" in json.loads(g["iso_char"](80))["tables"])
-    chk("weapon growth gated for id 81 (#22)",
-        "weapon growth" not in json.loads(g["iso_char"](81))["tables"])
-    chk("weapon growth write blocked for id 81 (#22)",
-        "error" in json.loads(g["iso_setchar"](json.dumps({"id": 81}),
+    # ---- Issue #22 reframe: weapon growth resolves through the Weapon id.
+    def _growth(cid):
+        t = json.loads(g["iso_char"](cid))["tables"].get("weapon growth")
+        return [f["value"] for f in t] if t else None
+    chk("weapon growth resolves via Weapon id 37 for the Prince (#22)",
+        _growth(0) == list(range(10, 170, 10)), str(_growth(0)))
+    chk("weapon growth present for id 81, gate removed (#22)",
+        _growth(81) == [5] * 16, str(_growth(81)))
+    chk("no weapon growth for a Weapon id 0 character (#22)", _growth(1) is None)
+    chk("weapon growth write blocked for Weapon id 0 (#22)",
+        "error" in json.loads(g["iso_setchar"](json.dumps({"id": 1}),
             json.dumps([{"table": "weapon growth", "field": "Sharpen Lv1 attack", "value": 5}]))))
+    chk("iso_setchar weapon growth via id 81 ok (#22)",
+        json.loads(g["iso_setchar"](json.dumps({"id": 81}),
+            json.dumps([{"table": "weapon growth", "field": "Sharpen Lv1 attack", "value": 99}]))).get("ok") is True)
+    chk("the edit is shared by every user of record 51 (#22)",
+        _growth(69)[0] == 99 and _growth(81)[0] == 99, str(_growth(69)[:2]))
+    _eq0 = {f["label"]: f["value"] for f in json.loads(g["iso_char"](0))["tables"]["starting equipment"]}
+    chk("starting equipment reframed: level, Weapon id, armor (#22)",
+        (_eq0["Starting level"], _eq0["Weapon id"], _eq0["Head"], _eq0["Body"],
+         _eq0["Arm (gloves)"], _eq0["Feet"]) == (3, 37, 1, 21, 2, 13), str(_eq0))
+    chk("Weapon id write past 81 is refused (#22)",
+        "error" in json.loads(g["iso_setchar"](json.dumps({"id": 1}),
+            json.dumps([{"table": "starting equipment", "field": "Weapon id", "value": 82}]))))
+    chk("Weapon id 81 write ok and attaches the record (#22)",
+        json.loads(g["iso_setchar"](json.dumps({"id": 1}),
+            json.dumps([{"table": "starting equipment", "field": "Weapon id", "value": 81}]))).get("ok") is True
+        and _growth(1) == [0] * 16)
+    # the weapon CSV sheet is keyed by weapon record id, not character id
+    _wexp = json.loads(g["iso_csvexport"]("char-weapon"))
+    import csv as _csv2, io as _io2
+    _wrows = list(_csv2.reader(_io2.StringIO(_wexp["csv"])))
+    chk("char-weapon sheet lists all 82 weapon records (#22)",
+        len(_wrows) - 1 == 82, str(len(_wrows) - 1))
+    _r37 = next(r for r in _wrows[1:] if r[0] == "37")
+    chk("char-weapon row 37 carries record 37 growth (#22)",
+        [int(x) for x in _r37[2:]] == list(range(10, 170, 10)), str(_r37[:4]))
+    _r37[2] = "111"
+    _buf2 = _io2.StringIO(); _w2 = _csv2.writer(_buf2); _w2.writerows(_wrows)
+    json.loads(g["iso_csvimport"]("char-weapon", _buf2.getvalue()))
+    chk("char-weapon import lands in record 37, not character 37 (#22)",
+        _growth(0)[0] == 111, str(_growth(0)[:2]))
+    # real-disc anchors (WEAPON_GROWTH.md): W bytes + shared curves + users
+    _real = os.environ.get("S5_ISO") or os.path.join(WEB, "..", "ISO", "suikoden5-us.iso")
+    if os.path.exists(_real):
+        import s5patch as _P
+        with _P.Iso(_real) as _h:
+            _anchors = {0: 37, 20: 35, 3: 62, 112: 78, 84: 3, 81: 51, 90: 60, 96: 30}
+            chk("real-disc Weapon id anchors decode (#22)",
+                all(_P.weapon_id_for_char(_h, c) == w for c, w in _anchors.items()),
+                str({c: _P.weapon_id_for_char(_h, c) for c in _anchors}))
+            _curveC = [10, 20, 35, 50, 75, 90, 110, 125, 140, 160, 170, 180, 190, 210, 230, 250]
+            _curveA = [10, 15, 30, 45, 55, 75, 110, 120, 130, 150, 165, 180, 200, 210, 220, 230]
+            _curveD = [20, 30, 45, 60, 80, 100, 120, 135, 145, 160, 170, 185, 210, 220, 230, 245]
+            chk("real-disc shared curves: Sialeeds/Maroon/Lun C, Lelei A, Kisara D (#22)",
+                _P.read_weapon_record(_h, 78)["growth"] == _curveC
+                and _P.read_weapon_record(_h, 51)["growth"] == _curveC
+                and _P.read_weapon_record(_h, 60)["growth"] == _curveC
+                and _P.read_weapon_record(_h, 3)["growth"] == _curveA
+                and _P.read_weapon_record(_h, 30)["growth"] == _curveD)
+            chk("real-disc record 3 users are Cius + Lelei (#22)",
+                [u["id"] for u in _P.read_weapon_record(_h, 3)["users"]] == [36, 84],
+                str(_P.read_weapon_record(_h, 3)["users"]))
+            _eqp = {f["label"]: f["value"] for f in _P.read_character(_h, 0)["starting equipment"]}
+            chk("real-disc Prince equipment values unchanged by the reframe (#22)",
+                (_eqp["Starting level"], _eqp["Weapon id"], _eqp["Head"], _eqp["Body"],
+                 _eqp["Arm (gloves)"], _eqp["Feet"]) == (3, 37, 1, 21, 2, 13), str(_eqp))
+    else:
+        print("SKIP real-disc weapon anchor checks: no real ISO")
     chk("iso_reference dict", isinstance(json.loads(g["iso_reference"]()), dict))
     chk("iso_enemies", "enemies" in json.loads(g["iso_enemies"]()))
     chk("iso_runes", "runes" in json.loads(g["iso_runes"]()))

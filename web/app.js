@@ -296,8 +296,10 @@ def iso_chars():
     return json.dumps({"chars": chars})
 def iso_char(cid):
     try:
-        with P.Iso(ISO) as g: tbls = P.read_character(g, int(cid))
-        return json.dumps({"tables": tbls})
+        with P.Iso(ISO) as g:
+            tbls = P.read_character(g, int(cid))
+            weapon = P.read_weapon_for_char(g, int(cid))
+        return json.dumps({"tables": tbls, "weapon": weapon})
     except Exception as e: return json.dumps({"error": str(e)})
 iso_setchar = _setter(lambda g, ident, e: P.write_field(g, e["table"], int(ident["id"]), e["field"], int(e["value"])))
 

@@ -137,16 +137,30 @@ The 49th byte of each record is padding and isn't exposed.
 
 ### Weapon growth
 
-Sixteen u8 values: the attack power of that character's weapon at sharpen level 1 through 16,
+Sixteen u8 values at record +0x50: the attack power of a weapon at sharpen level 1 through 16,
 ascending. This is the weapon's own damage curve, not a stat bonus.
+
+Weapons are not per-character. The table holds 82 weapon records (ids 0-81), and each
+character's starting-equipment record carries a one-byte Weapon id that picks its record.
+Record 0 is all zero and means "no weapon record" (non-combat, support, and body-weapon
+units). Records are shared, so editing one record's growth changes every character that
+uses it; the panel lists those characters. The record's type name and three stage names
+(and its range/class and affinity index bytes, whose gameplay meaning is unproven) are
+shown read-only. Earlier versions indexed this table by character id from a base that was
+0xB0 too high, which paired growth values with the wrong names and hid ids 81-119 entirely;
+the reframe (issue #22) fixes both.
 
 ### Starting equipment and starting items
 
-Both live in the same record.
+Both live in the same record (base 0x493110, stride 0x18).
 
-- **Starting equipment** — four armor ids: Head, Body, Arm (gloves), Feet. `0` means nothing
+- **Starting level and Weapon id**: record bytes +0 and +1: the level the character starts
+  at (0 reads as level 1) and the Weapon id above (0-81, validated on write).
+- **Starting equipment**: four armor ids at +2..+5: Head, Body, Arm (gloves), Feet. `0` means nothing
   equipped. The ids are the game's armor ids, which the editor offers as name dropdowns.
-  Ground truth: Richard starts in the full knight set.
+  Ground truth, byte-checked against game-written starting records: Richard starts with
+  Nothing / Byakko Chain Mail / Gloves / Boots; the Prince with Bandana / Refined Clothes /
+  Bracelet / Boots.
 - **Starting items** — four held-item slots, stored as pointers into the game's item-name
   pool rather than as ids. Because a wrong pointer would be a real corruption, the editor only
   lets you choose from the closed set of pointers the game already uses for held items.
@@ -651,8 +665,8 @@ move (and the rune-price stride).
 | Character stats + growth | 0x48A970 | 0x48FB60 | 0x12 | one per character id |
 | Character affinities | 0x48B530 | 0x490720 | 0x0E | one per character id |
 | Equipable skill caps | 0x4B2731 | 0x4B80D1 | 0x31 | 113 |
-| Weapon growth | 0x4987C0 | 0x49D9B0 | 0x60 | 81 (character ids 0-80 only) |
-| Starting equipment / items | 0x493112 | 0x498302 | 0x18 | one per character id |
+| Weapon growth | 0x498710 | 0x49D900 | 0x60 | 82 weapon records (ids 0-81, by Weapon id) |
+| Starting equipment / items | 0x493110 | 0x498300 | 0x18 | one per character id |
 | Enemies | 0x49F0DC | 0x4A42CC | 0x7C | 219 |
 | Skill effects | 0x4AEB1C | 0x4B44BC | 0x24 | 165 |
 | Spells | 0x4E87F0 | 0x4FC950 | 0x54 | 106 |

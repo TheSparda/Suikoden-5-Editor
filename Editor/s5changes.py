@@ -22,14 +22,15 @@ Only fields the editor itself can write are mapped. Gaps inside a record
 import s5fields as F
 import s5patch as P
 
-# Record counts for the character-indexed TABLES, from s5fields' own facts:
+# Record counts for the TABLES, from s5fields' own facts:
 # stats / affinities / starting equipment / starting items are indexed by
 # the 120-entry character table; equipable skills documents count 113;
-# weapon growth is F.WEAPON_GROWTH_COUNT (81, issue #22).
+# weapon growth is indexed by WEAPON RECORD id (F.WEAPON_RECORD_COUNT
+# records 0..81, issue #22), not by character.
 def _table_counts(n_chars):
     return {"stats": n_chars, "affinities": n_chars,
             "equipable skills": 113,
-            "weapon growth": F.WEAPON_GROWTH_COUNT,
+            "weapon growth": F.WEAPON_RECORD_COUNT,
             "starting equipment": n_chars, "starting items": n_chars}
 
 _GROUP_ORDER = ["Characters", "Spells", "Runes", "Rune prices", "Heal prices",
@@ -84,7 +85,9 @@ def static_regions():
                     "starting items": "Characters"}
     for tname, (base, stride, fields) in F.TABLES.items():
         for rec in range(counts[tname]):
-            who = cn.get(rec, "#%d" % rec)
+            # Weapon growth rows are weapon records, not characters (#22).
+            who = ("Weapon record %d" % rec) if tname == "weapon growth" \
+                else cn.get(rec, "#%d" % rec)
             for (label, foff, width, kind) in fields:
                 add(base + rec * stride + foff, width, table_groups[tname],
                     "%s · %s" % (who, label), kind)

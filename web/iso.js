@@ -400,15 +400,31 @@ function renderCharTables(cid) {
         <button class="ghost mini" onclick="charSkillPreset(${cid},7)">Max all (SS)</button>
         <button class="ghost mini" onclick="charSkillPreset(${cid},6)">All S</button>
         <button class="ghost mini" onclick="charSkillPreset(${cid},0)">Clear</button></div>`;
+    if (table === "weapon growth" && r.weapon && r.weapon.record) {
+      // Issue #22: the growth grid below edits a SHARED weapon record (picked
+      // by this character's Weapon id), so name the record, its users, and
+      // the read-only record labels before the editable bytes.
+      const rec = r.weapon.record;
+      const users = (rec.users || []).map(u => esc(u.name)).join(", ");
+      h += `<div class="note" style="margin:0 14px">Weapon record ${rec.id}`
+        + (rec.typeName ? ` · ${esc(rec.typeName)}` : "")
+        + (rec.stageNames && rec.stageNames.some(s => s)
+            ? ` · stages: ${rec.stageNames.map(s => esc(s || "?")).join(" / ")}` : "")
+        + `<br>Shared by: ${users || "no other character"} - editing this growth
+           changes every character with Weapon id ${rec.id}.
+           Range/class byte ${rec.rangeByte} and affinity index byte ${rec.indexByte}
+           are shown read-only (their gameplay meaning is unproven).</div>`;
+    }
     h += `<div class="grid" style="padding-top:8px">` + fields.map(f =>
       renderField(f, { view: "char", ident: JSON.stringify({ id: cid }), table,
         key: `char:${cid}:${table}:${f.label}`, prefix: `${name} · `, group: name })).join("") + `</div>`;
   }
-  if (!("weapon growth" in r.tables))   // issue #22: the table only covers ids 0-80
+  if (!("weapon growth" in r.tables))   // issue #22: Weapon id 0 = no record
     h += `<div class="subhd">weapon growth</div>
-      <div class="note" style="margin:0 14px">No weapon growth data is stored for this character:
-      the game's weapon growth table only has records for the first 81 characters (ids 0-80),
-      so there is nothing to show or edit here.</div>`;
+      <div class="note" style="margin:0 14px">This character has no weapon record
+      (Weapon id 0): it is a non-combat, support, or body-weapon unit, so there
+      is no growth curve to show or edit. Give it a Weapon id (1-81) under
+      starting equipment to attach one.</div>`;
   $("isoCbody").innerHTML = h;
 }
 /* Preset: set every equipable-skill cap for a character to one grade (staged, undoable). */

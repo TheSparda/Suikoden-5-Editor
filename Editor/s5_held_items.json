@@ -47,9 +47,9 @@
 "7208472": "Eye Drops"
 },
 "_meta": {
-"base": "0x493112",
+"base": "0x493110",
 "stride": "0x18",
-"slots": "+0x06/+0x0a/+0x0e/+0x12 u32 name pointers; 0x6DFDE8=Nothing",
+"slots": "+0x08/+0x0C/+0x10/+0x14 u32 name pointers; 0x6DFDE8=Nothing",
 "source": "full starting-item candidate catalog: contiguous JP item blob 0x4E5548..0x4E57F8 + item section 0x6DFDE0..0x6DFE18",
 "verified": "foods/medicines + accessories match ISO EN item pool; scrolls = spell-scroll items ('Casts X on enemies')",
 "buddha_note": "Sacrificial Buddha (issue #27) has no copy in the blob or the item section; 5129416 (0x4E44C8) is the item database's own name pointer for it, entry 9 of the stride-4 name-pointer table at file 0x491FB4, pointing at its name in the master JP item-name pool right after Jizo. Held-item pointers already span two unrelated pools, so resolution is by the pointed-to name string."
