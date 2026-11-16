@@ -2,8 +2,10 @@
 """Save-field round-trip on a synthetic gamedata payload built from the engine's own
 constants (no real save shipped). Covers the fields verified 2026-08-23 by ELF RE:
 potch @0xBC74, party SP @0xBC78, army name @0xBC8D, the hero/castle struct mirrors
-(0xBC7C/0xBC9E — the copies the game loads back live), the 10-slot party @0x36,
-and the playtime display decode. Run via tests/save-fields.mjs (skips without python3)."""
+(0xBC7C/0xBC9E — the copies the game loads back live), the party (real battle and
+entourage arrays @0xBB98/@0xBB9E, empty 0x86, plus the browser summary @0x36 the
+editor regenerates from them), and the playtime display decode. Run via
+tests/save-fields.mjs (skips without python3)."""
 import os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,10 +20,15 @@ def chk(name, cond, extra=""):
     if not cond: bad += 1
 
 gd = bytearray(SV.GAMEDATA_SIZE)
-# seed party: hero + Lyon(8), rest empty
+# seed party: hero + Lyon(8) in the real battle array, entourage empty, and
+# the browser summary the game would have regenerated for that party
 for k in range(SV.PARTY_SLOTS):
     v = 0 if k == 0 else (8 if k == 1 else SV.PARTY_EMPTY)
     gd[SV.PARTY_OFF+2*k:SV.PARTY_OFF+2*k+2] = v.to_bytes(2, "little")
+for k in range(SV.PARTY_BATTLE_SLOTS):
+    gd[SV.PARTY_BATTLE_OFF+k] = 0 if k == 0 else (8 if k == 1 else SV.PARTY_REAL_EMPTY)
+for k in range(SV.PARTY_ENTOUR_SLOTS):
+    gd[SV.PARTY_ENTOUR_OFF+k] = SV.PARTY_REAL_EMPTY
 # seed playtime 19:16:05
 for i, v in enumerate((19, 16, 5)):
     gd[SV.PLAYTIME_OFF+2*i:SV.PLAYTIME_OFF+2*i+2] = v.to_bytes(2, "little")
@@ -40,7 +47,9 @@ f2 = SV.decode_gamedata(gd2)
 chk("potch round-trip", f2["potch"] == 123456)
 chk("partySP round-trip", f2["partySP"] == 4321)
 chk("armyName round-trip", f2["armyName"] == "Royalist")
-chk("party slot edits", f2["party"][1] == SV.PARTY_EMPTY and f2["party"][2] == 16, str(f2["party"]))
+chk("party slot edits", f2["party"][1] == 16 and f2["party"][2] == SV.PARTY_EMPTY, str(f2["party"]))
+# (emptying slot 1 compacts the battle group: the game only writes gapless
+# arrays and regenerates the summary flattened, so member 16 slides to slot 1)
 # struct mirrors: renames must land in the game-state struct copies too
 chk("hero struct mirror", gd2[SV.S5_FIELD_MIRRORS["heroName"]:][:17].split(b"\x00")[0] == b"Freyja")
 chk("castle struct mirror", gd2[SV.S5_FIELD_MIRRORS["castleName"]:][:17].split(b"\x00")[0] == b"Ceras")
@@ -59,8 +68,11 @@ gd5, ch5 = SV.apply_gamedata_edits(gd, {"party4": 57})
 chk("party assign counts once", ch5 == 1, str(ch5))
 chk("party assign sets the recruit bit", SV.read_character(gd5, 57)["recruited"] == 1)
 diff = [i for i in range(len(gd)) if gd5[i] != gd[i]]
-chk("party assign touches only its slot + one bitfield byte",
-    diff == [SV.PARTY_OFF + 8, SV.PARTY_OFF + 9, SV.RECRUIT_BASE + 7], str(diff))
+chk("party assign touches summary slot + battle byte + one bitfield byte",
+    diff == [SV.PARTY_OFF + 4, SV.PARTY_OFF + 5, SV.PARTY_BATTLE_OFF + 2,
+             SV.RECRUIT_BASE + 7], str(diff))
+chk("party assign lands in the real battle array",
+    gd5[SV.PARTY_BATTLE_OFF:SV.PARTY_BATTLE_OFF + 3] == bytes([0, 8, 57]))
 chk("only the one bit flipped in that byte",
     gd5[SV.RECRUIT_BASE + 7] == (gd[SV.RECRUIT_BASE + 7] | (1 << (57 & 7))))
 # emptying a slot never touches the bitfield
@@ -92,6 +104,7 @@ chk("marker edit touches only byte 0x12", ch9 == 1
 # regression guards on the verified constants
 chk("POTCH off", SV.S5_FIELDS["potch"][0] == 0xBC74)
 chk("PARTY off/slots", (SV.PARTY_OFF, SV.PARTY_SLOTS, SV.PARTY_EMPTY) == (0x36, 10, 0x0100))
+chk("PARTY real arrays", (SV.PARTY_BATTLE_OFF, SV.PARTY_ENTOUR_OFF, SV.PARTY_REAL_EMPTY) == (0xBB98, 0xBB9E, 0x86))
 chk("mirror offs", (SV.S5_FIELD_MIRRORS["heroName"], SV.S5_FIELD_MIRRORS["castleName"]) == (0xBC7C, 0xBC9E))
 
 print(f"\n{n-bad}/{n} passed")

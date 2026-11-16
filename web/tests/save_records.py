@@ -105,9 +105,30 @@ if us:
     chk("US: party assign readback",
         SV.decode_gamedata(g2)["party"][slot] == 58
         and SV.read_character(g2, 58)["recruited"] == 1)
-    chk("US: party assign footprint is slot bytes + one bitfield byte",
-        diffs(us, g2) == [SV.PARTY_OFF + 2 * slot, SV.PARTY_OFF + 2 * slot + 1,
-                          SV.RECRUIT_BASE + (58 >> 3)], str(diffs(us, g2)))
+    # the write lands in the real battle array, and the browser summary is
+    # regenerated flattened (58 inserted at her battle position, the
+    # entourage entries shift one summary slot later)
+    chk("US: party assign lands in the real battle array",
+        g2[SV.PARTY_BATTLE_OFF:SV.PARTY_BATTLE_OFF + SV.PARTY_BATTLE_SLOTS]
+        == bytes([0, 8, 48, 58, SV.PARTY_REAL_EMPTY, SV.PARTY_REAL_EMPTY])
+        and [int.from_bytes(g2[SV.PARTY_OFF + 2 * i:SV.PARTY_OFF + 2 * i + 2],
+                            "little") for i in range(SV.PARTY_SLOTS)]
+        == [0, 8, 48, 58, 81, 19, 35] + [SV.PARTY_EMPTY] * 3)
+    chk("US: party assign footprint is summary + battle byte + one bitfield byte",
+        diffs(us, g2) == [SV.PARTY_OFF + 6, SV.PARTY_OFF + 8, SV.PARTY_OFF + 10,
+                          SV.PARTY_OFF + 12, SV.PARTY_OFF + 13,
+                          SV.PARTY_BATTLE_OFF + 3, SV.RECRUIT_BASE + (58 >> 3)],
+        str(diffs(us, g2)))
+    # negative control: the summary is not the source of truth. A payload
+    # whose summary was rewritten on its own (what the pre-fix editor
+    # produced) still decodes to the party in the real arrays.
+    tampered = bytearray(us)
+    for i in range(SV.PARTY_SLOTS):
+        tampered[SV.PARTY_OFF + 2 * i:SV.PARTY_OFF + 2 * i + 2] = \
+            SV.PARTY_EMPTY.to_bytes(2, "little")
+    chk("US: decode ignores a stale summary",
+        SV.decode_gamedata(bytes(tampered))["party"]
+        == SV.decode_gamedata(us)["party"])
     # emptying the slot leaves the bit set by design (issue #32); clearing
     # the bit explicitly afterwards restores the original bytes exactly
     g3, _ = SV.apply_gamedata_edits(g2, {"party%d" % slot: SV.PARTY_EMPTY})
@@ -141,8 +162,12 @@ if pal:
     member = next(i for i in range(SV.NUM_CHARS)
                   if i not in party and SV.read_character(pal, i)["recruited"] == 1)
     g2, _ = SV.apply_gamedata_edits(pal, {"party%d" % slot: member})
-    chk("PAL: party assign footprint is the slot bytes only (bit already set)",
-        diffs(pal, g2) == [SV.PARTY_OFF + 2 * slot, SV.PARTY_OFF + 2 * slot + 1],
+    chk("PAL: party assign lands in the real entourage array",
+        g2[SV.PARTY_ENTOUR_OFF:SV.PARTY_ENTOUR_OFF + SV.PARTY_ENTOUR_SLOTS]
+        == bytes([56, 63, member, SV.PARTY_REAL_EMPTY]))
+    chk("PAL: party assign footprint is summary slot + entourage byte only (bit already set)",
+        diffs(pal, g2) == [SV.PARTY_OFF + 2 * slot, SV.PARTY_OFF + 2 * slot + 1,
+                           SV.PARTY_ENTOUR_OFF + 2],
         str(diffs(pal, g2)))
     g3, _ = SV.apply_gamedata_edits(g2, {"party%d" % slot: SV.PARTY_EMPTY})
     chk("PAL: party round trip is byte-identical", g3 == pal)
