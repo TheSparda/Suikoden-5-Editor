@@ -19,6 +19,7 @@ const SHARE_CACHE = "s5share";   // holds a file shared into the PWA; never purg
 const SHELL = [
   "./", "./index.html", "./style.css",
   "./diff-core.js", "./common.js", "./app.js", "./iso.js",
+  "./health-core.js", "./vcdiff.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png",
   // Reused, unchanged from the desktop editor — single source of truth.

@@ -111,6 +111,18 @@ ok("save rune list has no phantom Critical/Magic",
 ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
 ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
 
+// Service worker shell: every module the app loads at runtime is precached
+// (health-core.js and vcdiff.js were missing; noted in the v1.17.8 ship
+// report). The cache name is NOT bumped here: that pairs with the next
+// version bump at ship time.
+{
+  const swSrc = fs.readFileSync(path.join(web, "sw.js"), "utf8");
+  ok("sw.js precaches health-core.js", swSrc.includes('"./health-core.js"'));
+  ok("sw.js precaches vcdiff.js", swSrc.includes('"./vcdiff.js"'));
+  ok("sw.js cache name unchanged (bump pairs with the version bump)",
+     swSrc.includes('const CACHE = "s5editor-v21"'));
+}
+
 // Rune slot availability (#6, display only): the save character view shows
 // per-slot states from the community-derived threshold table (labelled),
 // the record's fixed-rune flags, and warns when a removal strands a slot.
