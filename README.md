@@ -73,10 +73,10 @@ checksum** (the game validates three fixed header values only), so field edits a
 - **Resources**: **Potch** (up to 99,999,999) and **Party SP** (up to 999,999), each with a
   one-tap **Max**.
 - **New Game Plus**: the cleared-game flag that enables fast-forward.
-- **Active party**: the 6 battle slots and 4 support slots, picked from that save's own
+- **Active party**: the 6 battle slots and 4 entourage slots, picked from that save's own
   recruited roster (unrecruited characters are listed last and labelled unavailable). The
-  hero slot is locked because he always leads. Putting one character in two slots raises a
-  warning rather than blocking you.
+  hero's own slot is locked because he always stays in the party. Putting one character
+  in two slots raises a warning rather than blocking you.
 - **Level and playtime** are shown read-only, as the save-select screen reports them.
 
 **Characters panel**, for any of the 120 characters:

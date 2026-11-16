@@ -564,7 +564,7 @@ Verified and editable:
 | Party SP | Shared party skill points, capped at 999,999 |
 | Level | Lead character, 1-99 |
 | Cleared-game marker | 1 = set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list (it does not enable New Game Plus) |
-| Active party | 10 slots (6 battle + 4 support); slot 0 is the hero |
+| Active party | 10 slots (6 battle + 4 entourage), written to the game's real party arrays; the hero can sit in any slot |
 | Per character | Equipped armor (4 slots + accessory), equipped runes (head / right / left), skill ranks |
 
 Playtime is shown read-only — it's a display cache.
