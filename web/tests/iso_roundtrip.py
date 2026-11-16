@@ -139,6 +139,46 @@ def main():
         chk("%s round-trips into its own table" % ds,
             "error" not in back and back.get("errorCount") == 0, str(back)[:120])
 
+    # ---- Gear CSV byte identity (issue #25 regression): the disc's gear tables
+    # hold NEGATIVE signed stat bytes (head-gear Speed penalties down to -8).
+    # An unedited export/import round trip must preserve them exactly; the
+    # pre-fix importer capped signed values at 0 and silently destroyed them.
+    # The all-datasets loop above only asserts the import reports no errors,
+    # which a zeroing bug would also satisfy, so compare the bytes themselves.
+    head_base, head_count = F.ARMOR_TABLES["head"]
+    spd_off = next(o for (l, o, w, s) in F.ARMOR_FIELDS if l == "Speed")
+    with P.Iso(slice_path, writable=True) as h:
+        h.wu(head_base + 3 * F.ARMOR_STRIDE + spd_off, 1, 0xFB)   # Speed -5
+    head_before = P.Iso(slice_path).rd(head_base, head_count * F.ARMOR_STRIDE)
+    hexport = json.loads(g["iso_csvexport"]("gear-head"))["csv"]
+    hrows = list(_csv.reader(io.StringIO(hexport)))
+    hidx = {name: i for i, name in enumerate(hrows[0])}
+    row4 = next(r for r in hrows[1:] if r[hidx["id"]] == "4")
+    chk("gear CSV renders the planted penalty as -5",
+        row4[hidx["Speed"]] == "-5", row4[hidx["Speed"]])
+    hback = json.loads(g["iso_csvimport"]("gear-head", hexport))
+    head_after = P.Iso(slice_path).rd(head_base, head_count * F.ARMOR_STRIDE)
+    chk("unedited gear round trip is byte-identical (negatives preserved)",
+        "error" not in hback and head_after == head_before,
+        "changed=%s" % hback.get("changed"))
+    # and a gear value edit through the sheet lands on exactly one byte
+    body_base, body_count = F.ARMOR_TABLES["body"]
+    def_off = next(o for (l, o, w, s) in F.ARMOR_FIELDS if l == "DEF")
+    body_before = P.Iso(slice_path).rd(body_base, body_count * F.ARMOR_STRIDE)
+    bexport = json.loads(g["iso_csvexport"]("gear-body"))["csv"]
+    brows = list(_csv.reader(io.StringIO(bexport)))
+    bidx = {name: i for i, name in enumerate(brows[0])}
+    for r in brows[1:]:
+        if r[bidx["id"]] == "5":
+            r[bidx["DEF"]] = "88"
+    buf = io.StringIO(); w = _csv.writer(buf); w.writerows(brows)
+    json.loads(g["iso_csvimport"]("gear-body", buf.getvalue()))
+    body_after = P.Iso(slice_path).rd(body_base, body_count * F.ARMOR_STRIDE)
+    bdiff = [i for i in range(len(body_before)) if body_before[i] != body_after[i]]
+    chk("gear CSV edit lands on exactly the DEF byte",
+        bdiff == [4 * F.ARMOR_STRIDE + def_off]
+        and body_after[4 * F.ARMOR_STRIDE + def_off] == 88, str(bdiff[:5]))
+
     # ---- Spells & Runes sheets. Both tables are mostly CODES (element, target, status,
     # and a rune's start-spell id), so the import has to refuse an unknown one rather than
     # cap it the way a stat is capped — a capped code is a different spell, silently.
