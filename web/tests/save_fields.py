@@ -66,10 +66,13 @@ chk("16-char castle round-trip", f5["castleName"] == "Chateau Lalaland", f5["cas
 chk("16-char castle mirror", gd5[SV.S5_FIELD_MIRRORS["castleName"]:][:17] == b"Chateau Lalaland\x00")
 gd6, _ = SV.apply_gamedata_edits(gd, {"castleName": "1234567890ABCDEFG"})
 chk("17-char castle truncates at 16", SV.decode_gamedata(gd6)["castleName"] == "1234567890ABCDEF")
-# hero can sit in any party slot (issue #38): decode keeps him wherever he is
+# hero can sit in any party slot (issue #38): decode keeps him wherever he is.
+# Party storage is the real battle array (PARTY_BATTLE_OFF), not the browser
+# summary: Eachna's PAL save has Georg (20) at battle index 0 and the hero at
+# battle index 3, so the fixture writes the array the game actually reads.
 gd7 = bytearray(gd)
-gd7[SV.PARTY_OFF:SV.PARTY_OFF+2] = (20).to_bytes(2, "little")   # Georg in slot 1
-gd7[SV.PARTY_OFF+6:SV.PARTY_OFF+8] = (0).to_bytes(2, "little")   # hero in slot 4
+gd7[SV.PARTY_BATTLE_OFF] = 20        # Georg at battle index 0
+gd7[SV.PARTY_BATTLE_OFF+3] = 0       # hero at battle index 3
 chk("hero in slot 4 decode", SV.decode_gamedata(bytes(gd7))["party"][:4] == [20, 8, SV.PARTY_EMPTY, 0])
 # invalid party value rejected (char id must be <120 or the empty sentinel)
 gd4, ch4 = SV.apply_gamedata_edits(gd3, {"party3": 500})
