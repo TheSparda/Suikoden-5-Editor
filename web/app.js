@@ -1145,6 +1145,7 @@ function renderChar(i){
     + g(aBtn("accessory","Accessory",c.armor.accessory==null?0:c.armor.accessory))
     + sub("Runes")
     + g(rBtn("rhead","Head",c.runes.rhead)+rBtn("rright","Right hand",c.runes.rright)+rBtn("rleft","Left hand",c.runes.rleft))
+    + runeStatesHTML(c)
     + sub("Equipped skill slots")
     + g([0,1].map(k => `<div class="fld"><label>Slot ${k+1}</label><div class="in">${
         pickBtn(`c${i}_ss${k}`, `${i}:ss${k}`, (c.slots||[0,0])[k], slotName((c.slots||[0,0])[k]),
@@ -1155,6 +1156,27 @@ function renderChar(i){
           selHTML(`ce${i}_sk${s}`, RK, v, `writeCharField(${i},'sk${s}',this.value,this)`, `data-cf="${i}:sk${s}" data-orig="${v}"`)}${REVERT_BTN_SAVE}</div></div>`).join(""))
     + `<div style="padding:8px 14px 12px"><span class="note">Reverse-engineered &amp; cross-verified. Rune 0 = empty slot.${
         c.recruited||!c.recruitable ? "" : " · <b>Not yet recruited in this save.</b>"}</span></div>`;
+}
+/* Rune slot availability line (issue #6, display only): the game computes
+ * availability at menu time from the character's level; there is no stored
+ * count to edit. Thresholds are community-derived data (labelled as such);
+ * the fixed-rune markers are the record's own flag bytes. */
+function runeStatesHTML(c){
+  const sts = c.slotStates || [];
+  if(!sts.length) return "";
+  const lbl = { rhead:"Head", rright:"Right hand", rleft:"Left hand" };
+  const parts = sts.map(st => {
+    let t;
+    if(st.state === "open") t = "open";
+    else if(st.state === "locked") t = `locked until Lv ${st.unlock}`;
+    else if(st.state === "never") t = "never opens";
+    else t = "no community data";
+    if(st.fixed) t += " · fixed rune (cannot be removed)";
+    return `${lbl[st.slot]}: ${t}`;
+  });
+  const anyCommunity = sts.some(st => st.community);
+  return `<div class="fnote" style="margin:2px 16px 0">Rune slots${
+    anyCommunity ? " (unlock levels are community-derived, not read from the game)" : ""}: ${parts.join(" · ")}</div>`;
 }
 function selHTML(id, names, val, onchange, attrs){
   let h = `<select id="${id}" ${onchange?`onchange="${onchange}"`:""} ${attrs||""}>`;
@@ -1182,10 +1204,19 @@ async function setCharPick(i, field, id, displayName){
 async function writeCharField(i, field, value, el){
   const sv = saves[i], idx = +$(`csel${i}`).value;
   const key = `c${idx}_${field}`;
+  const c0 = ((CHARDATA[i] || {}).chars || []).find(x => x.idx === idx);   // pre-write state (for the #6 warning)
   spin(true);
   try{
     const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [key]: +value })));
     if(r.error){ toast("Error: " + r.error, "bad"); return; }
+    // Issue #6: removing a rune from a slot that is still below its unlock
+    // level strands the slot empty in game until that level (the game gates
+    // empty slots by level; a filled slot displays at any level).
+    if(["rhead","rright","rleft"].includes(field) && +value === 0 && c0 && c0.runes && c0.runes[field]){
+      const st = (c0.slotStates || []).find(s => s.slot === field);
+      if(st && typeof st.threshold === "number" && c0.level < st.threshold)
+        toast(`Warning: the ${charFieldLabel(field)} slot will be stranded empty until Lv ${st.threshold} (community-derived threshold). The rune is removed, but the empty slot stays locked in game until that level.`, "bad");
+    }
     // keep the cache fresh so re-opening the character shows current values
     const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
     // dirty vs the value this field had when the panel was rendered (data-orig)

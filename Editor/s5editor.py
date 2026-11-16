@@ -1023,6 +1023,7 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
   +sub('Runes')
   +g(rsel('rhead','Head',c.runes.rhead)+rsel('rright','Right hand',c.runes.rright)+rsel('rleft','Left hand',c.runes.rleft))
+  +runeStatesHTML(c)
   +sub('Equipped skill slots')
   +g([0,1].map(k=>{const names={'0':'— empty —'};(r.skillNames||[]).forEach((n,s)=>{if(s!==26)names[String(s+1)]=n;});
      return `<div class=fld><label>Slot ${k+1}</label><div class=in>${_sel('ce'+i+'_ss'+k,names,(c.slots||[0,0])[k])}</div></div>`;}).join(''))
@@ -1030,6 +1031,21 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +g((c.skills||[]).map((v,s)=>s===26?'':`<div class=fld><label>${(r.skillNames[s]||('Skill '+s))}</label><div class=in>${_sel('ce'+i+'_sk'+s,r.rankNames,v)}</div></div>`).join(''))
   +'<div style="padding:8px 14px 12px"><span class=note>Level, armor, runes and skill ranks are reverse-engineered and cross-verified (skills validated against the game per-character caps). Rune 0 = empty slot.'
   +(c.recruited||!c.recruitable?'':' · <b>This character is not yet recruited in this save.</b>')+'</span></div>';}
+function runeStatesHTML(c){
+ // Issue #6, display only: availability is computed from level at menu time;
+ // thresholds are community-derived (labelled), fixed markers are the
+ // record's own flag bytes.
+ const sts=c.slotStates||[];if(!sts.length)return '';
+ const lbl={rhead:'Head',rright:'Right hand',rleft:'Left hand'};
+ const parts=sts.map(st=>{let t;
+  if(st.state==='open')t='open';
+  else if(st.state==='locked')t='locked until Lv '+st.unlock;
+  else if(st.state==='never')t='never opens';
+  else t='no community data';
+  if(st.fixed)t+=' · fixed rune (cannot be removed)';
+  return lbl[st.slot]+': '+t;});
+ const anyCommunity=sts.some(st=>st.community);
+ return `<div class=note style="margin:2px 16px 0">Rune slots${anyCommunity?' (unlock levels are community-derived, not read from the game)':''}: ${parts.join(' · ')}</div>`;}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
  const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
@@ -1037,7 +1053,14 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
  for(const s of ['ss0','ss1']){const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  const rec=document.getElementById('ce'+i+'_rec');if(rec&&!rec.disabled)edits['c'+idx+'_rec']=rec.checked?1:0;
  const bakOn=document.getElementById('bakToggle').checked;
- if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
+ // Issue #6: warn when a removal strands a below-threshold slot empty.
+ const warns=[];const c0=(CHARDATA[i].chars||[]).find(x=>x.idx===idx);
+ if(c0){for(const s of ['rhead','rright','rleft']){const el=document.getElementById('ce'+i+'_'+s);
+  if(el&&+el.value===0&&c0.runes&&c0.runes[s]){const st=(c0.slotStates||[]).find(x=>x.slot===s);
+   if(st&&typeof st.threshold==='number'&&c0.level<st.threshold)
+    warns.push('the '+s+' slot will be stranded empty until Lv '+st.threshold+' (community-derived threshold)');}}}
+ if(!confirm('Write character #'+idx+' equipment to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')
+  +(warns.length?'  Warning: '+warns.join('; ')+'.':'')))return;
  const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
  if(r.error)toast('Error: '+r.error,'bad');else{toast('Wrote '+r.changed+' equipment field(s)','ok');
   // refresh cached data so re-open shows new values

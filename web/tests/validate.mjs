@@ -111,6 +111,16 @@ ok("save rune list has no phantom Critical/Magic",
 ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
 ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
 
+// Rune slot availability (#6, display only): the save character view shows
+// per-slot states from the community-derived threshold table (labelled),
+// the record's fixed-rune flags, and warns when a removal strands a slot.
+ok("app.js renders rune slot states (#6)",
+   appSrc.includes("runeStatesHTML") && appSrc.includes("community-derived"));
+ok("app.js warns on stranded rune slots (#6)", appSrc.includes("stranded empty until Lv"));
+ok("s5save carries the community threshold table (#6)",
+   fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("RUNE_SLOT_THRESHOLDS")
+   && fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("rune_slot_states"));
+
 // Starting loadouts (#28): the ISO character panel carries a new-game-facing
 // loadout section driven by the glue's loadout adapters and the engine's
 // validated writers (rune words are signed, so they cannot ride the generic

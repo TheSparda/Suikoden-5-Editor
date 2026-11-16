@@ -166,7 +166,90 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 #   VERIFIED: 100% of slotted skills are ones the character has a rank in (566 recruited
 #   records, all saves) + identity fits (Prince slots Royal Paradise, Jeane slots Rune Sage).
 CHAR_SLOTS = 0xF2
+# Per-slot fixed-rune flags @+0xEF/+0xF0/+0xF1 (head/right/left): set exactly
+# when the rune in the matching slot is fixed (cannot be removed). They say
+# nothing about when an empty slot opens (ps2-re RUNE_SLOTS.md).
+CHAR_RUNE_FLAGS = 0xEF
 RECRUIT_BASE = 0xD7CA
+
+# ---- Rune slot availability (issue #6, DISPLAY ONLY) ------------------------
+# Slot availability is computed at menu time from the character's current
+# level against per-character, per-slot unlock thresholds; there is no
+# stored slot-count field anywhere in the save, so the editor must not
+# offer one to write. The threshold table's storage location in the game
+# data was never found, so the table below is the COMMUNITY-DERIVED sample
+# from the GameFAQs "Level 60 Character Database" (cross-checked against
+# Fandom/Gensopedia), transcribed from ps2-re RUNE_SLOTS.md: 41 characters.
+# It is community data, not game data, and the UI labels it as such wherever
+# it is shown or relied on. Encoding per slot (head, right, left): an int is
+# the unlock level, "N" never opens, "F" is a slot that is present holding
+# a fixed rune. In-game-proven anchors: Goesch left 20, Lyon head 45,
+# Cathari left 30 (all three also match the ELF starting-rune table's
+# negative words, ps2-re LOADOUTS.md).
+# Known conflicts between this community sample and the ELF table, kept
+# as-is because the sample is the tasked source for this display: Lelei
+# left (sample 35, ELF word -1), Kisara head/left (sample 1/50, ELF -50/-1),
+# Faylon right/left (sample 35/1, ELF -1/-35), Levi head (sample 25, ELF
+# starts with the Pale Gate Rune). Treat those four characters' displayed
+# thresholds as unproven.
+RUNE_SLOT_THRESHOLDS = {
+    0: (35, "F", 1), 3: ("F", 1, 1), 5: ("N", 1, "F"), 8: (45, 1, "F"),
+    10: ("F", "F", 1), 11: ("N", 1, 35), 12: (55, 1, 20), 14: (50, 1, 1),
+    16: ("N", "F", 1), 17: (55, 1, 35), 18: (45, "N", "N"), 19: ("F", 1, 30),
+    20: ("N", "F", 35), 21: ("F", "N", "N"), 22: (55, 1, 1), 25: (40, 1, 1),
+    27: (45, "N", "N"), 29: (45, "N", "N"), 36: ("N", 1, 35), 39: ("F", 1, 1),
+    41: ("N", 1, 30), 42: (55, 1, 1), 45: ("N", 1, 1), 47: (55, 1, 1),
+    48: ("N", 1, 20), 57: (55, 1, 40), 58: ("N", "F", 25), 60: (25, 1, 1),
+    70: (40, 1, 1), 71: ("N", 1, 1), 76: ("F", 25, 1), 79: (40, "F", 20),
+    80: ("N", 1, "F"), 84: (55, 1, 35), 85: ("F", "N", "N"), 89: ("N", 1, 35),
+    90: (55, 25, 1), 96: (1, 1, 50), 99: ("N", 35, 1), 100: ("N", 1, 35),
+    106: ("N", 1, 40),
+}
+# Slots that are story-gated rather than level-gated: Lyon's left slot holds
+# the Twilight Rune story slot, proven in game to stay dark at levels 40 and
+# 45 while empty (RUNE_SLOTS.md dynamic tests). An empty story-gated slot
+# displays as "never" (by level); once the story writes the rune it displays
+# filled like any other slot.
+RUNE_SLOT_STORY_GATED = {(8, 2)}
+
+def rune_slot_state(level, threshold, filled, story_gated=False):
+    """One slot's display state. threshold is an unlock level (int), "N"
+    (never), "F" (fixed slot), or None (no community data for this
+    character). A FILLED slot always displays open: the game shows an
+    equipped rune and its spells regardless of level (proven with the
+    Prince's head slot at level 34 against a threshold of 35); the level
+    gate applies to empty slots only."""
+    if filled:
+        return {"state": "open", "unlock": threshold if isinstance(threshold, int) else None}
+    if threshold is None:
+        return {"state": "unknown", "unlock": None}
+    if threshold == "N" or story_gated:
+        return {"state": "never", "unlock": None}
+    if threshold == "F":
+        return {"state": "open", "unlock": None}
+    if level >= threshold:
+        return {"state": "open", "unlock": threshold}
+    return {"state": "locked", "unlock": threshold}
+
+def rune_slot_states(gd, idx):
+    """Per-slot display states for one character record in a gamedata
+    payload: [{slot, state, unlock, filled, fixed, threshold, community}].
+    `fixed` is the record's own fixed-rune flag byte (+0xEF..+0xF1);
+    `community` marks that the threshold came from the community-derived
+    table above. Display only: nothing here is writable."""
+    r = _char_off(idx)
+    if r + CHAR_STRIDE > len(gd): return []
+    level = gd[r + CHAR_LEVEL]
+    table = RUNE_SLOT_THRESHOLDS.get(idx)
+    out = []
+    for s, slot in enumerate(RUNE_SLOTS):
+        filled = gd[r + CHAR_RUNE + s] != 0
+        th = table[s] if table else None
+        st = rune_slot_state(level, th, filled, (idx, s) in RUNE_SLOT_STORY_GATED)
+        out.append({"slot": slot, "state": st["state"], "unlock": st["unlock"],
+                    "filled": filled, "fixed": gd[r + CHAR_RUNE_FLAGS + s] != 0,
+                    "threshold": th, "community": table is not None})
+    return out
 # 109-111 (Arshtat, Ferid, Lymsleia) carry the bit from their temporary story-party stints
 # but are not recruitable stars; 112-119 are Sialeeds + the antagonists.
 NON_RECRUITABLE = set(range(109, 120))
@@ -319,7 +402,9 @@ def read_character(gd, idx):
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
             "recruited": recruited, "recruitable": idx not in NON_RECRUITABLE,
             "slots": [gd[r + CHAR_SLOTS], gd[r + CHAR_SLOTS + 1]],
-            "armor": armor, "runes": runes, "skills": skills}
+            "armor": armor, "runes": runes, "skills": skills,
+            "runeFlags": [gd[r + CHAR_RUNE_FLAGS + i] for i in range(3)],
+            "slotStates": rune_slot_states(gd, idx)}
 
 def read_all_characters(gd):
     return [c for i in range(NUM_CHARS) if (c := read_character(gd, i))]
