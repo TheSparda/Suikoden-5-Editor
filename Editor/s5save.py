@@ -105,11 +105,23 @@ S5_FIELD_MAX = {"potch": 99_999_999, "partySP": 999_999, "newGamePlus": 1, "leve
 # struct (what actually loads back into play). Write both so renames stick in-game.
 S5_FIELD_MIRRORS = {"heroName": 0xBC7C, "castleName": 0xBC9E}   # 17-byte slots (16+nul)
 
-# ---- Active party (VERIFIED 2026-08-23): 10 u16 slots @0x36 (6 battle + 4 support).
-# Value = character id (s5_characters.json); 0x0100 = empty slot; slot 0 = hero (0).
-# Cross-checked on 6 saves: every member recruited in that save's bitfield, hero always
-# slot 0, Lyon(8) present wherever story allows, sizes 3..10 match save context.
+# ---- Active party. The game's real party storage is two u8 arrays in the
+# global-state region: battle party @0xBB98 (6 slots) and entourage @0xBB9E
+# (4 slots), empty = 0x86 in both. The 10 u16 slots @0x36 (0x0100 = empty)
+# are only the save BROWSER SUMMARY, sitting in the header block with the
+# hero name, castle name, level and play time: the game regenerates the
+# summary from the real arrays on every save and never reads it for the
+# live party. Proven dynamically 2026-11-15 (ps2-re DYNAMIC_TESTS.md): an
+# in-game swap changed exactly the two real-array bytes, and the summary
+# came back regenerated as the flattened arrays (battle members in order,
+# then entourage members, 0x0100 padding). The editor's 10-slot model maps
+# slots 0-5 to the battle array and 6-9 to the entourage. The hero (id 0)
+# is an ordinary array member at any index (Eachna's PAL save: battle
+# index 3); support-type characters ride in the entourage.
 PARTY_OFF, PARTY_SLOTS, PARTY_EMPTY = 0x36, 10, 0x0100
+PARTY_BATTLE_OFF, PARTY_BATTLE_SLOTS = 0xBB98, 6
+PARTY_ENTOUR_OFF, PARTY_ENTOUR_SLOTS = 0xBB9E, 4
+PARTY_REAL_EMPTY = 0x86
 # Playtime display copy (header): u16 hours @0x30, minutes @0x32, seconds @0x34.
 # VERIFIED vs icon.sys titles (Sparda 19:16 ✓) — display cache, exposed read-only.
 PLAYTIME_OFF = 0x30
@@ -487,6 +499,40 @@ def read_individual_save(path):
     return {"folder": folder, "payloadSize": len(gd), "region": region_label(folder),
             "fields": decode_gamedata(gd), "path": path}
 
+def _read_party(gd):
+    """The 10-slot party model (slots 0-5 battle, 6-9 entourage) decoded from
+    the REAL party arrays; 0x86 there reads as PARTY_EMPTY. The @0x36 summary
+    is never read: it is a display cache the game regenerates, and saves
+    written by older editors may carry a summary that disagrees with the
+    arrays (those edits never reached the game)."""
+    out = []
+    for base, count in ((PARTY_BATTLE_OFF, PARTY_BATTLE_SLOTS),
+                        (PARTY_ENTOUR_OFF, PARTY_ENTOUR_SLOTS)):
+        for i in range(count):
+            v = gd[base + i]
+            out.append(PARTY_EMPTY if v == PARTY_REAL_EMPTY else v)
+    return out
+
+def _write_party(b, party):
+    """Write the 10-slot party model into bytearray b: the real battle and
+    entourage arrays, plus the @0x36 browser summary regenerated from them.
+    Each group is compacted (members keep their order, empties trail as
+    0x86): every game-written save has that shape, and the game's own
+    summary regeneration flattens the arrays the same way, so the editor
+    only ever writes shapes the game itself produces."""
+    flat = []
+    for group, base, count in ((party[:PARTY_BATTLE_SLOTS], PARTY_BATTLE_OFF,
+                                PARTY_BATTLE_SLOTS),
+                               (party[PARTY_BATTLE_SLOTS:], PARTY_ENTOUR_OFF,
+                                PARTY_ENTOUR_SLOTS)):
+        members = [v for v in group if v != PARTY_EMPTY]
+        flat += members
+        for i in range(count):
+            b[base + i] = members[i] if i < len(members) else PARTY_REAL_EMPTY
+    for i in range(PARTY_SLOTS):
+        v = flat[i] if i < len(flat) else PARTY_EMPTY
+        b[PARTY_OFF + 2*i:PARTY_OFF + 2*i + 2] = v.to_bytes(2, "little")
+
 def decode_gamedata(gd):
     if not gd or len(gd) < GAMEDATA_SIZE: return {}
     out = {}
@@ -495,9 +541,8 @@ def decode_gamedata(gd):
             out[k] = gd[off:off+w].split(b"\x00")[0].decode("latin1", "replace")
         else:
             out[k] = int.from_bytes(gd[off:off+w], "little")
-    # active party: 10 u16 slots, 0x0100 = empty (slot 0 = hero)
-    out["party"] = [int.from_bytes(gd[PARTY_OFF+2*i:PARTY_OFF+2*i+2], "little")
-                    for i in range(PARTY_SLOTS)]
+    # active party: decoded from the real arrays (see _read_party)
+    out["party"] = _read_party(gd)
     # playtime display copy (read-only): h/m/s u16s
     h, m, s = (int.from_bytes(gd[PLAYTIME_OFF+2*i:PLAYTIME_OFF+2*i+2], "little") for i in range(3))
     out["playtime"] = f"{h}:{m:02d}:{s:02d}"
@@ -507,12 +552,17 @@ def decode_gamedata(gd):
 def apply_gamedata_edits(gd, edits):
     """edits: {field: value}. Returns (new_gd, changed). Writable: S5_FIELDS (header) plus
     per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft).
-    Party assignments are applied LAST and also set the member's recruitment bit: every
-    real save keeps the two in sync (party member => bit set), so a party edit must never
-    leave a bit-clear character in the party (issue #32). Applying them last means the
-    invariant holds even if the same batch also stages a 'c<idx>_rec' clear for that
-    character; to un-recruit someone, remove them from the party in an earlier save."""
+    Party assignments are collected and applied LAST, after every other edit:
+    the final party is written to the real battle/entourage arrays with the
+    browser summary regenerated from them (see _write_party), and each
+    assigned member's recruitment bit is set in the same pass: every real
+    save keeps the two in sync (party member => bit set), so a party edit
+    must never leave a bit-clear character in the party (issue #32). Applying
+    them last means the invariant holds even if the same batch also stages a
+    'c<idx>_rec' clear for that character; to un-recruit someone, remove
+    them from the party in an earlier save."""
     b = bytearray(gd); changed = 0
+    party_edits = {}
     items = list((edits or {}).items())
     items.sort(key=lambda kv: 1 if (kv[0].startswith("party") and kv[0][5:].isdigit()) else 0)
     for k, v in items:
@@ -532,15 +582,21 @@ def apply_gamedata_edits(gd, edits):
             slot = int(k[5:])
             v = int(v)
             if 0 <= slot < PARTY_SLOTS and (0 <= v < NUM_CHARS or v == PARTY_EMPTY):
-                b[PARTY_OFF+2*slot:PARTY_OFF+2*slot+2] = v.to_bytes(2, "little")
-                if v != PARTY_EMPTY:   # keep party => recruited in sync (issue #32)
-                    b[RECRUIT_BASE + (v >> 3)] |= 1 << (v & 7)
+                party_edits[slot] = v
                 changed += 1
         elif k.startswith("inv_"):
             _apply_inv_edit(b, k, v)   # raises ValueError on an unverified edit
             changed += 1
         elif _apply_char_edit(b, k, v):
             changed += 1
+    if party_edits:
+        party = _read_party(b)
+        for slot, v in party_edits.items():
+            party[slot] = v
+        _write_party(b, party)
+        for v in party_edits.values():
+            if v != PARTY_EMPTY:   # keep party => recruited in sync (issue #32)
+                b[RECRUIT_BASE + (v >> 3)] |= 1 << (v & 7)
     return bytes(b), changed
 
 def write_save_fields(card_path, folder, edits, make_backup=True):
