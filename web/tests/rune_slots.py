@@ -91,8 +91,9 @@ if _tpls:
     for k, v in tpl.items():
         idx = int(k)
         gd2[SV._char_off(idx):SV._char_off(idx) + SV.CHAR_STRIDE] = bytes.fromhex(v["raw"])
-        if v["recruited"]:
-            gd2[SV.RECRUIT_BASE + (idx >> 3)] |= 1 << (idx & 7)
+    # (The template dump's per-record "recruited" labels came from the
+    # editor's old fake bitfield and are ignored here, issue #39; rune
+    # flags and slot states derive from the records themselves.)
     gd2 = bytes(gd2)
     okflags = all(SV.read_character(gd2, int(k))["runeFlags"] == v["rune_flags"]
                   for k, v in tpl.items())

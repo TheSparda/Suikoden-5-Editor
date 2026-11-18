@@ -84,16 +84,18 @@ ok("armor names table has an accessory list",
 // onclick attribute must be double-quoted or the handler is cut off and clicks do nothing (#17).
 ok("pickBtn double-quotes its onclick", /class="pickbtn"[^`]*onclick="\$\{onPick\}"/.test(appSrc));
 
-// Recruitment freedom (#24): both UIs warn on the impossible Eresh+Euram pair
-// without blocking it, and the text keeps the deliberate path legitimate.
+// Recruitment display (#24, #39): both UIs warn on the impossible Eresh+Euram
+// pair. Since #39 the panel is read-only (recruitment comes from the game's
+// status records and cannot be edited), so the warning names an outside
+// change as the source and a backup restore as the repair.
 ok("app.js defines recruitPairWarn (#24)", appSrc.includes("function recruitPairWarn"));
-ok("app.js pair warning keeps the deliberate path open (#24)",
-   appSrc.includes("Eresh and Euram are both marked recruited")
-   && appSrc.includes("Checking both on purpose is allowed"));
+ok("app.js pair warning is the read-only #39 wording (#24)",
+   appSrc.includes("Eresh and Euram are both shown as recruited")
+   && appSrc.includes("cannot change recruitment"));
 const editorSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5editor.py"), "utf8");
 ok("desktop editor has the pair warning too (#24)",
    editorSrc.includes("function recruitPairWarn")
-   && editorSrc.includes("Checking both on purpose is allowed"));
+   && editorSrc.includes("cannot change recruitment"));
 
 // Save-editor rune names: save bytes follow the rune DEFINITION table's order,
 // not s5_rune_ids.json (the equip/code list). The save list must be the one the

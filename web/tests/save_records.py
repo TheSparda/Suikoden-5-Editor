@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Per-character record edits (runes, skill ranks, skill slots, recruit bits,
-party sync) on the two real fixture saves plus a synthetic payload.
+"""Per-character record edits (runes, skill ranks, skill slots, party
+arrays) on the two real fixture saves plus a synthetic payload.
 
-save_fields.py covers the header fields and the #32/#24 semantics on a
+save_fields.py covers the header fields and the #32/#39 semantics on a
 synthetic payload; this suite covers the character-record write paths
 themselves (c<idx>_rhead / _sk<n> / _ss0 / _ss1), which no other suite
-exercises, and re-proves the #32/#24 invariants on the real US and PAL
+exercises, and re-proves the party invariants on the real US and PAL
 fixtures with byte-exact footprints and byte-identical round trips.
+Recruitment itself is read-only (issue #39): it is read from the
+status word, and no edit in this suite may move a status word or the
+old fake-field region.
 Real-save sections skip when a fixture is absent."""
 import os, sys
 
@@ -114,11 +117,13 @@ if us:
         and [int.from_bytes(g2[SV.PARTY_OFF + 2 * i:SV.PARTY_OFF + 2 * i + 2],
                             "little") for i in range(SV.PARTY_SLOTS)]
         == [0, 8, 48, 58, 81, 19, 35] + [SV.PARTY_EMPTY] * 3)
-    chk("US: party assign footprint is summary + battle byte + one bitfield byte",
+    chk("US: party assign footprint is summary + battle byte only",
         diffs(us, g2) == [SV.PARTY_OFF + 6, SV.PARTY_OFF + 8, SV.PARTY_OFF + 10,
                           SV.PARTY_OFF + 12, SV.PARTY_OFF + 13,
-                          SV.PARTY_BATTLE_OFF + 3, SV.RECRUIT_BASE + (58 >> 3)],
+                          SV.PARTY_BATTLE_OFF + 3],
         str(diffs(us, g2)))
+    chk("US: party assign leaves Hazuki's status word at zero",
+        SV.status_word(g2, 58) == 0)
     # negative control: the summary is not the source of truth. A payload
     # whose summary was rewritten on its own (what the pre-fix editor
     # produced) still decodes to the party in the real arrays.
@@ -129,34 +134,35 @@ if us:
     chk("US: decode ignores a stale summary",
         SV.decode_gamedata(bytes(tampered))["party"]
         == SV.decode_gamedata(us)["party"])
-    # emptying the slot leaves the bit set by design (issue #32); clearing
-    # the bit explicitly afterwards restores the original bytes exactly
+    # emptying the slot restores the original bytes exactly: the party
+    # write never touched her status word, so her read returns to plain
+    # unrecruited with no second edit (issue #39)
     g3, _ = SV.apply_gamedata_edits(g2, {"party%d" % slot: SV.PARTY_EMPTY})
-    chk("US: emptying the slot leaves the recruit bit set",
-        SV.read_character(g3, 58)["recruited"] == 1)
-    g4, _ = SV.apply_gamedata_edits(g3, {"c58_rec": 0})
-    chk("US: party round trip is byte-identical", g4 == us)
-    # #24: Eresh is recruited organically in this save; adding Euram must
-    # flip exactly one bitfield byte and nothing else
-    chk("US: Eresh recruited organically",
-        SV.read_character(us, 10)["recruited"] == 1
-        and SV.read_character(us, 108)["recruited"] == 0)
-    g5, _ = SV.apply_gamedata_edits(us, {"c108_rec": 1})
-    chk("US: Euram bit lands alone",
-        diffs(us, g5) == [SV.RECRUIT_BASE + (108 >> 3)]
-        and SV.read_character(g5, 108)["recruited"] == 1
-        and SV.read_character(g5, 10)["recruited"] == 1)
-    g6, _ = SV.apply_gamedata_edits(g5, {"c108_rec": 0})
-    chk("US: Euram round trip is byte-identical", g6 == us)
+    chk("US: emptying the slot restores the unrecruited read",
+        SV.read_character(g3, 58)["recruited"] == 0)
+    chk("US: party round trip is byte-identical", g3 == us)
+    g4, ch4 = SV.apply_gamedata_edits(us, {"c58_rec": 1})
+    chk("US: a rec edit is a no-op on a real save", ch4 == 0 and g4 == us)
+    # #24 on real data: in Kevin's save neither rival reads recruited
+    # (Eresh has no record, Euram's is initialized only). The old suite
+    # expected Eresh set: that was the fake bitfield talking (issue #39).
+    chk("US: neither rival reads recruited",
+        SV.read_character(us, 10)["recruited"] == 0
+        and SV.read_character(us, 10)["recruitState"] == "none"
+        and SV.read_character(us, 108)["recruited"] == 0
+        and SV.read_character(us, 108)["recruitState"] == "initialized")
 
 # ---------- #32 / #24 fixture state on the real PAL fixture ----------
 pal = dict(fixtures).get("PAL")
 if pal:
-    # Eachna's save carries the bulk-set bitfield (see the #38 writeup and
-    # the health audit): both rivals read recruited with no edit at all.
-    chk("PAL: Eresh and Euram both read recruited",
+    # Eachna recruited Eresh organically: her status word is active, and
+    # Euram's is initialized only, so the mutually exclusive pair reads
+    # exactly as the story leaves it. (The old suite expected both set:
+    # her save also carries the bulk-set fake bitfield from the #38 era,
+    # which the editor no longer reads, issue #39.)
+    chk("PAL: Eresh recruited, Euram not",
         SV.read_character(pal, 10)["recruited"] == 1
-        and SV.read_character(pal, 108)["recruited"] == 1)
+        and SV.read_character(pal, 108)["recruited"] == 0)
     party = SV.decode_gamedata(pal)["party"]
     slot = next(i for i, v in enumerate(party) if v == SV.PARTY_EMPTY)
     member = next(i for i in range(SV.NUM_CHARS)
@@ -165,7 +171,7 @@ if pal:
     chk("PAL: party assign lands in the real entourage array",
         g2[SV.PARTY_ENTOUR_OFF:SV.PARTY_ENTOUR_OFF + SV.PARTY_ENTOUR_SLOTS]
         == bytes([56, 63, member, SV.PARTY_REAL_EMPTY]))
-    chk("PAL: party assign footprint is summary slot + entourage byte only (bit already set)",
+    chk("PAL: party assign footprint is summary slot + entourage byte only (recruitment data untouched)",
         diffs(pal, g2) == [SV.PARTY_OFF + 2 * slot, SV.PARTY_OFF + 2 * slot + 1,
                            SV.PARTY_ENTOUR_OFF + 2],
         str(diffs(pal, g2)))

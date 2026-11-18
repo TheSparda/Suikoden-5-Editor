@@ -1,8 +1,9 @@
 /* Health audit (web/health-core.js): acceptance on the two real fixture saves
- * (Kevin's US save must pass clean; Eachna's PAL save must be flagged for its
- * bulk-set recruitment flags) plus one synthetic negative control per rule,
- * each tripping exactly its own rule. Skips the real-save part when python3
- * or the fixtures are unavailable. */
+ * (both must pass clean under the status-word recruitment rules, issue #39;
+ * Eachna's PAL save was flagged under the old fake-field rules for a
+ * bulk-set bitfield the editor no longer reads at all) plus one synthetic
+ * negative control per rule, each tripping exactly its own rule. Skips the
+ * real-save part when python3 or the fixtures are unavailable. */
 import { spawnSync } from "child_process";
 import { createRequire } from "module";
 import path from "path";
@@ -30,17 +31,16 @@ if (snaps.us) {
 } else console.log("SKIP US acceptance: fixture not found");
 if (snaps.pal) {
   const fs = HealthCore.audit(snaps.pal);
-  const got = ids(fs);
-  chk("PAL save: flagged for Eresh+Euram", got.includes("recruit-eres-euram"), JSON.stringify(got));
-  chk("PAL save: flagged for the bulk-set fingerprint", got.includes("recruit-bulk"));
-  chk("PAL save: no inventory or party findings (its lists are well-formed)",
-    !got.some((x) => x.startsWith("inv-") || x.startsWith("party-")), JSON.stringify(got));
+  chk("PAL save: no findings (its status words are all game-plausible)",
+    fs.length === 0, JSON.stringify(ids(fs)));
 } else console.log("SKIP PAL acceptance: fixture not found");
 
 // ---- synthetic controls -------------------------------------------------------
 function base() {
   const roster = [];
-  for (let i = 0; i < 120; i++) roster.push({ idx: i, recruited: i === 0 });
+  for (let i = 0; i < 120; i++) roster.push({ idx: i, recruited: i === 0,
+    state: i === 0 ? "party" : "none", wordState: i === 0 ? "active" : "none",
+    inParty: i === 0, statusWord: i === 0 ? 0x0300 : 0 });
   return {
     potch: 100,
     party: [0, 256, 256, 256, 256, 256, 256, 256, 256, 256],
@@ -64,17 +64,25 @@ function control(name, mutate, expect) {
 chk("base snapshot: no findings", HealthCore.audit(base()).length === 0);
 control("control: Eresh+Euram", (s) => { s.roster[10].recruited = 1; s.roster[108].recruited = 1; },
   ["recruit-eres-euram"]);
-control("control: antagonist flag", (s) => { s.roster[115].recruited = 1; },
-  ["recruit-antagonists"]);
-control("control: bulk-set fingerprint", (s) => { s.roster.forEach((c) => { if (c.idx <= 111) c.recruited = 1; }); },
-  ["recruit-bulk", "recruit-eres-euram"]);   // the pair rule necessarily co-fires
+// The antagonist and bulk-fingerprint rules were dropped in issue #39:
+// their premise was the fake bitfield. Story characters legitimately hold
+// active status words during their stints, and a bulk-recruited roster is
+// not distinguishable from a complete genuine one by the words alone.
+control("control: antagonist recruit no longer flagged (#39)", (s) => {
+    s.roster[115].recruited = 1; s.roster[115].wordState = "active"; }, []);
+control("control: everyone recruited trips only the pair rule (#39)", (s) => {
+    s.roster.forEach((c) => { c.recruited = 1; c.wordState = "active"; }); },
+  ["recruit-eres-euram"]);
 control("control: unrecruited party member", (s) => { s.party[1] = 20; },
   ["party-unrecruited-1"]);
+control("control: party member with an initialized-only record", (s) => {
+    s.roster[20].wordState = "initialized"; s.party[1] = 20; },
+  ["party-unrecruited-1"]);
 control("control: duplicated party member", (s) => {
-    s.roster[8].recruited = 1; s.party[1] = 8; s.party[2] = 8; },
+    s.roster[8].recruited = 1; s.roster[8].wordState = "active"; s.party[1] = 8; s.party[2] = 8; },
   ["party-dup-2"]);
 control("control: hero missing from party", (s) => {
-    s.roster[8].recruited = 1; s.party = [8, 256, 256, 256, 256, 256, 256, 256, 256, 256]; },
+    s.roster[8].recruited = 1; s.roster[8].wordState = "active"; s.party = [8, 256, 256, 256, 256, 256, 256, 256, 256, 256]; },
   ["party-hero-missing"]);
 control("control: quantity over the stack limit", (s) => {
     s.inventory.bag = [{ slot: 0, cat: 9, id: 1, qty: 6, max: 5, value: 0 }]; s.counts.bag = 1; },

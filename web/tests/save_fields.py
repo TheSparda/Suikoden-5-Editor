@@ -77,38 +77,44 @@ chk("hero in slot 4 decode", SV.decode_gamedata(bytes(gd7))["party"][:4] == [20,
 # invalid party value rejected (char id must be <120 or the empty sentinel)
 gd4, ch4 = SV.apply_gamedata_edits(gd3, {"party3": 500})
 chk("bad party id rejected", ch4 == 0)
-# ---- issue #32: a party assignment also sets the member's recruitment bit, in the
-# same edit, and touches nothing else (the game keeps party => recruited in sync;
-# a bit-clear party member is a corrupted state the old write path produced).
+# ---- issues #32/#39: a party assignment writes the real party arrays and
+# the regenerated summary, and nothing else. Recruitment state is the game's
+# own status word, which the editor never writes (issue #39): the assigned
+# member reads recruited through party membership, with their word untouched.
 gd5, ch5 = SV.apply_gamedata_edits(gd, {"party4": 57})
 chk("party assign counts once", ch5 == 1, str(ch5))
-chk("party assign sets the recruit bit", SV.read_character(gd5, 57)["recruited"] == 1)
+chk("party member reads recruited via the party, word untouched",
+    SV.read_character(gd5, 57)["recruited"] == 1
+    and SV.read_character(gd5, 57)["recruitState"] == "party"
+    and SV.status_word(gd5, 57) == 0)
 diff = [i for i in range(len(gd)) if gd5[i] != gd[i]]
-chk("party assign touches summary slot + battle byte + one bitfield byte",
-    diff == [SV.PARTY_OFF + 4, SV.PARTY_OFF + 5, SV.PARTY_BATTLE_OFF + 2,
-             SV.RECRUIT_BASE + 7], str(diff))
+chk("party assign touches summary slot + battle byte only",
+    diff == [SV.PARTY_OFF + 4, SV.PARTY_OFF + 5, SV.PARTY_BATTLE_OFF + 2], str(diff))
 chk("party assign lands in the real battle array",
     gd5[SV.PARTY_BATTLE_OFF:SV.PARTY_BATTLE_OFF + 3] == bytes([0, 8, 57]))
-chk("only the one bit flipped in that byte",
-    gd5[SV.RECRUIT_BASE + 7] == (gd[SV.RECRUIT_BASE + 7] | (1 << (57 & 7))))
-# emptying a slot never touches the bitfield
+chk("party assign never touches the old fake-field region",
+    gd5[0xD7CA:0xD7CA + 15] == gd[0xD7CA:0xD7CA + 15])
+# emptying a slot never touches recruitment data either
 gd6, _ = SV.apply_gamedata_edits(gd5, {"party4": SV.PARTY_EMPTY})
-chk("emptying a slot leaves the bitfield alone",
-    gd6[SV.RECRUIT_BASE:SV.RECRUIT_BASE + 15] == gd5[SV.RECRUIT_BASE:SV.RECRUIT_BASE + 15])
-# a same-batch staged un-recruit cannot undo a party assignment (party pass runs last)
-gd7, _ = SV.apply_gamedata_edits(gd, {"c57_rec": 0, "party4": 57})
-chk("party assignment wins over a same-batch un-recruit",
-    SV.read_character(gd7, 57)["recruited"] == 1)
-# ---- issue #24: Eresh (10) and Euram (108) are mutually exclusive in normal play,
-# but deliberately recruiting both is a legitimate edit. The engine must set both
-# bits when asked; the impossibility warning is a UI concern, not a write block.
+chk("emptying a slot leaves the status words alone",
+    all(SV.status_word(gd6, i) == SV.status_word(gd5, i) for i in range(SV.NUM_CHARS)))
+# ---- issue #39: 'rec' edits no longer exist. A staged recruitment edit is
+# ignored outright (not applied, not counted), because the field it used to
+# write was never the recruitment record and corrupted other data.
+gd7, ch7 = SV.apply_gamedata_edits(gd, {"c57_rec": 1})
+chk("rec edit is a no-op", ch7 == 0 and gd7 == gd)
+gd7b, ch7b = SV.apply_gamedata_edits(gd, {"c57_rec": 0, "party4": 57})
+chk("same-batch rec edit ignored, party edit still applies",
+    ch7b == 1 and SV.read_character(gd7b, 57)["recruitState"] == "party")
+# ---- issue #24: Eresh (10) and Euram (108) are mutually exclusive in normal
+# play; with recruitment read-only there is nothing to set. Both read not
+# recruited in this fixture (their words are zero), and rec edits for the
+# pair change nothing; the impossibility warning is a UI concern over the
+# read state.
 gd8, ch8 = SV.apply_gamedata_edits(gd, {"c10_rec": 1, "c108_rec": 1})
-chk("Eresh+Euram both settable", ch8 == 2
-    and SV.read_character(gd8, 10)["recruited"] == 1
-    and SV.read_character(gd8, 108)["recruited"] == 1)
-chk("pair bits land in their own bytes",
-    gd8[SV.RECRUIT_BASE + 1] == (gd[SV.RECRUIT_BASE + 1] | (1 << 2))
-    and gd8[SV.RECRUIT_BASE + 13] == (gd[SV.RECRUIT_BASE + 13] | (1 << 4)))
+chk("Eresh+Euram rec edits are no-ops", ch8 == 0 and gd8 == gd
+    and SV.read_character(gd8, 10)["recruited"] == 0
+    and SV.read_character(gd8, 108)["recruited"] == 0)
 # ---- issues #2/#19: the byte at 0x12 is the cleared-game marker (a display
 # marker, not an NG+ or fast-forward switch). The relabel changes no data:
 # offset, width and cap are exactly as before, and an edit touches only 0x12.

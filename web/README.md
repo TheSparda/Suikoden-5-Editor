@@ -117,12 +117,14 @@ npm run test:all          # both
 
 - Save-editable fields are the verified set (hero / castle / army name, Potch, Party SP, New
   Game Plus, active party, per character level, armor, accessory, runes, skill slots,
-  skill ranks, recruitment, and the three inventory lists: party bag, warehouse and key
+  skill ranks, and the three inventory lists: party bag, warehouse and key
   items, with the game's own stack limits enforced). Fields whose offsets are not
-  reverse-engineered yet are intentionally not exposed.
+  reverse-engineered yet are intentionally not exposed. Recruitment status is shown
+  read-only, read from the game's own per-character status record; it is not editable
+  (issue #39).
 - The save editor also carries two read-only helpers. The **health check** audits a save
   against rules the game itself keeps (recruitment impossibilities such as Eresh and Euram
-  both set, party members whose recruit bit is clear, inventory entries judged against the
+  both recruited, party members whose recruitment record is not active, inventory entries judged against the
   disc's stack-limit table, potch over the game's 99,999,999 clamp, unterminated name
   slots) and reports findings; it changes nothing. The **recruitment guide** shows where
   each character is found, how they join, and their missable cutoff when a guide supports

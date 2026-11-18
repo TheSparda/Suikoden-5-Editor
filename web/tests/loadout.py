@@ -10,11 +10,13 @@ Two layers:
 2. The real disc plus the lab enumeration: the implementation must
    reproduce ps2-re loadout_work/loadouts_elf.json for all 120 characters,
    and must predict the game-written starting records in a real save
-   (templates file) at the documented tallies: equipped slots 62/62,
-   ranks 60/62 (exceptions Levi 60 and Byakuren 95), runes 60/62
-   (exceptions Miakis 72 and Byakuren 95), level 57/62, armor 54/62.
-   The exceptions are documented in LOADOUTS.md section 4 and are
-   asserted as-is, not fixed.
+   (templates file). The ground-truth set is the characters who are not
+   recruited in that save under the status-word rule (issue #39): 84
+   records, predicted at slots 84/84, ranks 82/84 (exceptions Eresh 10
+   and Levi 60), runes 83/84 (exception Miakis 72), level 79/84,
+   armor 82/84. (The original lab selection used the editor's old fake
+   recruitment bitfield; the word-based reselection is larger and
+   cleaner. LOADOUTS.md section 4 carries the correction note.)
 
 Run directly (python3 tests/loadout.py) or via tests/loadout.mjs."""
 import os, re, json, sys, tempfile
@@ -141,9 +143,22 @@ def main():
 
             if os.path.exists(tpl_path):
                 tpl = json.load(open(tpl_path))
-                unrec = [int(k) for k, v in tpl.items() if not v["recruited"]]
-                chk("template set is the documented 62 unrecruited records",
-                    len(unrec) == 62, str(len(unrec)))
+                # Ground-truth selection by the status-word rule on the
+                # source save itself (issue #39). The templates file's own
+                # "recruited" labels predate the correction (they were
+                # read off the fake bitfield) and are not used.
+                import s5save as SV
+                src_path = os.path.join(os.path.expanduser("~"),
+                    "workspace/suikoden5-debug/saves/library/sparda-us-slot00.payload.bin")
+                src = open(src_path, "rb").read() if os.path.exists(src_path) else None
+                if src is None:
+                    print("SKIP template tally checks: source payload not found")
+                    unrec = []
+                else:
+                    unrec = [int(k) for k in tpl
+                             if not SV.recruit_state(src, int(k))["recruited"]]
+                    chk("template set is the 84 word-unrecruited records (#39)",
+                        len(unrec) == 84, str(len(unrec)))
                 labels = [f[0] for f in F.TABLES["equipable skills"][2]]
                 tally = {"slots": 0, "ranks": 0, "runes": 0, "level": 0, "armor": 0}
                 miss = {"ranks": [], "runes": []}
@@ -161,16 +176,16 @@ def main():
                     else: miss["runes"].append(cid)
                     if got["level"] == t["level"]: tally["level"] += 1
                     if lo["armor"] == t["armor"][:4]: tally["armor"] += 1
-                chk("predicted equipped slots match the save 62/62 (#28)",
-                    tally["slots"] == 62, str(tally))
-                chk("predicted ranks match 60/62 with the documented exceptions (#28)",
-                    tally["ranks"] == 60 and miss["ranks"] == [60, 95], str(miss["ranks"]))
-                chk("predicted runes match 60/62 with the documented exceptions (#28)",
-                    tally["runes"] == 60 and miss["runes"] == [72, 95], str(miss["runes"]))
-                chk("predicted levels match the documented 57/62 (#28)",
-                    tally["level"] == 57, str(tally))
-                chk("predicted armor matches the documented 54/62 (#28)",
-                    tally["armor"] == 54, str(tally))
+                chk("predicted equipped slots match the save 84/84 (#28)",
+                    tally["slots"] == 84, str(tally))
+                chk("predicted ranks match 82/84 with the measured exceptions (#28)",
+                    tally["ranks"] == 82 and miss["ranks"] == [10, 60], str(miss["ranks"]))
+                chk("predicted runes match 83/84 with the measured exception (#28)",
+                    tally["runes"] == 83 and miss["runes"] == [72], str(miss["runes"]))
+                chk("predicted levels match the measured 79/84 (#28)",
+                    tally["level"] == 79, str(tally))
+                chk("predicted armor matches the measured 82/84 (#28)",
+                    tally["armor"] == 82, str(tally))
             else:
                 print("SKIP template tally checks: no templates file")
 

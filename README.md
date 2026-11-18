@@ -81,7 +81,7 @@ checksum** (the game validates three fixed header values only), so field edits a
 
 **Characters panel**, for any of the 120 characters:
 
-- **Level** (1 to 99) and a **Recruited** toggle.
+- **Level** (1 to 99). Recruitment status is shown read-only (see the Recruitment panel).
 - **Equipped armor**: Helm, Armor, Gloves, Boots **and Accessory**, picked by name.
 - **Equipped runes**: Head, Right hand, Left hand, using the full **92-rune name table**
   extracted from the ISO (verified against innate runes: Zerase = Star, the Prince = Dawn).
@@ -89,10 +89,12 @@ checksum** (the game validates three fixed header values only), so field edits a
 - **All 48 skill ranks** (None through SS). Support skills (Cook, Forge, Tutor and the rest)
   use the same scale as their fixed in-game grades.
 
-**Recruitment panel**: the 108 Stars as a searchable checkbox roster, with a live recruited
-counter, a name filter, check / uncheck all, a one-click **Recruit ALL**, and a write that
-touches only the flags you changed. Story-only characters and antagonists stay locked so
-saves remain consistent.
+**Recruitment panel**: the 108 Stars as a searchable read-only roster, with a live recruited
+counter and a name filter. Each character's status is read from the game's own status
+record (in party / recruited / not recruited). Recruitment cannot be edited: the field an
+earlier version wrote turned out not to be the recruitment record at all, and whether
+writing the real record is enough to recruit in game was never proven, so the panel only
+reports status (issue #39). Clicking a character still opens their recruitment guide entry.
 
 Verified by an automated suite: full write, read-back round-trips of every field on every
 supported format (79 checks, NTSC-U and PAL).
@@ -563,8 +565,12 @@ npm run test:all          # both
 - **`save-fields.mjs`**: write and read-back round-trips of every save field on every
   supported format.
 - **`save-records.mjs`**: per-character record edits (runes, skill ranks and slots,
-  recruit bits, party sync) with byte-exact footprints and byte-identical round
-  trips on the real US and PAL fixture saves.
+  party arrays) with byte-exact footprints and byte-identical round trips on the
+  real US and PAL fixture saves.
+- **`recruitment.mjs`**: the recruitment status-word suite (issue #39): the read
+  law and display mapping on the genuine US and PAL saves, the state mapping on
+  synthetic words, and write confinement (no edit moves a status word or the old
+  fake-field region, and recruitment edits no longer exist).
 - **`sets-unit.mjs`**, **`sets-iso.mjs`**: the armor-set decode and rewrite, checked against
   the Suikosource guide as ground truth.
 - **`runes-always.mjs`**, **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,

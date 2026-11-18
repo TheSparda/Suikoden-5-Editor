@@ -92,6 +92,25 @@ Everything here is indexed by character id. The playable roster and its ids are 
 `Editor/s5_characters.json`; ids not in that list are NPCs and unused slots that still have
 records on the disc.
 
+### Recruitment status (save side, read-only)
+
+Whether a character has joined is not an ISO field; in a save it is read from the
+character's own status word, a u16 the game keeps in the live character record at
++0x150 and persists in the payload at `0x2A8 + (id + 1) * 0x160 + 0xA0` (the next
+record's +0xA0 slot). The word is composite: the high byte is a band (0x00 no
+record, 0x01 initialized only, 0x03 and its 0x13/0x17 variants active) and the low
+byte behaves like a usage counter. The editor shows four states: in party,
+recruited (active record), not recruited (initialized only), and not recruited
+(no record). Party membership is read from the real party arrays and counts as
+recruited on its own.
+
+Recruitment is display-only. An earlier version of the editor read and wrote a
+"recruitment bitfield" at payload +0xD7CA; that field was never the recruitment
+record (the bytes belong to an unrelated record array), its reads were wrong on
+genuine saves, and its writes corrupted data. Whether writing the status word
+alone makes the game treat a character as recruited was never proven on a
+roster screen, so the editor does not write it (issue #39).
+
 ### Stats and growth
 
 Eighteen bytes per character: nine starting stats, then nine growth values.
