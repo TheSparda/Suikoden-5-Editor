@@ -158,10 +158,20 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 # CHAR_LEVEL @+0xC1: byte 1..99, VERIFIED (per-char max == story-cap level in each save).
 # CHAR_SKILLS @+0x119: 48 skill ranks (ISO skill order), VERIFIED — 100% respect the ISO
 #   per-char equipable-skill CAPS across all saves (Zerase Magic/Incant=S, Georg physical=A).
-# RECRUIT_BASE: recruitment bitfield (bit index == character id, LSB-first, 15 bytes).
-#   VERIFIED across 6 saves: count scales with progress (58@lvl39 -> 112 complete), perfect
-#   same-playthrough monotonicity (bits only gained, never lost), story chars set everywhere,
-#   and the completionist's zero bits are exactly ids 112-119 (Sialeeds + the villains).
+# RECRUITMENT (issue #39, corrected 2026-11-18): there is no recruitment
+#   bitfield. The 15 bytes at payload +0xD7CA that earlier versions read and
+#   wrote as one are the tail of a record inside a 0x30-stride record array
+#   near +0xCFA8 (six 0xFF padding bytes plus a consecutive u32 pair, values
+#   like 342, 343): reads were wrong (automatic recruit Luserina read clear,
+#   never-joined Richard read set) and writes corrupted that array record.
+#   Full disproof: ps2-re games/suikoden5/RECRUIT_FIELD_AUDIT.md.
+#   The game's real per-character recruitment record is the STATUS WORD:
+#   the u16 the cheat tables expose at live record +0x150, persisted in the
+#   NEXT character's save record at +0xA0 (see status_word() below). It is
+#   composite (high byte = engagement band, low byte = a usage counter) and
+#   the editor READS it but never writes it: whether a word write alone
+#   recruits in game has not been proven on a roster screen (ps2-re
+#   games/suikoden5/ROSTER_PROOF.md), so recruitment is display-only.
 # CHAR_SLOTS @+0xF2/+0xF3: the two EQUIPPED skill slots (1-based skill id, 0=empty).
 #   VERIFIED: 100% of slotted skills are ones the character has a rank in (566 recruited
 #   records, all saves) + identity fits (Prince slots Royal Paradise, Jeane slots Rune Sage).
@@ -170,7 +180,55 @@ CHAR_SLOTS = 0xF2
 # when the rune in the matching slot is fixed (cannot be removed). They say
 # nothing about when an empty slot opens (ps2-re RUNE_SLOTS.md).
 CHAR_RUNE_FLAGS = 0xEF
-RECRUIT_BASE = 0xD7CA
+
+# ---- Recruitment status word (issue #39) -----------------------------------
+# Character idx's status word sits at record (idx+1)'s +0xA0 slot: payload
+# 0x2A8 + (idx+1)*0x160 + 0xA0. Proven identical to the live record's +0x150
+# word on both builds (120/120 characters, US and PAL), and a live write of
+# the word persisted through the game's own save to exactly this slot
+# (ps2-re games/suikoden5/CHEAT_TABLE_RECRUITMENT.md). Band semantics,
+# tabulated over the three genuine saves held (360 characters, ROSTER_PROOF.md):
+#   word == 0            -> no live record: not recruited, usually not met.
+#   (word >> 8) & 3 == 3 -> active record: recruited. High bytes 0x03, 0x13
+#                           and 0x17 all occur (extra bits are flags on top of
+#                           the active state); every party/entourage member in
+#                           every held save sits in this band. Caveat: guest
+#                           characters enter the band during a guest stint
+#                           (Toma, Boz), slightly before formal recruitment.
+#   anything else        -> record initialized only (0x01xx, or a bare low
+#                           byte like Flail's 0x0001): met or story-exposed,
+#                           NOT recruited. In the fullest save held this band
+#                           is exactly the unrecruited characters plus the
+#                           non-recruitable story NPCs (ids 109-119).
+STATUS_WORD_OFF = 0xA0
+
+def status_word(gd, idx):
+    """Character idx's recruitment status word (u16), or None out of range."""
+    off = CHAR_BASE + (idx + 1) * CHAR_STRIDE + STATUS_WORD_OFF
+    if off + 2 > len(gd): return None
+    return int.from_bytes(gd[off:off + 2], "little")
+
+def recruit_state(gd, idx):
+    """Recruitment display state for one character, from the status word and
+    the real party arrays. Returns {word, state, recruited, inParty} with
+    state one of "party" (in the battle party or entourage), "active"
+    (recruited, active record), "initialized" (record exists, not recruited),
+    "none" (no record). recruited is True for "party" and "active". This is
+    a READ model only: nothing in the editor writes the status word."""
+    w = status_word(gd, idx)
+    in_party = idx in (gd[PARTY_BATTLE_OFF:PARTY_BATTLE_OFF + PARTY_BATTLE_SLOTS]
+                       + gd[PARTY_ENTOUR_OFF:PARTY_ENTOUR_OFF + PARTY_ENTOUR_SLOTS]) \
+        if len(gd) >= PARTY_ENTOUR_OFF + PARTY_ENTOUR_SLOTS else False
+    if in_party:
+        state = "party"
+    elif w is None or w == 0:
+        state = "none"
+    elif (w >> 8) & 0x03 == 0x03:
+        state = "active"
+    else:
+        state = "initialized"
+    return {"word": w, "state": state,
+            "recruited": state in ("party", "active"), "inParty": in_party}
 
 # ---- Rune slot availability (issue #6, DISPLAY ONLY) ------------------------
 # Slot availability is computed at menu time from the character's current
@@ -250,8 +308,9 @@ def rune_slot_states(gd, idx):
                     "filled": filled, "fixed": gd[r + CHAR_RUNE_FLAGS + s] != 0,
                     "threshold": th, "community": table is not None})
     return out
-# 109-111 (Arshtat, Ferid, Lymsleia) carry the bit from their temporary story-party stints
-# but are not recruitable stars; 112-119 are Sialeeds + the antagonists.
+# 109-111 (Arshtat, Ferid, Lymsleia) carry initialized or active status words
+# from their temporary story-party stints but are not recruitable stars;
+# 112-119 are Sialeeds + the antagonists.
 NON_RECRUITABLE = set(range(109, 120))
 
 # ---- Inventory lists (VERIFIED 2026-11-15: ELF RE + two real saves).
@@ -271,7 +330,7 @@ NON_RECRUITABLE = set(range(109, 120))
 # stack-limit byte equal to the master-table byte (see STACK_LIMITS), every
 # quantity inside 1..limit (limit 0 => quantity 0), counts 6/134/10 (US) and
 # 65/39/29 (PAL). The key-item list ends at 0xCA64, well clear of the
-# recruitment bitfield at 0xD7CA.
+# 0x30-stride record array near 0xCFA8.
 INV_LISTS = {"bag": (0xBCBC, 70), "warehouse": (0xBEF8, 300), "keyItems": (0xC864, 64)}
 INV_EMPTY_CAT = 0x13
 # Item id ranges per category (ELF category table, VM_HANDLERS.md section 4).
@@ -327,7 +386,9 @@ def audit_snapshot(gd):
         "potch": f.get("potch", 0),
         "party": f.get("party", []),
         "nameSlots": names,
-        "roster": [{"idx": c["idx"], "recruited": c["recruited"]}
+        "roster": [{"idx": c["idx"], "recruited": c["recruited"],
+                    "state": c["recruitState"], "statusWord": c["statusWord"],
+                    "inParty": c["inParty"]}
                    for c in read_all_characters(gd)],
         "inventory": read_inventory(gd),
         "counts": {nm: int.from_bytes(gd[b:b + 2], "little")
@@ -398,9 +459,12 @@ def read_character(gd, idx):
     runes = {s: gd[r + CHAR_RUNE + i] for i, s in enumerate(RUNE_SLOTS)}
     active = any(gd[r + CHAR_ACTIVE:r + CHAR_ACTIVE + 47])
     skills = list(gd[r + CHAR_SKILLS:r + CHAR_SKILLS + SKILL_COUNT])
-    recruited = (gd[RECRUIT_BASE + (idx >> 3)] >> (idx & 7)) & 1
+    rs = recruit_state(gd, idx)
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
-            "recruited": recruited, "recruitable": idx not in NON_RECRUITABLE,
+            "recruited": 1 if rs["recruited"] else 0,
+            "recruitState": rs["state"], "statusWord": rs["word"],
+            "inParty": rs["inParty"],
+            "recruitable": idx not in NON_RECRUITABLE,
             "slots": [gd[r + CHAR_SLOTS], gd[r + CHAR_SLOTS + 1]],
             "armor": armor, "runes": runes, "skills": skills,
             "runeFlags": [gd[r + CHAR_RUNE_FLAGS + i] for i in range(3)],
@@ -449,10 +513,6 @@ def _apply_char_edit(b, key, val):
         sn = int(slot[2:])
         if not (0 <= sn < SKILL_COUNT): return False
         b[r + CHAR_SKILLS + sn] = max(0, min(7, int(val)))
-    elif slot == "rec":
-        byte, mask = RECRUIT_BASE + (idx >> 3), 1 << (idx & 7)
-        if int(val): b[byte] |= mask
-        else:        b[byte] &= ~mask & 0xFF
     elif slot in ("ss0", "ss1"):
         b[r + CHAR_SLOTS + int(slot[2])] = max(0, min(SKILL_COUNT, int(val)))
     else:
@@ -639,13 +699,12 @@ def apply_gamedata_edits(gd, edits):
     per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft).
     Party assignments are collected and applied LAST, after every other edit:
     the final party is written to the real battle/entourage arrays with the
-    browser summary regenerated from them (see _write_party), and each
-    assigned member's recruitment bit is set in the same pass: every real
-    save keeps the two in sync (party member => bit set), so a party edit
-    must never leave a bit-clear character in the party (issue #32). Applying
-    them last means the invariant holds even if the same batch also stages a
-    'c<idx>_rec' clear for that character; to un-recruit someone, remove
-    them from the party in an earlier save."""
+    browser summary regenerated from them (see _write_party). Recruitment is
+    never written (issue #39): the status word is the game's own record and
+    no editor write to it is proven, so a party edit does not touch it.
+    Assigning a character whose record is not active is allowed (the arrays
+    are the real party storage, proven in issue #32); the health audit flags
+    the mismatch instead of the write path faking the record."""
     b = bytearray(gd); changed = 0
     party_edits = {}
     items = list((edits or {}).items())
@@ -679,9 +738,6 @@ def apply_gamedata_edits(gd, edits):
         for slot, v in party_edits.items():
             party[slot] = v
         _write_party(b, party)
-        for v in party_edits.values():
-            if v != PARTY_EMPTY:   # keep party => recruited in sync (issue #32)
-                b[RECRUIT_BASE + (v >> 3)] |= 1 << (v & 7)
     return bytes(b), changed
 
 def write_save_fields(card_path, folder, edits, make_backup=True):
