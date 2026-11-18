@@ -984,19 +984,16 @@ async function openChars(i){const sv=window._saves[i];const box=document.getElem
  box._open=true; CHARDATA[i]=r;
  const opts=r.chars.map(c=>`<option value="${c.idx}">${c.idx}: ${c.name}${c.recruited||!c.recruitable?'':' (not recruited)'}</option>`).join('');
  box.innerHTML=`<div class=row><span class=note>Character</span><select id="csel${i}" onchange="renderChar(${i})">${opts}</select>`
-  +`<button onclick="writeChar(${i})">Write character</button>`
-  +`<button class=ghost onclick="recruitAll(${i})" title="Set the recruited flag for every recruitable character (108 Stars)">Recruit ALL</button></div><div id="cfld${i}"></div>`;
+  +`<button onclick="writeChar(${i})">Write character</button></div><div id="cfld${i}"></div>`;
  renderChar(i);}
-async function recruitAll(i){const sv=window._saves[i];const r=CHARDATA[i];
- const edits={};let n=0;
- for(const c of r.chars){if(c.recruitable&&!c.recruited){edits['c'+c.idx+'_rec']=1;n++;}}
- if(!n){toast('Everyone recruitable is already recruited','ok');return}
- const bakOn=document.getElementById('bakToggle').checked;
- if(!confirm('Recruit '+n+' missing character(s) in '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
- const res=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
- if(res.error)toast('Error: '+res.error,'bad');
- else{toast('Recruited '+res.changed+' character(s)','ok');
-  const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error){CHARDATA[i]=rr;renderChar(i);}}}
+/* Recruitment status line (issue #39): read-only, from the game's status
+   word via s5save.recruit_state. */
+function recruitStatusText(c){
+ if(!c.recruitable)return 'not recruitable';
+ if(c.recruitState==='party')return 'Recruited (in party)';
+ if(c.recruited)return 'Recruited';
+ if(c.recruitState==='initialized')return 'Not recruited (record initialized only)';
+ return 'Not recruited';}
 async function openRecruit(i){const sv=window._saves[i];const box=document.getElementById('recruit'+i);
  if(box._loading)return;
  if(box._open){box._open=false;box.innerHTML='';return}
@@ -1008,49 +1005,35 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
  box.innerHTML=`<div class=sec><h3>Recruitment — <span id="reccount${i}"></span></h3>
   <div class=row style="padding:10px 14px 0">
    <input id="recfilter${i}" size=18 placeholder="search name…" oninput="recruitFilter(${i})">
-   <button class="ghost mini" onclick="recruitCheckAll(${i},true)">Check all</button>
-   <button class="ghost mini" onclick="recruitCheckAll(${i},false)">Uncheck all</button>
-   <button onclick="writeRecruit(${i})">Write changes</button>
    <span class=note>greyed = not recruitable (story/antagonist)</span>
   </div>
+  <div class=note style="padding:8px 14px 0;text-transform:none">Read from the game's status records; recruitment cannot be edited (issue #39).</div>
   <div id="pairwarn${i}"></div>
   <div id="recgrid${i}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px"></div></div>`;
  const grid=document.getElementById('recgrid'+i);
  grid.innerHTML=r.chars.map(c=>{
   const dis=!c.recruitable;
-  return `<label class=chk data-name="${c.name.toLowerCase()}" style="${dis?'opacity:.4':''}">`
-   +`<input type=checkbox data-idx="${c.idx}" ${c.recruited?'checked':''} ${dis?'disabled':''} onchange="recruitCount(${i})">`
-   +` <span class=note style="text-transform:none">${c.idx}: ${c.name}</span></label>`;}).join('');
+  return `<div class=recrow data-name="${c.name.toLowerCase()}" style="display:flex;justify-content:space-between;gap:8px;${dis?'opacity:.4':''}">`
+   +`<span class=note style="text-transform:none">${c.idx}: ${c.name}</span>`
+   +`<span class=note style="text-transform:none">${recruitStatusText(c)}</span></div>`;}).join('');
  recruitCount(i);}
-function recruitCount(i){const boxes=[...document.querySelectorAll('#recgrid'+i+' input[type=checkbox]')];
- const on=boxes.filter(b=>b.checked).length;
- const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+boxes.filter(b=>!b.disabled).length+' recruited';
+function recruitCount(i){const r=CHARDATA[i];if(!r)return;
+ const chars=r.chars.filter(c=>c.recruitable);
+ const on=chars.filter(c=>c.recruited).length;
+ const el=document.getElementById('reccount'+i);if(el)el.textContent=on+' / '+chars.length+' recruited';
  recruitPairWarn(i);}
-/* Eresh (10) and Euram (108) are mutually exclusive in normal play. Both bits set
-   is a legitimate deliberate edit (issue #24), so this warns without blocking:
-   it names the usual accidental sources and the repair, and states that a
-   deliberate pair is kept as-is. */
+/* Eresh (10) and Euram (108) are mutually exclusive in normal play (issue #24).
+   Both reading recruited is a state no played save produces, so this warns:
+   it names the likely source (a change made outside gameplay) and the repair
+   (restore a backup), since the editor itself cannot change recruitment. */
 function recruitPairWarn(i){const box=document.getElementById('pairwarn'+i);if(!box)return;
- const state={};document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{state[+b.dataset.idx]=b.checked;});
+ const r=CHARDATA[i];if(!r){box.innerHTML='';return}
+ const state={};r.chars.forEach(c=>{state[c.idx]=!!c.recruited;});
  box.innerHTML=(state[10]&&state[108])
-  ?'<div style="padding:10px 14px 0;color:#d97706">⚠ Eresh and Euram are both marked recruited, but the game only lets you recruit one of them. Both flags usually come from a bulk action (Check all, Recruit ALL) or a cheat device; if that is what happened here, uncheck the one you did not recruit, then Write changes. Checking both on purpose is allowed and will be kept.</div>'
+  ?'<div style="padding:10px 14px 0;color:#d97706">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside gameplay (a cheat device or another tool). This editor cannot change recruitment; if that was not deliberate, restore a backup.</div>'
   :'';}
 function recruitFilter(i){const q=document.getElementById('recfilter'+i).value.trim().toLowerCase();
- document.querySelectorAll('#recgrid'+i+' label').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q))?'':'none';});}
-function recruitCheckAll(i,on){document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{
-  if(!b.disabled&&b.closest('label').style.display!=='none')b.checked=on;});recruitCount(i);}
-async function writeRecruit(i){const sv=window._saves[i];const r=CHARDATA[i];
- const edits={};let n=0;
- document.querySelectorAll('#recgrid'+i+' input[type=checkbox]').forEach(b=>{
-  if(b.disabled)return;const idx=+b.dataset.idx;const c=r.chars.find(x=>x.idx===idx);
-  if(c&&(!!c.recruited)!==b.checked){edits['c'+idx+'_rec']=b.checked?1:0;n++;}});
- if(!n){toast('No recruitment changes','ok');return}
- const bakOn=document.getElementById('bakToggle').checked;
- if(!confirm('Write '+n+' recruitment change(s) to '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).')))return;
- const res=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits});
- if(res.error){toast('Error: '+res.error,'bad');return}
- toast('Wrote '+res.changed+' recruitment change(s)','ok');
- const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error)CHARDATA[i]=rr;}
+ document.querySelectorAll('#recgrid'+i+' .recrow').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q))?'':'none';});}
 function _sel(id,names,val){let h=`<select id="${id}">`;
  // ensure current value present even if unnamed
  const keys=Object.keys(names);
@@ -1067,8 +1050,9 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
    sub('Level & recruitment')
   +`<div class=grid style="grid-template-columns:150px 260px;padding-top:8px">`
   +`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`
-  +`<div class=fld><label>Recruited</label><div class=in><label class=chk><input type=checkbox id="ce${i}_rec" ${c.recruited?'checked':''} ${c.recruitable?'':'disabled title="Not recruitable (story/antagonist)"'}> <span class=note>${c.recruitable?'in the roster':'not recruitable'}</span></label></div></div>`
+  +`<div class=fld><label>Recruitment</label><div class=in><span class=note style="text-transform:none">${recruitStatusText(c)}</span></div></div>`
   +`</div>`
+  +`<div class=note style="margin:2px 16px 0;text-transform:none">Recruitment is read from the game's own status record and cannot be edited (issue #39).</div>`
   +sub('Equipment')
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
   +sub('Runes')
@@ -1101,7 +1085,6 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  for(let s=0;s<48;s++){const el=document.getElementById('ce'+i+'_sk'+s);if(el)edits['c'+idx+'_sk'+s]=+el.value;}
  for(const s of ['ss0','ss1']){const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
- const rec=document.getElementById('ce'+i+'_rec');if(rec&&!rec.disabled)edits['c'+idx+'_rec']=rec.checked?1:0;
  const bakOn=document.getElementById('bakToggle').checked;
  // Issue #6: warn when a removal strands a below-threshold slot empty.
  const warns=[];const c0=(CHARDATA[i].chars||[]).find(x=>x.idx===idx);
