@@ -4,12 +4,14 @@
 //
 // Every rule rests on a fact proven against the game or real saves, never on
 // a guess about what "looks wrong":
-//   - Eresh (10) and Euram (108) are mutually exclusive in the story, and ids
-//     112-119 (Sialeeds and the antagonists) never carry a recruitment bit in
-//     a save the game wrote (the completionist's only clear bits in 0-119).
-//   - The game rebuilds the party from recruitment state on load and drops
-//     members whose bit is clear (issue #32); every real save keeps the hero
-//     in the party and no character twice.
+//   - Recruitment state is the per-character status word (issue #39): the
+//     snapshot carries each character's word band (active / initialized /
+//     none) as wordState. Eresh (10) and Euram (108) are mutually exclusive
+//     in the story, so no save the game writes shows both as recruited.
+//   - Every party member in every genuine save checked holds an active
+//     status record; the party arrays are the real party storage (issue
+//     #32), and every real save keeps the hero in the party and no
+//     character twice.
 //   - Inventory entries obey the append functions' rules: the stack-limit
 //     byte equals the disc's master-table byte (s5save.STACK_LIMITS, verified
 //     on 283 real entries), quantity sits in 1..limit, and one-per-slot items
@@ -35,33 +37,23 @@
     if (!snap) return out;
 
     // --- recruitment -------------------------------------------------------
-    const rec = new Map((snap.roster || []).map((c) => [c.idx, !!c.recruited]));
-    const isRec = (id) => rec.get(id) === true;
+    // wordState is the status word's band alone (no party override), so the
+    // party check below can compare the party against the word itself.
+    // Two rules from the old bitfield era are gone (issue #39): the
+    // antagonist-flags rule, whose premise was the fake field (Sialeeds
+    // legitimately holds an active word during her story stint, so it fired
+    // on genuine saves), and the bulk-write fingerprint, which described
+    // that same field's shape; the Eresh/Euram rule covers the impossible
+    // state it was really pointing at.
+    const rec = new Map((snap.roster || []).map((c) => [c.idx, c]));
+    const isRec = (id) => { const c = rec.get(id); return !!c && !!c.recruited; };
+    const wordState = (id) => { const c = rec.get(id); return c ? c.wordState : undefined; };
     if (isRec(10) && isRec(108)) {
       add({ id: "recruit-eres-euram", sev: "error", group: "Recruitment",
         title: "Both Eresh and Euram are marked recruited",
         detail: "The story makes them mutually exclusive: recruiting one sends the other " +
-          "away, so no save the game writes itself can hold both flags. One of them was " +
-          "set outside gameplay." });
-    }
-    const antag = [];
-    for (let id = 112; id <= 119; id++) if (isRec(id)) antag.push(id);
-    if (antag.length) {
-      add({ id: "recruit-antagonists", sev: "error", group: "Recruitment",
-        title: `Antagonist recruitment flags are set (${antag.map(charName).join(", ")})`,
-        detail: "Ids 112-119 are Sialeeds and the villains; the game never sets their " +
-          "recruitment bits. In a completionist save the only clear bits in 0-119 are " +
-          "exactly these." });
-    }
-    let setCount = 0;
-    for (let id = 0; id <= 111; id++) if (isRec(id)) setCount++;
-    if (setCount === 112) {
-      add({ id: "recruit-bulk", sev: "error", group: "Recruitment",
-        title: "Every recruitment flag from 0 to 111 is set",
-        detail: "That includes both mutually exclusive rivals and every missable " +
-          "character. It is the fingerprint of a bulk recruit-all write (an editor " +
-          "check-all or a cheat patch), not of played progress. If that was not " +
-          "deliberate, restore a backup and check again." });
+          "away, so no save the game writes itself can show both as recruited. One of " +
+          "their records was set outside gameplay." });
     }
 
     // --- party ---------------------------------------------------------------
@@ -74,12 +66,15 @@
           title: `${charName(v)} is in party slots ${seen.get(v) + 1} and ${slot + 1}`,
           detail: "The same character twice in the party is not a state the game builds." });
       } else seen.set(v, slot);
-      if (!isRec(v)) {
-        add({ id: `party-unrecruited-${slot}`, sev: "error", group: "Party",
-          title: `Party slot ${slot + 1} holds ${charName(v)}, who is not recruited`,
-          detail: "The game rebuilds the party from recruitment state on load and drops " +
-            "members whose flag is clear (the Cathari case, issue #32). Recruit them or " +
-            "clear the slot." });
+      const ws = wordState(v);
+      if (ws && ws !== "active") {
+        add({ id: `party-unrecruited-${slot}`, sev: "warn", group: "Party",
+          title: `Party slot ${slot + 1} holds ${charName(v)}, whose recruitment record is not active`,
+          detail: "Every party member in a save the game wrote holds an active status " +
+            "record; this character's record reads " + ws + " instead. The party arrays " +
+            "are the real party storage, so the assignment itself is written correctly, " +
+            "but whether the game keeps them in the party on load is unproven (issue #39). " +
+            "Clear the slot if that was not deliberate." });
       }
     });
     if (party.length && !party.includes(0)) {

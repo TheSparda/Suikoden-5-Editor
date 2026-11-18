@@ -388,6 +388,9 @@ def audit_snapshot(gd):
         "nameSlots": names,
         "roster": [{"idx": c["idx"], "recruited": c["recruited"],
                     "state": c["recruitState"], "statusWord": c["statusWord"],
+                    "wordState": ("none" if not c["statusWord"] else
+                                  "active" if (c["statusWord"] >> 8) & 0x03 == 0x03
+                                  else "initialized"),
                     "inParty": c["inParty"]}
                    for c in read_all_characters(gd)],
         "inventory": read_inventory(gd),
