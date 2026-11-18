@@ -309,6 +309,24 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
    <span id=ensave class=note></span>
   </div>
   <div id=enemysections></div>
+  <div id=drblock style=display:none>
+   <h3>Drop rates (global)</h3>
+   <p class=note>Drop rates are constants in the battle code, not per-enemy data, so these are GLOBAL: one set of rates applies to every enemy. Slots 1 to 5 are the drop slots by position; the Treasure Discovery support skill adds its rank bonus on top of them. The game caps every roll at 99 percent. The dish rate registers each enemy's Food dish (Cook) slot; a dish is only awarded when the party's Cook support skill is rank 6 or 7, and those two chances are set here as well. The dish's stock rate is 100, which the cap makes identical to 99 in play.</p>
+   <div class=row>
+    <span class=note>Slot 1 %</span><input id=drS1 type=number min=0 max=99 size=4>
+    <span class=note>Slot 2 %</span><input id=drS2 type=number min=0 max=99 size=4>
+    <span class=note>Slot 3 %</span><input id=drS3 type=number min=0 max=99 size=4>
+    <span class=note>Slot 4 %</span><input id=drS4 type=number min=0 max=99 size=4>
+    <span class=note>Slot 5 %</span><input id=drS5 type=number min=0 max=99 size=4>
+    <span class=note>Food dish %</span><input id=drDish type=number min=0 max=100 size=4>
+    <span class=note>Cook rank 6 %</span><input id=drC6 type=number min=0 max=99 size=4>
+    <span class=note>Cook rank 7 %</span><input id=drC7 type=number min=0 max=99 size=4>
+    <button onclick=applyDropRates()>Apply drop rates</button>
+    <button class=ghost onclick=restoreDropRates()>Restore stock</button>
+    <span id=drstatus class=note></span>
+   </div>
+   <p class=note>Stock rates: slots 40 / 20 / 10 / 5 / 1, dish 100, Cook 20 / 30.</p>
+  </div>
   <p class=note id=enemyhint>Open your ISO above to begin.</p>
  </section>
 
@@ -601,7 +619,7 @@ async function verify(){const s=await j('/api/verify',{iso:iso()});
   document.getElementById('runehint').textContent='';loadRune();
   ENEMIES=(await j('/api/enemies',{iso:iso()})).enemies||[];
   fillEnemies();document.getElementById('enrow').style.display='';
-  document.getElementById('enemyhint').textContent='';loadEnemy();
+  document.getElementById('enemyhint').textContent='';loadEnemy();loadDropRates();
   document.getElementById('gearrow').style.display='';
   document.getElementById('gearhint').textContent='';loadGear();
   loadMP();loadSkillfx();loadUnites();}
@@ -740,6 +758,27 @@ async function loadEnemy(){const sel=document.getElementById('ensel');if(!sel.va
  const eh=document.getElementById('enemyhelp');
  if(eh&&MAPS.help&&MAPS.help.enemy){eh.textContent=MAPS.help.enemy;eh.style.display='';}
  document.getElementById('ensave').textContent='';refreshDirty();}
+async function loadDropRates(){const s=await j('/api/droprates',{iso:iso()});
+ const blk=document.getElementById('drblock');if(!blk)return;
+ if(s.error){blk.style.display='none';return}
+ blk.style.display='';
+ [1,2,3,4,5].forEach((n,i)=>{document.getElementById('drS'+n).value=s.slots[i]});
+ document.getElementById('drDish').value=s.dish;
+ document.getElementById('drC6').value=s.cook[0];document.getElementById('drC7').value=s.cook[1];}
+async function applyDropRates(){if(!needIso())return;
+ const slots=[1,2,3,4,5].map(n=>parseInt(document.getElementById('drS'+n).value));
+ const dish=parseInt(document.getElementById('drDish').value);
+ const cook=[parseInt(document.getElementById('drC6').value),parseInt(document.getElementById('drC7').value)];
+ const bad=slots.concat(cook).some(v=>isNaN(v)||v<0||v>99)||isNaN(dish)||dish<0||dish>100;
+ if(bad){toast('Drop rates must be whole percents: slots and Cook 0 to 99, dish 0 to 100.','bad');return}
+ if(!confirm('Rewrite the GLOBAL drop rates for every enemy?  (.bak made; Restore stock available)'))return;
+ const r=await j('/api/setdroprates',{iso:iso(),slots,dish,cook});
+ if(r.error){toast('Error: '+r.error,'bad');return}
+ document.getElementById('drstatus').textContent='Drop rates applied to every enemy.';toast('Drop rates applied','ok');loadDropRates()}
+async function restoreDropRates(){if(!needIso())return;
+ const r=await j('/api/dropratesrestore',{iso:iso()});
+ if(r.error){toast('Error: '+r.error,'bad');return}
+ document.getElementById('drstatus').textContent='Stock drop rates restored.';toast('Stock drop rates restored','ok');loadDropRates()}
 function restoreEnemyField(btn){const i=document.querySelector('#enemysections [data-k="'+btn.dataset.k+'"]');
  if(i){i.value=ENORIG[btn.dataset.k];}refreshDirty();}
 function revertEnemy(){document.querySelectorAll('#enemysections [data-k]').forEach(i=>{i.value=ENORIG[i.dataset.k]});refreshDirty();toast('Reverted unsaved changes')}
@@ -1786,6 +1825,31 @@ class H(http.server.BaseHTTPRequestHandler):
                     for e in d.get("edits", []):
                         P.write_unite_member(g, int(d["id"]), int(e["slot"]), int(e["charId"]))
                 return self._send(200, json.dumps({"ok": True}))
+            if self.path == "/api/droprates":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    with P.Iso(iso) as g: r = P.read_drop_rates(g)
+                    return self._send(200, json.dumps(r))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/setdroprates":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    with P.Iso(iso, writable=True) as g:
+                        r = P.write_drop_rates(g, d["slots"], d["dish"], d["cook"])
+                    return self._send(200, json.dumps(r))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
+            if self.path == "/api/dropratesrestore":
+                if not os.path.exists(iso):
+                    return self._send(200, json.dumps({"error": "open the ISO first"}))
+                try:
+                    with P.Iso(iso, writable=True) as g: r = P.restore_drop_rates(g)
+                    return self._send(200, json.dumps(r))
+                except Exception as e:
+                    return self._send(200, json.dumps({"error": str(e)}))
             if self.path == "/api/hardmode":
                 if not os.path.exists(iso):
                     return self._send(200, json.dumps({"error": "open the ISO first"}))

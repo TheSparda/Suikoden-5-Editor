@@ -121,6 +121,7 @@ function isoGlueHandles(){
     gear:g("iso_gear"), gearitem:g("iso_gearitem"), setgear:g("iso_setgear"),
     setgearname:g("iso_setgearname"),
     enemies:g("iso_enemies"), enemy:g("iso_enemy"), setenemy:g("iso_setenemy"),
+    droprates:g("iso_droprates"), setdroprates:g("iso_setdroprates"), dropratesrestore:g("iso_dropratesrestore"),
     runeprices:g("iso_runeprices"), setruneprice:g("iso_setruneprice"),
     healprices:g("iso_healprices"), sethealprice:g("iso_sethealprice"),
     mp:g("iso_mp"), setmp:g("iso_setmp"), skillfx:g("iso_skillfx"), setskillfx:g("iso_setskillfx"),
@@ -632,6 +633,24 @@ def iso_accnames():
                 nm, en, jp = P._armor_name(g, "accessory", i, P.armor_addr("accessory", i))
                 out[str(i + 1)] = nm or ("#%d" % i)          # key = equip id
         return json.dumps({"accessory": out})
+    except Exception as e: return json.dumps({"error": str(e)})
+
+def iso_droprates():
+    try:
+        with P.Iso(ISO) as g: return json.dumps(P.read_drop_rates(g))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setdroprates(slots_json, dish, cook_json):
+    try:
+        slots = [int(x) for x in json.loads(slots_json)]
+        cook = [int(x) for x in json.loads(cook_json)]
+        with P.Iso(ISO, writable=True) as g:
+            r = P.write_drop_rates(g, slots, int(dish), cook)
+        return json.dumps(dict(r, ok=True))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_dropratesrestore():
+    try:
+        with P.Iso(ISO, writable=True) as g: r = P.restore_drop_rates(g)
+        return json.dumps(dict(r, ok=True))
     except Exception as e: return json.dumps({"error": str(e)})
 
 def iso_hardmode(factor):

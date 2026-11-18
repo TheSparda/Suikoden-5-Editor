@@ -2657,6 +2657,188 @@ def enemy_scale_restore(iso_path):
     return {"count": len(base)}
 
 
+# ---- Global drop rates (issue #40): the rates are constants in the battle
+# code, not record bytes (lab: ENEMY_DROP_BLOCK.md). The five slot rates and
+# the food dish rate are addiu immediates in the BATLE overlay's drop
+# processor; the Cook gate chances are data in the support-skill table
+# (record 0x98, read by the settlement through func_2E2910). Editing them is
+# GLOBAL: one set of rates for every enemy. The registration code clamps
+# every rate to 99, so 99 is the effective ceiling; the dish's stock
+# immediate is 100, which plays identically to 99.
+DROP_RATE_STOCK = (40, 20, 10, 5, 1)     # slots 1..5, by slot position
+DROP_DISH_STOCK = 100                    # slot 6 registration immediate
+DROP_COOK_STOCK = (20, 30)               # Cook record ranks 6 and 7
+# Support-skill table ISO offsets by region (ELF 0x501208 NTSC-U, 0x506BA8
+# PAL; both proven: the three records' rank columns match the traced values,
+# and each region's own BATLE code loads exactly this table address).
+_SKILL_TABLE_ISO = {"ntsc-u": 0x4AEB08, "pal": 0x4B44A8}
+_SKILL_TD_A = (3, 5, 10, 15, 20, 25, 30)  # record 0x90 ranks 1..7 (signature)
+_SKILL_TD_B = (0, 0, 0, 3, 5, 8, 10)      # record 0x91 ranks 1..7 (signature)
+_SKILL_COOK_REC = 0x98
+
+
+def _skill_rank_iso(table_iso, rec, rank):
+    """ISO offset of one rank column: func_2E2910 reads the s16 at
+    table + rec*36 + rank*2 + 0x12 (rank 1..7)."""
+    return table_iso + rec * 36 + rank * 2 + 0x12
+
+
+def _cook_offsets(iso):
+    """(rank6_off, rank7_off) of the Cook award chances on this disc, after
+    validating the skill table's layout against the two Treasure Discovery
+    records (which this feature never writes, so they are a pure signature)
+    and the Cook record's untouched ranks 1..5. Raises ValueError on a disc
+    whose table does not match the traced layout."""
+    region = region_of(iso)
+    if region not in _SKILL_TABLE_ISO:
+        raise ValueError("unrecognized disc: no skill table base for region %r"
+                         % (region,))
+    base = _SKILL_TABLE_ISO[region]
+    for rec, want in ((0x90, _SKILL_TD_A), (0x91, _SKILL_TD_B)):
+        got = tuple(iso.ru(_skill_rank_iso(base, rec, k), 2) for k in range(1, 8))
+        if got != want:
+            raise ValueError("skill table layout not recognised "
+                             "(record 0x%02X ranks %s)" % (rec, got))
+    low = tuple(iso.ru(_skill_rank_iso(base, _SKILL_COOK_REC, k), 2)
+                for k in range(1, 6))
+    if low != (0, 0, 0, 0, 0):
+        raise ValueError("Cook record layout not recognised "
+                         "(ranks 1..5 are %s, expected all zero)" % (low,))
+    return (_skill_rank_iso(base, _SKILL_COOK_REC, 6),
+            _skill_rank_iso(base, _SKILL_COOK_REC, 7))
+
+
+def read_cook_chances(iso):
+    """[rank6, rank7] Cook award chances (percent) on this disc."""
+    o6, o7 = _cook_offsets(iso)
+    vals = [iso.ru(o6, 2), iso.ru(o7, 2)]
+    if any(v > 99 for v in vals):
+        raise ValueError("Cook chances on this disc are out of range: %s"
+                         % (vals,))
+    return vals
+
+
+# Rate sites in the DECOMPRESSED BATLE overlay: (slot, immediate offset,
+# expected top halfword of the addiu, pair-address addiu offset and word,
+# registration jal offset). The pair word encodes which record slot the call
+# registers (U-frame +0x4C/+0x54/+0x5C/+0x64/+0x6C/+0x74), so the six sites
+# are identified structurally, not by the immediate values (which this
+# feature itself rewrites). Proven on both regions' stock overlays: the
+# rate instructions sit at the same offsets with the same shapes; only the
+# jal targets and table addresses around them differ by region.
+_DROP_SITES = (
+    (1, 0xF718, 0x2602, 0xF728, 0x2684004C, 0xF72C),
+    (2, 0xF6F0, 0x2602, 0xF6F4, 0x26840054, 0xF704),
+    (3, 0xF6CC, 0x2602, 0xF6C8, 0x2684005C, 0xF6DC),
+    (4, 0xF69C, 0x2602, 0xF6A0, 0x26840064, 0xF6B0),
+    (5, 0xF770, 0x2602, 0xF780, 0x2684006C, 0xF788),
+    (6, 0xF738, 0x2405, 0xF734, 0x26840074, 0xF744),
+)
+
+
+def _batle_bin(iso):
+    """The decompressed BATLE overlay bytes from this disc, in memory."""
+    ov = next((o for o in list_overlays(iso.path) if o["name"] == "BATLE.ROM"),
+              None)
+    if ov is None:
+        raise ValueError("this disc has no BATLE.ROM overlay")
+    raw = iso.rd(ov["lba"] * _SECT, ov["size"])
+    if raw[0:4] == b"\x00mor" and raw[8:12] == b"\x00szl":
+        dec = int.from_bytes(raw[0x0C:0x10], "little")
+        return _lzss_decompress(raw[0x40:], dec)
+    raise ValueError("BATLE.ROM is not in the expected compressed form")
+
+
+def _drop_site_rates(data):
+    """Validate the drop processor's six rate sites in a decompressed BATLE
+    overlay and return {slot: current immediate}. Raises ValueError if the
+    code shape is not the traced one (a foreign or differently-built
+    overlay is never written over)."""
+    out = {}
+    for slot, off, top, poff, pword, joff in _DROP_SITES:
+        w = int.from_bytes(data[off:off + 4], "little")
+        if w >> 16 != top:
+            raise ValueError("drop-rate site for slot %d not recognised "
+                             "(word 0x%08X at overlay 0x%X)" % (slot, w, off))
+        if int.from_bytes(data[poff:poff + 4], "little") != pword:
+            raise ValueError("drop processor layout not recognised "
+                             "(slot %d pair instruction)" % slot)
+        jw = int.from_bytes(data[joff:joff + 4], "little")
+        if jw >> 26 != 0x03:                       # jal opcode
+            raise ValueError("drop processor layout not recognised "
+                             "(slot %d registration call)" % slot)
+        imm = w & 0xFFFF
+        if imm >= 0x8000:
+            imm -= 0x10000
+        if not 0 <= imm <= 100:
+            raise ValueError("drop rate for slot %d on this disc is out of "
+                             "range: %d" % (slot, imm))
+        out[slot] = imm
+    return out
+
+
+def read_drop_rates(iso):
+    """Current global drop rates on this disc:
+    {region, slots: [1..5], dish, cook: [rank6, rank7], stock: {...}}."""
+    rates = _drop_site_rates(_batle_bin(iso))
+    return {"region": region_of(iso),
+            "slots": [rates[s] for s in range(1, 6)],
+            "dish": rates[6],
+            "cook": read_cook_chances(iso),
+            "stock": {"slots": list(DROP_RATE_STOCK),
+                      "dish": DROP_DISH_STOCK,
+                      "cook": list(DROP_COOK_STOCK)}}
+
+
+def write_drop_rates(iso, slots, dish, cook):
+    """Write global drop rates: five slot rates and the Cook chances 0..99,
+    the dish rate 0..100 (its stock value; the game clamps rolls at 99).
+    The BATLE overlay is rewritten through reinsert_overlay (which refuses
+    if the recompressed container outgrows its sector slot) BEFORE the Cook
+    bytes are touched, so a refused overlay write changes nothing. Every
+    span is re-read and verified after writing."""
+    slots = [int(v) for v in slots]
+    cook = [int(v) for v in cook]
+    dish = int(dish)
+    if len(slots) != 5 or any(not 0 <= v <= 99 for v in slots):
+        raise ValueError("slot rates must be five values from 0 to 99")
+    if len(cook) != 2 or any(not 0 <= v <= 99 for v in cook):
+        raise ValueError("Cook chances must be two values from 0 to 99")
+    if not 0 <= dish <= 100:
+        raise ValueError("the dish rate must be from 0 to 100")
+    read_drop_rates(iso)                    # layout validation before any write
+    backup(iso.path)
+    data = bytearray(_batle_bin(iso))
+    want = {1: slots[0], 2: slots[1], 3: slots[2], 4: slots[3], 5: slots[4],
+            6: dish}
+    for slot, off, top, _poff, _pword, _joff in _DROP_SITES:
+        data[off:off + 4] = ((top << 16) | want[slot]).to_bytes(4, "little")
+    import tempfile
+    fd, tmp = tempfile.mkstemp(prefix="s5_batle_", suffix=".bin")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(bytes(data))
+        res = reinsert_overlay(iso, "BATLE.ROM", tmp)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    o6, o7 = _cook_offsets(iso)
+    iso.wu(o6, 2, cook[0])
+    iso.wu(o7, 2, cook[1])
+    now = read_drop_rates(iso)
+    if now["slots"] != slots or now["dish"] != dish or now["cook"] != cook:
+        raise AssertionError("drop-rate write did not verify: %r" % (now,))
+    return {"ok": True, "slots": slots, "dish": dish, "cook": cook,
+            "overlaySlack": res["slack"]}
+
+
+def restore_drop_rates(iso):
+    """Restore the stock global drop rates (40/20/10/5/1, dish 100,
+    Cook 20/30). Exact at the value level: the stock rates are constants."""
+    return write_drop_rates(iso, list(DROP_RATE_STOCK), DROP_DISH_STOCK,
+                            list(DROP_COOK_STOCK))
+
+
 # --------------------------------------------------------------------------- CLI
 def _verify(a):
     with Iso(a.iso) as g: r = region_of(g)

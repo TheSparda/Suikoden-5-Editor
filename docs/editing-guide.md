@@ -337,6 +337,16 @@ Ground truth for the whole layout: Nariqua (id 4) is Lv45, 1800 HP, 2500 potch, 
 points, with a 20% drop of category 7 item 0x10 = a Drain Piece. Holly Boy (id 1) is Lv10,
 80 HP, 30 potch, 10 skill points.
 
+### Drop rates (global)
+
+Because the rates are code constants, the Enemies view also carries a **Drop rates
+(global)** panel that rewrites them for every enemy at once: the five slot rates
+(0 to 99 percent each), the food dish registration rate (stock 100, capped to 99 in play),
+and the two Cook award chances at rank 6 and rank 7 (stock 20 and 30). The slot rates and
+the dish rate live in the battle overlay (BATLE.ROM) and are rewritten through the overlay
+machinery; the Cook chances are data in the support-skill table. Restore stock writes the
+original constants back. There is no per-enemy rate: the game simply does not store one.
+
 ---
 
 ## Gear

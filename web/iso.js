@@ -1129,13 +1129,67 @@ VIEW_RENDER.healprice = priceView(() => window.PYISO.healprices(), "healprice",
 
 VIEW_RENDER.enemy = async (body) => {
   const list = JSON.parse(window.PYISO.enemies()).enemies || [];
-  body.innerHTML = `<div class="row" style="padding:10px 14px 0"><span class="note">Enemy/unit</span>
+  body.innerHTML = `<div id="isoDrPanel" style="padding:12px 14px 0"></div>
+    <div class="row" style="padding:10px 14px 0"><span class="note">Enemy/unit</span>
       <select id="isoEsel">${list.map(e=>`<option value="${e.id}">${e.id}: ${esc(e.name)} (HP ${e.hp})</option>`).join("")}</select></div>
     <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).enemy||"")}</div>
     <div id="isoEbody"></div>`;
+  renderDropRates();
   $("isoEsel").onchange = () => renderEnemy(+$("isoEsel").value);
   if (list.length) renderEnemy(+list[0].id); else $("isoEbody").innerHTML = `<p class="note" style="padding:14px">No enemy records found.</p>`;
 };
+function renderDropRates() {
+  const host = $("isoDrPanel"); if (!host) return;
+  const r = JSON.parse(window.PYISO.droprates());
+  if (r.error) { host.innerHTML = `<div class="subhd">Drop rates (global)</div><p class="bad">${esc(r.error)}</p>`; return; }
+  const num = (id, v) => `<input type="number" id="${id}" value="${v}" min="0" max="99" step="1" style="width:64px">`;
+  host.innerHTML = `<div class="subhd">Drop rates (global)</div>
+    <p class="note">Drop rates are constants in the battle code, not per-enemy data, so this panel is
+      <b>GLOBAL</b>: one set of rates applies to every enemy. Slots 1 to 5 are the drop slots by position;
+      the Treasure Discovery support skill adds its rank bonus on top of them. The game caps every roll at
+      99 percent. The dish rate registers each enemy's Food dish (Cook) slot; a dish is only awarded when the
+      party's Cook support skill is rank 6 or 7, and those two chances are set here as well. The dish's stock
+      rate is 100, which the cap makes identical to 99 in play.</p>
+    <div class="row">
+      <label>Slot 1 % ${num("drS1", r.slots[0])}</label>
+      <label>Slot 2 % ${num("drS2", r.slots[1])}</label>
+      <label>Slot 3 % ${num("drS3", r.slots[2])}</label>
+      <label>Slot 4 % ${num("drS4", r.slots[3])}</label>
+      <label>Slot 5 % ${num("drS5", r.slots[4])}</label>
+      <label>Food dish % ${num("drDish", r.dish)}</label>
+      <label>Cook rank 6 % ${num("drC6", r.cook[0])}</label>
+      <label>Cook rank 7 % ${num("drC7", r.cook[1])}</label>
+      <button id="drApply">Apply drop rates</button>
+      <button class="ghost" id="drRestore">Restore stock</button>
+    </div>
+    <div id="drMsg" class="note">Stock rates: slots 40 / 20 / 10 / 5 / 1, dish 100, Cook 20 / 30.</div>`;
+  $("drApply").onclick = async () => {
+    const slots = [1,2,3,4,5].map(i => +$("drS"+i).value);
+    const dish = +$("drDish").value, cook = [+$("drC6").value, +$("drC7").value];
+    const bad = slots.concat(cook).some(v => !Number.isInteger(v) || v < 0 || v > 99)
+      || !Number.isInteger(dish) || dish < 0 || dish > 100;
+    if (bad) { toast("Drop rates must be whole percents: slots and Cook 0 to 99, dish 0 to 100.", "bad"); return; }
+    spin(true);
+    try {
+      const r2 = JSON.parse(window.PYISO.setdroprates(JSON.stringify(slots), dish, JSON.stringify(cook)));
+      if (r2.error) { toast(r2.error, "bad"); return; }
+      isoEdits["droprates"] = { label: `Drop rates (global): slots ${slots.join(" / ")}, dish ${dish}, Cook ${cook.join(" / ")}`,
+        group: "Enemies", to: "applied" };
+      $("drMsg").textContent = "Drop rates applied to every enemy.";
+      updateIsoToolbar(); captureUndoStep();
+    } finally { spin(false); }
+  };
+  $("drRestore").onclick = async () => {
+    spin(true);
+    try {
+      const r2 = JSON.parse(window.PYISO.dropratesrestore());
+      if (r2.error) { toast(r2.error, "bad"); return; }
+      delete isoEdits["droprates"];
+      $("drMsg").textContent = "Stock drop rates restored.";
+      updateIsoToolbar(); captureUndoStep(); renderDropRates();
+    } finally { spin(false); }
+  };
+}
 function renderEnemy(eid) {
   const r = JSON.parse(window.PYISO.enemy(eid));
   if (r.error) { $("isoEbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
