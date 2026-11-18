@@ -958,6 +958,54 @@ async function writeInvField(i, list, slot, val){
   finally{ spin(false); }
 }
 
+/* ---------- per-character held items (fixed slots, no compaction) ---------- */
+function heldRow(i, k, e){
+  if(!e || !e.cat)
+    return `<div class="row" style="align-items:center;gap:8px;padding:2px 0">
+      <span class="note" style="min-width:52px">Slot ${k+1}</span><span class="note">empty</span>
+      <button type="button" class="ghost mini" onclick="pickHeldItem(${i},${k})">+ Add item…</button></div>`;
+  const qty = e.max > 0
+    ? `<input type="number" style="width:64px" min="1" max="${e.max}" value="${e.qty}" onchange="setHeldQty(${i},${k},${e.cat},${e.id},this.value)"> <span class="note">of ${e.max} max</span>`
+    : `<span class="note">single</span>`;
+  return `<div class="row" style="align-items:center;gap:8px;padding:2px 0">
+    <span class="note" style="min-width:52px">Slot ${k+1}</span>
+    <button type="button" class="pickbtn" onclick="pickHeldItem(${i},${k})"><span class="pickbtn-name">${esc(invItemName(e.cat, e.id))}</span><span class="pickbtn-id note">${esc(invCatName(e.cat))} #${e.id}</span></button>
+    ${qty}
+    <button type="button" class="chip mini" title="Remove this entry" onclick="removeHeldItem(${i},${k})">Remove</button>
+  </div>`;
+}
+function heldEntry(i, k){
+  const idx = +$(`csel${i}`).value;
+  const c = ((CHARDATA[i] || {}).chars || []).find(x => x.idx === idx);
+  return c ? (c.held || [])[k] : null;
+}
+function pickHeldItem(i, k){
+  const e = heldEntry(i, k);
+  const cur = e && e.cat ? `${e.cat}:${e.id}` : "";
+  openPicker(`Choose held item (slot ${k+1})`, invPickerList(), cur, (sel) => {
+    const [cat, id] = sel.split(":").map(Number);
+    const lim = ((INVNAMES.limits || {})[String(cat)] || [])[id - 1] || 0;
+    writeHeldField(i, k, { cat, id, qty: lim ? 1 : 0 });
+  }, { cap: 1000 });
+}
+function setHeldQty(i, k, cat, id, v){ writeHeldField(i, k, { cat, id, qty: +v }); }
+function removeHeldItem(i, k){ writeHeldField(i, k, { cat: 0 }); }
+async function writeHeldField(i, k, val){
+  const sv = saves[i], idx = +$(`csel${i}`).value;
+  spin(true);
+  try{
+    const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [`c${idx}_held${k}`]: val })));
+    if(r.error){ toast("Error: " + r.error, "bad"); return; }
+    sEdits[`c${idx}:held${k}`] = { label: `${nameOf(idx)} · Held item ${k+1}`,
+      group: sv.folder, to: val.cat ? invItemName(val.cat, val.id) : "removed" };
+    updateSaveToolbar();
+    // Re-render the whole panel: held slot 1 shares its byte with Accessory.
+    const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
+    renderChar(i);
+  }catch(e){ toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
+  finally{ spin(false); }
+}
+
 /* ---------- save health audit ---------- */
 async function openHealth(i){
   const box = $(`health${i}`);
@@ -1160,20 +1208,34 @@ function renderChar(i){
   const rBtn = (slot,lbl,val) => `<div class="fld"><label>${lbl}</label><div class="in">${
     pickBtn(`c${i}_${slot}`, `${i}:${slot}`, val, runeName(val),
       `pickRune(${i},'${slot}',${val})`)}</div></div>`;
+  const numFld = (field, lbl, val, min, max) => `<div class="fld"><label>${lbl}</label><div class="in"><input type="number" id="ce${i}_${field}" value="${val}" min="${min}" max="${max}" data-cf="${i}:${field}" data-orig="${val}" onchange="writeCharField(${i},'${field}',this.value,this)">${REVERT_BTN_SAVE}</div></div>`;
   $(`cfld${i}`).innerHTML =
     sub("Level & recruitment")
-    + `<div class="grid" style="grid-template-columns:150px 260px;padding-top:8px">`
+    + `<div class="grid" style="grid-template-columns:150px 150px 150px 260px;padding-top:8px">`
     + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" data-cf="${i}:level" data-orig="${c.level}" onchange="writeCharField(${i},'level',this.value,this)">${REVERT_BTN_SAVE}</div></div>`
+    + numFld("exp", "EXP", c.exp || 0, 0, 65535)
+    + numFld("sp", "SP", c.sp || 0, 0, 65535)
     + `<div class="fld"><label>Recruited</label><div class="in"><label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} ${c.recruitable?"":'disabled title="Not recruitable"'} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">${c.recruitable?"in the roster":"not recruitable"}</span></label>${c.recruitable?REVERT_BTN_SAVE:""}</div></div>`
     + `</div>`
     + guideHTML(idx)
     + sub("Equipment")
+    + `<div class="grid" style="grid-template-columns:150px;padding-top:8px">`
+    + numFld("wlv", "Weapon level", c.weaponLevel || 1, 1, 16)
+    + `</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Sharpen level of the character's own weapon (1 to 16). Which weapon it is comes from the ISO starting-loadout editor; this is the level the blacksmith raises.</div>`
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
     + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot — needed to complete a 5-piece set.</div>`
     + g(aBtn("accessory","Accessory",c.armor.accessory==null?0:c.armor.accessory))
+    + sub("Held items")
+    + `<div style="padding-top:8px">${(c.held || []).map((e, k) => heldRow(i, k, e)).join("")}</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Items the character carries personally (starting items, rune orbs, accessories). Slot 1 shares its item byte with the Accessory field above: when slot 1 holds an accessory, that accessory is the equipped one, and clearing slot 1 clears it.</div>`
     + sub("Runes")
     + g(rBtn("rhead","Head",c.runes.rhead)+rBtn("rright","Right hand",c.runes.rright)+rBtn("rleft","Left hand",c.runes.rleft))
     + runeStatesHTML(c)
+    + `<div class="grid" style="grid-template-columns:repeat(4,110px);padding-top:8px">`
+    + [0,1,2,3].map(k => numFld(`ruse${k}`, `Lv${k+1} uses left`, (c.runeUses || [0,0,0,0])[k], 0, 9)).join("")
+    + `</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Spell uses left per spell level (of ${(c.runeUsesMax || [0,0,0,0]).join(" / ")} at this level and rune). The game loads these counts from the save, so edits here are the counts the character comes back with.</div>`
     + sub("Equipped skill slots")
     + g([0,1].map(k => `<div class="fld"><label>Slot ${k+1}</label><div class="in">${
         pickBtn(`c${i}_ss${k}`, `${i}:ss${k}`, (c.slots||[0,0])[k], slotName((c.slots||[0,0])[k]),
@@ -1295,6 +1357,9 @@ function revertSaveField(btn){
 }
 function charFieldLabel(field){
   if(field === "level") return "Level"; if(field === "rec") return "Recruited";
+  if(field === "exp") return "EXP"; if(field === "sp") return "SP";
+  if(field === "wlv") return "Weapon level";
+  if(field.startsWith("ruse")) return "Lv"+(+field.slice(4)+1)+" spell uses";
   if(field.startsWith("sk")) return (SKILL_NAMES[+field.slice(2)]||field)+" rank";
   if(field.startsWith("ss")) return "Skill slot "+(+field.slice(2)+1);
   if(field === "accessory") return "Accessory";
