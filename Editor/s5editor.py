@@ -552,9 +552,13 @@ function ctrl(r,key){const v=r.value;
   o+=`<option value=0 ${cur==0?'selected':''}>— none —</option>`;
   Object.keys(D).forEach(k=>{o+=`<option value=${k} ${k==cur?'selected':''}>${D[k]}</option>`});
   return `<select data-k="${key}" ${ch}>${o}</select>`;}
- if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='spellstatus'||r.kind=='helditem'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
+ if(r.kind=='geartype'){const T={1:'Light',2:'Medium',3:'Heavy'};let o='';
+  if(!T[v])o+=`<option value=${v} selected>${v} · (current)</option>`;
+  [1,2,3].forEach(i=>{o+=`<option value=${i} ${i==v?'selected':''}>${T[i]}</option>`});
+  return `<select data-k="${key}" ${ch}>${o}</select>`;}
+ if(r.kind=='item'||r.kind=='rune'||r.kind=='element'||r.kind=='target'||r.kind=='spellstatus'||r.kind=='helditem'||r.kind=='weaponid'||r.kind.indexOf&&r.kind.indexOf('armor')==0){
   const A=MAPS.armor||{};
-  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets,spellstatus:MAPS.spellstatus,helditem:MAPS.held,
+  const it=({item:MAPS.items,rune:MAPS.runes,element:MAPS.elements,target:MAPS.targets,spellstatus:MAPS.spellstatus,helditem:MAPS.held,weaponid:MAPS.weapons,
              armorhead:A.head,armorbody:A.body,armorarm:A.glove,armorfoot:A.foot}[r.kind])||{};
   const nm=id=>{const e=it[id];return e?(e.name||e):('#'+id)};
   const hideId=r.kind=='helditem'||(r.kind.indexOf&&r.kind.indexOf('armor')==0);  // hide raw id for held items + armor slots
@@ -687,9 +691,13 @@ function fillRunes(){const sel=document.getElementById('rsel'),f=(document.getEl
  sel.innerHTML=RUNES.filter(r=>!f||r.name.toLowerCase().includes(f)||(''+r.id).includes(f))
   .map(r=>`<option value="${r.id}">${r.id} — ${r.name}</option>`).join('');}
 function filterRunes(){fillRunes();loadRune();}
-function fldHTML(r,key){return `<div class=fld><label>${r.label} <span class=pill>${pillFor(r)}</span></label>`+
-  `<div class=in>${ctrl(r,key)}`+
+function fldHTML(r,key){const fh=r.label=='Power / heal (u16)'
+  ?`<button class="ghost mini" title="The value the game's own heal and revive spells carry: fully restores HP" onclick=spellFullHealDesk(this)>Full heal (9999)</button>`:'';
+ return `<div class=fld><label>${r.label} <span class=pill>${pillFor(r)}</span></label>`+
+  `<div class=in>${ctrl(r,key)}${fh}`+
   `<button class="ghost mini" title=restore onclick=restoreRuneField(this) data-k="${key}">↺</button></div></div>`;}
+function spellFullHealDesk(btn){const i=btn.parentElement.querySelector('input');if(!i)return;
+ i.value=9999;refreshDirty();}
 async function loadRune(){const sel=document.getElementById('rsel');if(!sel.value)return;
  RCUR=parseInt(sel.value);const s=await j('/api/rune',{iso:iso(),id:RCUR});
  const box=document.getElementById('runesections');
@@ -1873,7 +1881,14 @@ class H(http.server.BaseHTTPRequestHandler):
                 heldfile = "s5_held_items_pal.json" if F.REGION == "pal" else "s5_held_items.json"
                 try: held = F.res_json(heldfile).get("map", {})
                 except Exception: held = {}
+                weapons = {}
+                try:
+                    if iso and os.path.exists(iso):
+                        with P.Iso(iso) as g:
+                            weapons = {str(k): v for k, v in P.weapon_type_names(g).items()}
+                except Exception: weapons = {}
                 return self._send(200, json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
+                    "weapons": weapons,
                     "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES,
                     "egrades": F.ENEMY_AFFINITY_GRADES,
                     "spellstatus": {str(k): v for k, v in F.SPELL_STATUS_NAMES.items()},

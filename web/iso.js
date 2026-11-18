@@ -190,6 +190,8 @@ function kindList(kind) {
     case "element": return mapList(M.elements);
     case "target": return mapList(M.targets);
     case "spellstatus": return mapList(M.spellstatus);
+    case "weaponid": return mapList(M.weapons).map(x => ({ id: x.id, name: x.id + " · " + x.name }));
+    case "geartype": return [{ id: 1, name: "Light" }, { id: 2, name: "Medium" }, { id: 3, name: "Heavy" }];
     case "drop": return mapList(M.dropitems);
     case "item": return mapList(M.items);
     case "helditem": return mapList(M.held);
@@ -202,7 +204,7 @@ function kindList(kind) {
     default: return null;
   }
 }
-const SMALL_KINDS = new Set(["rank","grade","egrade","element","target","spellstatus"]);
+const SMALL_KINDS = new Set(["rank","grade","egrade","element","target","spellstatus","weaponid","geartype"]);
 const PICKER_KINDS = new Set(["item","helditem","rune","armorhead","armorbody","armorarm","armorfoot","drop","spellid"]);
 function nameFor(kind, value) {
   const list = kindList(kind); if (!list) return String(value);
@@ -234,7 +236,8 @@ function renderField(f, attrs) {
   if (SMALL_KINDS.has(kind)) {
     const list = kindList(kind) || [];
     let o = "";
-    if (!list.some(x => String(x.id) === String(f.value))) o += `<option value="${f.value}" selected>#${f.value}</option>`;
+    if (!list.some(x => String(x.id) === String(f.value)))
+      o += `<option value="${f.value}" selected>${kind === "geartype" ? f.value + " (current)" : "#" + f.value}</option>`;
     for (const it of list) o += `<option value="${it.id}" ${String(it.id)===String(f.value)?"selected":""}>${esc(it.name)}</option>`;
     inner = `<select ${dataset} onchange="onIsoField(this)">${o}</select>`;
   } else if (PICKER_KINDS.has(kind)) {
@@ -246,8 +249,18 @@ function renderField(f, attrs) {
     const min = f.signed ? -(max>>1)-1 : 0, hi = f.signed ? (max>>1) : max;
     inner = `<input type="number" ${dataset} value="${f.value}" min="${min}" max="${hi}" onchange="onIsoField(this)">`;
   }
+  const extra = (attrs.view === "spell" && f.label === "Power / heal (u16)")
+    ? `<button type="button" class="chip mini" onclick="spellFullHeal(this)" title="The value the game's own heal and revive spells carry: fully restores HP">Full heal (9999)</button>` : "";
   return `<div class="fld"><label>${esc(f.label)}
-    <span class="pill">${kind==="num"?(f.width+"B"):kind}</span></label><div class="in">${inner}${REVERT_BTN}</div></div>`;
+    <span class="pill">${kind==="num"?(f.width+"B"):kind}</span></label><div class="in">${inner}${REVERT_BTN}${extra}</div></div>`;
+}
+/* Spell Power preset (issue #42): set the field to the full-heal sentinel
+ * through the normal write path, exactly as if 9999 had been typed. */
+function spellFullHeal(btn) {
+  const inp = btn.parentElement.querySelector("input");
+  if (!inp) return;
+  inp.value = "9999";
+  onIsoField(inp);
 }
 
 /* dispatch a field write to the right Pyodide setter (write-through). */
@@ -727,6 +740,16 @@ function renderSet(idx){
         <div class="fnote">the game caps this field at ${e.value} — that clamp is built into
           the set's code (it is not a bonus and does not replace the field's own value),
           so it is shown for reference and isn't editable</div></div>`;
+      if (e.grade) {
+        const grades = (EFFTARGETS && EFFTARGETS.grades) || (isoMAPS && isoMAPS.grades) || [];
+        const out = (+e.value < 0 || +e.value >= grades.length)
+          ? `<option value="${e.value}" selected>${e.value} (current)</option>` : "";
+        return `<div class="fld"><label>${esc(lbl)} <span class="pill">${e.kind === "set" ? "=" : "+"}</span></label>
+          <div class="in"><select data-key="setbonus:${s.index}:${i}" data-view="setbonus" data-setidx="${s.index}" data-eff="${i}"
+            data-kind="grade" data-orig="${e.value}" data-lbl="${esc(s.name)} · ${esc(lbl)}" data-grp="Sets"
+            onchange="onIsoField(this)">${out}${grades.map((g, gi) => `<option value="${gi}" ${gi===+e.value?"selected":""}>rank ${esc(g)}</option>`).join("")}</select>${REVERT_BTN}</div>
+          <div class="fnote">an affinity tier, not an amount: the same grade list the custom-set builder uses</div></div>`;
+      }
       return `<div class="fld"><label>${esc(lbl)} <span class="pill">${e.kind === "set" ? "=" : "+"}</span></label>
         <div class="in"><input type="number" value="${e.value}" min="-32768" max="65535"
           data-key="setbonus:${s.index}:${i}" data-view="setbonus" data-setidx="${s.index}" data-eff="${i}"

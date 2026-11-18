@@ -967,6 +967,20 @@ def read_weapon_record(iso, wid):
             "users": users}
 
 
+def weapon_type_names(iso):
+    """{weapon id: type name} for the starting-equipment Weapon id dropdown
+    (issue #42): id 0 is the empty record ("No weapon record"); the rest are
+    the disc's own type-name strings read from each weapon record. Type
+    names repeat across records (several records share one weapon type),
+    so callers show the id alongside the name."""
+    base = F.TABLES["weapon growth"][0]
+    out = {0: "No weapon record"}
+    for wid in range(1, F.WEAPON_RECORD_COUNT):
+        out[wid] = (_sjis_field(iso.rd(base + wid * F.WEAPON_TABLE_STRIDE, 0x0F))
+                    or ("Weapon record %d" % wid))
+    return out
+
+
 def read_weapon_for_char(iso, cid):
     """Weapon context for one character: its W byte plus the full weapon
     record when W is nonzero (None when the character has no weapon record)."""
@@ -1269,8 +1283,12 @@ def read_armor_item(iso, slot, i):
     base = armor_addr(slot, i)
     summ = _armor_summary(iso, base)
     name, en, jp = _armor_name(iso, slot, i, base)
-    fields = [{"label": l, "off": o, "width": w, "kind": "num", "signed": s,
-               "value": _rd_signed(iso, base + o, w, s)}
+    fields = [{"label": l, "off": o, "width": w,
+               # Gear Type is a weight class on the four armor slots (issue
+               # #42); the accessory table's Type is a different, undocumented
+               # value set, so it stays a plain number there.
+               "kind": "geartype" if (l == "Type" and slot != "accessory") else "num",
+               "signed": s, "value": _rd_signed(iso, base + o, w, s)}
               for (l, o, w, s) in F.ARMOR_FIELDS]
     return {"fields": fields, "name": name, "nameEn": en, "nameJp": jp,
             "summary": summ, "summaryEn": F.armor_summary_en(summ), "off": base}

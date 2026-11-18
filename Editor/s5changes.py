@@ -121,7 +121,8 @@ def static_regions():
             for (label, foff, width, signed) in F.ARMOR_FIELDS:
                 add(base + rec * F.ARMOR_STRIDE + foff, width,
                     "Gear", "%s (%s) · %s" % (who, F.ARMOR_SLOT_LABEL[slot], label),
-                    "num", signed)
+                    "geartype" if (label == "Type" and slot != "accessory") else "num",
+                    signed)
 
     for rec in range(F.ENEMY_MAX):
         nm = enemies.get(str(rec), "#%d" % rec)
@@ -238,6 +239,8 @@ def _fmt(region, img, names):
         return "%d (%s)" % (v, F.SPELL_STATUS_NAMES[v]) if v in F.SPELL_STATUS_NAMES else str(v)
     if kind == "spellid":
         return "%d (%s)" % (v, spells[v]) if 0 <= v < len(spells) else str(v)
+    if kind == "geartype":
+        return "%d (%s)" % (v, F.GEAR_TYPE_NAMES[v]) if v in F.GEAR_TYPE_NAMES else str(v)
     if kind == "drop":
         cat, item = v & 0xFF, (v >> 8) & 0xFF
         nm = (drops.get("items") or {}).get("%d:%d" % (cat, item), "")

@@ -269,7 +269,14 @@ def iso_maps():
     heldfile = "s5_held_items_pal.json" if F.REGION == "pal" else "s5_held_items.json"
     try: held = F.res_json(heldfile).get("map", {})
     except Exception: held = {}
+    weapons = {}
+    try:
+        if ISO:
+            with P.Iso(ISO) as g:
+                weapons = {str(k): v for k, v in P.weapon_type_names(g).items()}
+    except Exception: weapons = {}
     return json.dumps({"items": items, "runes": runes, "armor": armor, "held": held,
+        "weapons": weapons,
         "ranks": F.RANK_NAMES, "grades": F.AFFINITY_GRADES, "egrades": F.ENEMY_AFFINITY_GRADES,
         "spellstatus": {str(k): v for k, v in F.SPELL_STATUS_NAMES.items()},
         "dropitems": {str((int(k.split(":")[1]) << 8) | int(k.split(":")[0])):
@@ -534,10 +541,12 @@ def iso_sets():
         with P.Iso(ISO) as g: d = P.read_sets(g)
         # attach readable labels + the documented bonus, and per-piece names/descriptions
         acc = {}
+        grade_offs = {t[1] for t in F.SET_EFFECT_TARGETS if t[4] == "grade"}
         for s in d["sets"]:
             s["docBonus"] = F.SET_DOC_BONUS.get(s["index"], "")
             for e in s["effects"]:
                 e["field"] = F.SET_FIELD_HINT.get(e.get("charOff"), None)
+                e["grade"] = e.get("charOff") in grade_offs
             for m in s["members"]:
                 slot = m["slot"]; sid = int(m["id"]) - 1     # equip id -> stat record
                 m["statId"] = sid

@@ -370,6 +370,10 @@ ARMOR_ELEMENTS = ["Sun", "Fire", "Lightning", "Wind", "Water", "Earth", "Star",
 # both). Recovered via a community-documented Head Gear module (module offset - 8 = our offset).
 # Type (base-3): armor weight class 1=Light/2=Medium/3=Heavy (accessories use a different
 # set 1=Cape..6=Ring). SPD penalty (base-2): unsigned speed cost, scales with weight class.
+# Note: stock body armor also carries Type 4..6 (chain mail, plate, special pieces), so
+# the dropdown preserves any value outside 1..3 as the current value rather than
+# rewriting it; only 1..3 have established labels.
+GEAR_TYPE_NAMES = {1: "Light", 2: "Medium", 3: "Heavy"}
 ARMOR_FIELDS = [
     ("Buy price",  0x00, 4, False),
     ("Sell price", 0x04, 4, False),
