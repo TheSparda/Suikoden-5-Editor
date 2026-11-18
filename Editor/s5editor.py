@@ -1002,7 +1002,7 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
  box._loading=false;
  if(r.error){box.innerHTML='<span class=bad>'+r.error+'</span>';return}
  box._open=true; CHARDATA[i]=r;
- box.innerHTML=`<div class=sec><h3>Recruitment — <span id="reccount${i}"></span></h3>
+ box.innerHTML=`<div class=sec><h3>Recruitment: <span id="reccount${i}"></span></h3>
   <div class=row style="padding:10px 14px 0">
    <input id="recfilter${i}" size=18 placeholder="search name…" oninput="recruitFilter(${i})">
    <span class=note>greyed = not recruitable (story/antagonist)</span>
