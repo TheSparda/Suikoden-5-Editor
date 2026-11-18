@@ -118,8 +118,8 @@ ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune
   const swSrc = fs.readFileSync(path.join(web, "sw.js"), "utf8");
   ok("sw.js precaches health-core.js", swSrc.includes('"./health-core.js"'));
   ok("sw.js precaches vcdiff.js", swSrc.includes('"./vcdiff.js"'));
-  ok("sw.js cache name bumped with the v1.17.9 version bump",
-     swSrc.includes('const CACHE = "s5editor-v22"'));
+  ok("sw.js cache name bumped with the v1.18.0 version bump",
+     swSrc.includes('const CACHE = "s5editor-v23"'));
 }
 
 // Rune slot availability (#6, display only): the save character view shows
