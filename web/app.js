@@ -838,7 +838,7 @@ function renderSaves(){
           <div class="fnote">clear-data marker: turns the hero name green in the load list. Does not enable New Game Plus on a save that has not finished the game.</div></div>
       </div>
       ${ro?"":`<div class="subhd">Active party
-        <span class="note">— tap a slot to choose; only recruited characters can join</span></div>
+        <span class="note">— tap a slot to choose; recruited characters are listed first</span></div>
       <div id="pwarn${i}"></div>
       ${partyGroup(i, fl.party||[], 0, 6, "Battle members")}
       ${partyGroup(i, fl.party||[], 6, 10, "Support members")}`}
@@ -1004,8 +1004,10 @@ function partyGroup(i, party, from, to, title){
 }
 /* Searchable picker (not a 120-entry native dropdown): recruited characters first,
    already-in-party marked. Unrecruited characters are listed last and labelled with
-   what assigning them does: the write also sets their recruitment bit (issue #32),
-   because the game keeps party membership and the recruit bitfield in sync. */
+   what assigning them does: the write changes only the party arrays (the real
+   party storage, issue #32). The editor never writes recruitment state
+   (issue #39), so an assigned character's status record stays as it was and
+   the health audit flags the mismatch. */
 function partyList(i){
   const roster = ROSTER[i] || [];
   const inParty = new Map();
@@ -1019,7 +1021,7 @@ function partyList(i){
   for(const c of roster) if(c.recruited)
     list.push({ id: c.idx, name: nameOf(c.idx), desc: tag(c) });
   for(const c of roster) if(!c.recruited)
-    list.push({ id: c.idx, name: nameOf(c.idx), desc: "not recruited in this save (assigning also recruits them)" });
+    list.push({ id: c.idx, name: nameOf(c.idx), desc: "not recruited in this save (assigning writes the party only; their record stays inactive)" });
   if(!roster.length)   // roster unavailable → fall back to every known name
     for(const id of Object.keys(NAMES.cnames)) list.push({ id: +id, name: NAMES.cnames[id] });
   return list;
@@ -1115,7 +1117,6 @@ async function openChars(i){
     c.recruited||!c.recruitable ? "" : " (not recruited)"}</option>`).join("");
   box.innerHTML = `<div class="row"><span class="note">Character</span>
     <select id="csel${i}" onchange="renderChar(${i})">${opts}</select>
-    <button class="ghost" onclick="recruitAll(${i})" title="Set the recruited flag for every recruitable character (108 Stars)">Recruit ALL</button>
     </div><div id="cfld${i}"></div>`;
   renderChar(i);
 }
@@ -1164,8 +1165,9 @@ function renderChar(i){
     sub("Level & recruitment")
     + `<div class="grid" style="grid-template-columns:150px 260px;padding-top:8px">`
     + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" data-cf="${i}:level" data-orig="${c.level}" onchange="writeCharField(${i},'level',this.value,this)">${REVERT_BTN_SAVE}</div></div>`
-    + `<div class="fld"><label>Recruited</label><div class="in"><label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} ${c.recruitable?"":'disabled title="Not recruitable"'} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">${c.recruitable?"in the roster":"not recruitable"}</span></label>${c.recruitable?REVERT_BTN_SAVE:""}</div></div>`
+    + `<div class="fld"><label>Recruitment</label><div class="in"><span class="note" style="text-transform:none">${recruitStatusText(c)}</span></div></div>`
     + `</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Recruitment is read from the game's own status record and cannot be edited (issue #39).</div>`
     + guideHTML(idx)
     + sub("Equipment")
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
@@ -1263,7 +1265,7 @@ async function writeCharField(i, field, value, el){
 /* Per-field undo for the Save editor: revert a control to its rendered value. */
 function revertSaveField(btn){
   let el = btn.previousElementSibling;
-  if(el && el.tagName === "LABEL") el = el.querySelector("input");   // NG+/recruited checkbox
+  if(el && el.tagName === "LABEL") el = el.querySelector("input");   // NG+ checkbox
   if(!el || el.dataset.orig == null) return;
   const orig = el.dataset.orig;
   if(el.dataset.sk && el.dataset.sk.indexOf("sv") === 0){            // header / party field
@@ -1293,8 +1295,19 @@ function revertSaveField(btn){
     }
   }
 }
+/* Recruitment status line (issue #39): read-only, from the game's status
+   word via s5save.recruit_state. States: party / active count as recruited;
+   initialized means the record exists but the character is not recruited;
+   none means no record at all. */
+function recruitStatusText(c){
+  if(!c.recruitable) return "not recruitable";
+  if(c.recruitState === "party") return "Recruited (in party)";
+  if(c.recruited) return "Recruited";
+  if(c.recruitState === "initialized") return "Not recruited (record initialized only)";
+  return "Not recruited";
+}
 function charFieldLabel(field){
-  if(field === "level") return "Level"; if(field === "rec") return "Recruited";
+  if(field === "level") return "Level";
   if(field.startsWith("sk")) return (SKILL_NAMES[+field.slice(2)]||field)+" rank";
   if(field.startsWith("ss")) return "Skill slot "+(+field.slice(2)+1);
   if(field === "accessory") return "Accessory";
@@ -1302,7 +1315,6 @@ function charFieldLabel(field){
            rhead:"Rune (head)", rright:"Rune (right)", rleft:"Rune (left)" }[field] || field;
 }
 function charFieldDisplay(field, v){
-  if(field === "rec") return v ? "Recruited" : "Not recruited";
   if(field.startsWith("sk")) return RANK_NAMES[v] || String(v);
   if(field.startsWith("ss")) return v ? (SKILL_NAMES[v-1]||"#"+v) : "empty";
   if(field === "accessory") return (NAMES.accNames||{})[String(v)] || (String(v)==="0"?"Nothing":"#"+v);
@@ -1329,7 +1341,14 @@ function showRecGuide(i, idx){
     ${g.missable ? `<div class="warnbox" style="margin:6px 0 2px">Missable: ${esc(g.missable)}</div>` : ""}</div>` : "";
 }
 
-/* ---------- recruitment roster ---------- */
+/* ---------- recruitment roster (read-only, issue #39) ---------- */
+/* Recruitment state comes from the game's own status records; the editor
+   reads them and never writes them. Earlier versions toggled a field at
+   payload +0xD7CA believing it was a recruitment bitfield; it is the tail
+   of an unrelated record array, so the toggles corrupted data while the
+   display lied (RECRUIT_FIELD_AUDIT.md). Whether writing the real status
+   word recruits in game is unproven on a roster screen (ROSTER_PROOF.md),
+   so there is deliberately nothing here to click but the guide. */
 async function openRecruit(i){
   const sv = saves[i], box = $(`recruit${i}`);
   if(box._loading) return;
@@ -1341,83 +1360,45 @@ async function openRecruit(i){
   box.innerHTML = `<div class="sec"><h3>Recruitment — <span id="reccount${i}"></span></h3>
     <div class="row" style="padding:10px 14px 0">
       <input id="recfilter${i}" size="18" placeholder="search name…" oninput="recruitFilter(${i})">
-      <button class="ghost mini" onclick="recruitCheckAll(${i},true)">Check all</button>
-      <button class="ghost mini" onclick="recruitCheckAll(${i},false)">Uncheck all</button>
       <span class="note">greyed = not recruitable</span>
     </div>
+    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records; recruitment cannot be edited (issue #39). Tap a name for its recruitment guide entry.</div>
     <div id="pairwarn${i}"></div>
     <div id="guidenote${i}" style="padding:4px 16px 0"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
   $(`recgrid${i}`).innerHTML = r.chars.map(c => {
     const dis = !c.recruitable;
-    return `<label class="chk" data-name="${esc(nameOf(c.idx).toLowerCase())}" style="${dis?"opacity:.4":""}" onclick="showRecGuide(${i},${c.idx})">
-      <input type="checkbox" data-idx="${c.idx}" ${c.recruited?"checked":""} ${dis?"disabled":""} onchange="toggleRecruit(${i},this)">
-      <span class="note" style="text-transform:none">${c.idx}: ${esc(nameOf(c.idx))}</span></label>`;
+    return `<div class="recrow" data-name="${esc(nameOf(c.idx).toLowerCase())}" style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;cursor:pointer;${dis?"opacity:.4":""}" onclick="showRecGuide(${i},${c.idx})">
+      <span class="note" style="text-transform:none">${c.idx}: ${esc(nameOf(c.idx))}</span>
+      <span class="note" style="text-transform:none">${recruitStatusText(c)}</span></div>`;
   }).join("");
   recruitCount(i);
 }
 function recruitCount(i){
-  const boxes = [...document.querySelectorAll(`#recgrid${i} input[type=checkbox]`)];
-  const on = boxes.filter(b => b.checked).length;
-  const el = $(`reccount${i}`); if(el) el.textContent = `${on} / ${boxes.filter(b=>!b.disabled).length} recruited`;
+  const r = CHARDATA[i]; if(!r) return;
+  const chars = r.chars.filter(c => c.recruitable);
+  const on = chars.filter(c => c.recruited).length;
+  const el = $(`reccount${i}`); if(el) el.textContent = `${on} / ${chars.length} recruited`;
   recruitPairWarn(i);
 }
-/* Eresh (10) and Euram (108) are mutually exclusive in normal play: the game lets
-   you recruit only one of them. Both bits set is a legitimate deliberate edit
-   (issue #24), so this warns without blocking or unchecking anything: it names
-   the usual accidental sources (bulk actions, cheat devices) and the repair,
-   and states that a deliberate pair is kept as-is. */
+/* Eresh (10) and Euram (108) are mutually exclusive in normal play: the game
+   lets you recruit only one of them (issue #24). Both reading recruited is a
+   state no played save produces, so this warns: it names the likely source
+   (a change made outside gameplay) and the repair (restore a backup), since
+   the editor itself cannot change recruitment. */
 function recruitPairWarn(i){
   const box = $(`pairwarn${i}`); if(!box) return;
+  const r = CHARDATA[i]; if(!r){ box.innerHTML = ""; return; }
   const state = {};
-  document.querySelectorAll(`#recgrid${i} input[type=checkbox]`)
-    .forEach(b => { state[+b.dataset.idx] = b.checked; });
+  r.chars.forEach(c => { state[c.idx] = !!c.recruited; });
   box.innerHTML = (state[10] && state[108])
-    ? `<div class="warnbox" style="margin:10px 14px 0">⚠ Eresh and Euram are both marked recruited, but the game only lets you recruit one of them. Both flags usually come from a bulk action (Check all, Recruit ALL) or a cheat device; if that is what happened here, uncheck the one you did not recruit to repair the save. Checking both on purpose is allowed and will be kept.</div>`
+    ? `<div class="warnbox" style="margin:10px 14px 0">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside gameplay (a cheat device or another tool). This editor cannot change recruitment; if that was not deliberate, restore a backup.</div>`
     : "";
 }
 function recruitFilter(i){
   const query = $(`recfilter${i}`).value.trim().toLowerCase();
-  document.querySelectorAll(`#recgrid${i} label`).forEach(l => {
+  document.querySelectorAll(`#recgrid${i} .recrow`).forEach(l => {
     l.style.display = (!query || l.dataset.name.includes(query)) ? "" : "none"; });
-}
-async function toggleRecruit(i, box){
-  const sv = saves[i], idx = +box.dataset.idx;
-  await writeRecruitOne(sv, i, idx, box.checked);
-  recruitCount(i);
-}
-async function recruitCheckAll(i, on){
-  const sv = saves[i]; spin(true);
-  try{
-    const boxes = [...document.querySelectorAll(`#recgrid${i} input[type=checkbox]`)]
-      .filter(b => !b.disabled && b.closest("label").style.display !== "none");
-    for(const b of boxes){ b.checked = on; await writeRecruitOne(sv, i, +b.dataset.idx, on, true); }
-    const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
-    updateSaveToolbar(); recruitCount(i);
-  } finally { spin(false); }
-}
-async function recruitAll(i){
-  const sv = saves[i], r = CHARDATA[i]; spin(true);
-  try{
-    let n=0;
-    for(const c of r.chars){ if(c.recruitable && !c.recruited){ await writeRecruitOne(sv, i, c.idx, true, true); n++; } }
-    const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
-    // sync the grid to the written state so the count and the Eresh/Euram pair
-    // warning (issue #24) reflect what Recruit ALL just did
-    if(!rr.error) document.querySelectorAll(`#recgrid${i} input[type=checkbox]`).forEach(b => {
-      const c = rr.chars.find(x => x.idx === +b.dataset.idx); if(c) b.checked = !!c.recruited; });
-    updateSaveToolbar(); recruitCount(i);
-    toast(n ? `Recruited ${n} character(s)` : "Everyone recruitable is already recruited", "ok");
-  } finally { spin(false); }
-}
-async function writeRecruitOne(sv, i, idx, on, quiet){
-  const r = JSON.parse(PY.write(SAVE_PATH, sv.folder || "", JSON.stringify({ [`c${idx}_rec`]: on?1:0 })));
-  if(r.error){ if(!quiet) toast("Error: " + r.error, "bad"); return; }
-  const sk = `c${idx}:rec`;
-  const c0 = (CHARDATA[i].chars.find(x=>x.idx===idx)||{});
-  if((!!c0.recruited) !== on) sEdits[sk] = { label: `${nameOf(idx)} · Recruited`, group: sv.folder, to: on?"Recruited":"Not recruited" };
-  else delete sEdits[sk];
-  if(!quiet){ const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr; updateSaveToolbar(); }
 }
 
 /* ================= Save editor: sticky toolbar + Save ================= */
