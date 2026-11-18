@@ -608,6 +608,7 @@ SECTION_HELP = {
     "gear":       "Armor pieces (Head / Body / Arm / Foot). Fully editable, verified vs the Armor List guide: DEF, buy/sell price, weight Type (1=Light/2=Medium/3=Heavy) + SPD penalty, stat bonuses (HP/Attack/Technique/Magic/Evasion/MDEF/Speed/Luck), proc effects (auto-heal/HP-drain/status-resist/potch/counter %), and per-element ATK & DEF for all 14 elements. The read-only summary below is just the game's own description text.",
     "affinities": "Elemental affinity grades for this character — one per element (None / E / D / C / B / A / S). Higher = better at casting/resisting that element. Verified in-game (Prince = Sun A; Zerase = Fire/Star/Dark A). Applies to a NEW GAME.",
     "equipable skills": "The MAX rank this character can equip each skill at (None / E / D / C / B / A / S / SS). This is the character's skill cap, not their current level. Verified vs the game data (Prince caps Attack/Technique/MDef at S; Zerase caps Magic/Incantation at S). Applies to a NEW GAME.",
+    "enemy": "Drops roll per slot at fixed rates set by slot position, not by item: Drop 40%, Drop 20%, Drop 10%, Drop 5% and Drop 1% are the base chances of the five slots in order, and each slot rolls on its own. A Treasure Discovery support skill in the party adds a rank bonus on top: up to +30 on the 40/20/10 slots and up to +10 on the 5/1 slots at rank 7. To maximize the chance of one specific item, put it in the 40% slot, or stack the same item in several slots: the rolls are independent, so an item in all five slots drops about 59 percent of the time (1 - 0.6 x 0.8 x 0.9 x 0.95 x 0.99), but a duplicate success merges into the same entry, so one enemy never yields more than one copy of the item. No normal drop can be made certain: the rates are fixed by position and the game caps every roll at 99 percent. Food dish (Cook) is a separate slot with its own mechanic: the dish is rolled at 100 percent (the game caps the roll at 99) into a separate candidate list, but it is awarded only when the party has the Cook support skill at rank 6 (20 percent chance) or rank 7 (30 percent), and at most one dish per battle. Attribute flags is not a drop setting: it is a bitmask the battle code copies onto the enemy and uses to gate which actions the enemy may use; the individual bits are not yet identified.",
 }
 GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — use in-game save files."
 
@@ -620,9 +621,22 @@ GLOBAL_HELP = "Edits apply to a NEW GAME. Do NOT use emulator save states — us
 # Potch30 SP10. This CORRECTS the old stat labels (order is HP, ATK, TECH, ACC, MAG,
 # EVA, PDF, MDF, SPD, LUK — the previous Attack/Magic/... order was wrong) and
 # identifies the old hidden +0x16 as the POTCH reward (+0x18 = skill-point reward).
-# Each drop slot is 8 bytes: category u8 + item u8 (+6 unknown); read as one u16 LE
-# the value is category | item<<8 — decoded via s5_drop_items.json (Item Drop Table).
-# +0x28 = 100%-drop flag (0x0F = drops whole loot table every time).
+# Each drop slot is 8 bytes: category u8 + item u8 (+6 bytes, zero in every real
+# record; only the dummy record 0 carries data there); read as one u16 LE
+# the value is category | item<<8, decoded via s5_drop_items.json (Item Drop Table).
+# The five slots roll at fixed rates BY POSITION (40/20/10/5/1 percent; constants in
+# the battle drop processor, not record bytes), each slot independently. The same
+# pair stacked in several slots raises the chance (about 59 percent across all five)
+# but registration dedupes, so one enemy never awards more than one copy; every rate
+# clamps at 99, so no drop is ever guaranteed. A sixth slot at +0x54 is the enemy's
+# food dish: rolled at 100 percent (capped to 99) into a separate candidate list,
+# awarded only through the
+# Cook support skill gate (rank 6 = 20 percent, rank 7 = 30 percent, at most one
+# dish per battle). Full trace in the lab: ENEMY_DROP_BLOCK.md (issue #40).
+# +0x28 is NOT a drop flag. It is an attribute bitmask the combatant builder copies
+# to combatant+0x150; its bits are tested only in the battle action dispatcher's
+# validation cascade, where they can force an action to be rejected for that unit.
+# The individual bit meanings are not identified, so it stays a plain numeric field.
 # Enemy AFFINITIES @+0x1A..: 14 grade bytes, scale 0=E..5=S (ENEMY_AFFINITY_GRADES —
 # distinct from the character scale which starts at 0=None).
 # ENEMY_MAX is the END of the table, and it has to be exact: past the last record the
@@ -646,9 +660,10 @@ def _enemy_fields():
     f += [(lbl, 0x02 + i*2, 2, "num") for i, lbl in enumerate(stats)]
     f += [("Potch reward", 0x16, 2, "num"), ("Skill Pts reward", 0x18, 2, "num")]
     f += [(f"{e} affinity", 0x1A + i, 1, "egrade") for i, e in enumerate(ARMOR_ELEMENTS)]
-    f.append(("100% drop flag", 0x28, 1, "num"))
+    f.append(("Attribute flags", 0x28, 1, "num"))
     for pct, off in [("40%", 0x2c), ("20%", 0x34), ("10%", 0x3c), ("5%", 0x44), ("1%", 0x4c)]:
         f.append((f"Drop {pct}", off, 2, "drop"))
+    f.append(("Food dish (Cook)", 0x54, 2, "drop"))
     return f
 ENEMY_FIELDS = _enemy_fields()
 

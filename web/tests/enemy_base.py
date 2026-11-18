@@ -86,5 +86,63 @@ for region, path in discs:
             F.ENEMY_BASE + F.ENEMY_MAX * F.ENEMY_STRIDE <= F.SKILLFX_BASE,
             f"enemies end {F.ENEMY_BASE + F.ENEMY_MAX * F.ENEMY_STRIDE:#x}, skillfx {F.SKILLFX_BASE:#x}")
 
+    # ---- (#40) the drop block: +0x28 attribute flags and the +0x54 food dish --------
+    # The old "100% drop flag" label was false (the byte gates battle actions, never
+    # drops) and the sixth drop slot at +0x54 was not exposed at all. Writes go to a
+    # throwaway front slice of the disc (the first 0x6A0000 bytes hold the whole enemy
+    # table, as in dawn_rune.py), never to the real ISO.
+    import tempfile
+    tmp = os.path.join(tempfile.gettempdir(), f"s5_enemy_test_{region}.bin")
+    with open(path, "rb") as fh:
+        front = fh.read(0x6A0000)
+    with open(tmp, "wb") as fh:
+        fh.write(front)
+    try:
+        chk(f"{region}: slice keeps its region", P.set_region_for(tmp) == region)
+        with P.Iso(tmp, True) as g:
+            labels = [f["label"] for f in P.read_enemy(g, 1)]
+            chk(f"{region}: +0x28 is exposed as Attribute flags",
+                "Attribute flags" in labels and "100% drop flag" not in labels)
+            chk(f"{region}: +0x54 is exposed as Food dish (Cook)",
+                "Food dish (Cook)" in labels)
+            def field(eid, label):
+                return {f["label"]: f["value"] for f in P.read_enemy(g, eid)}[label]
+            chk(f"{region}: Holly Boy's food dish is Tomato Salad (category 9, item 15)",
+                field(1, "Food dish (Cook)") == (9 | 15 << 8),
+                f"got {field(1, 'Food dish (Cook)'):#x}")
+            chk(f"{region}: Diamond Sun A's food dish is empty",
+                field(117, "Food dish (Cook)") == 0,
+                f"got {field(117, 'Food dish (Cook)'):#x}")
+            empties = sum(1 for eid in range(F.ENEMY_MAX)
+                          if field(eid, "Food dish (Cook)") == 0)
+            chk(f"{region}: 62 enemies carry no food dish", empties == 62,
+                f"got {empties}")
+            # Round trip: writing every record's own +0x28 and +0x54 values back must
+            # leave the whole table byte-identical.
+            before = g.rd(P.enemy_addr(0), F.ENEMY_MAX * F.ENEMY_STRIDE)
+            for eid in range(F.ENEMY_MAX):
+                P.write_enemy_field(g, eid, "Attribute flags", field(eid, "Attribute flags"))
+                P.write_enemy_field(g, eid, "Food dish (Cook)", field(eid, "Food dish (Cook)"))
+            chk(f"{region}: +0x28/+0x54 write-back is byte-identical (all 219 records)",
+                g.rd(P.enemy_addr(0), F.ENEMY_MAX * F.ENEMY_STRIDE) == before)
+            # Changed values must land on exactly the two fields' bytes, nowhere else.
+            P.write_enemy_field(g, 1, "Attribute flags", 0xA5)
+            P.write_enemy_field(g, 1, "Food dish (Cook)", 9 | 20 << 8)
+            chk(f"{region}: edited Attribute flags reads back",
+                field(1, "Attribute flags") == 0xA5,
+                f"got {field(1, 'Attribute flags'):#x}")
+            chk(f"{region}: edited Food dish reads back",
+                field(1, "Food dish (Cook)") == (9 | 20 << 8),
+                f"got {field(1, 'Food dish (Cook)'):#x}")
+            after = g.rd(P.enemy_addr(0), F.ENEMY_MAX * F.ENEMY_STRIDE)
+            diff = [i for i in range(len(before)) if after[i] != before[i]]
+            # The dish edit kept category 9, so only its item byte (+0x55) differs.
+            want = [1 * F.ENEMY_STRIDE + 0x28, 1 * F.ENEMY_STRIDE + 0x55]
+            chk(f"{region}: the edits touched only the two fields' bytes", diff == want,
+                f"diff at {[hex(i) for i in diff]}")
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+
 print(f"\n{n - bad}/{n} passed")
 sys.exit(1 if bad else 0)

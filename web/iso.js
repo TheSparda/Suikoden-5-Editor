@@ -1131,6 +1131,7 @@ VIEW_RENDER.enemy = async (body) => {
   const list = JSON.parse(window.PYISO.enemies()).enemies || [];
   body.innerHTML = `<div class="row" style="padding:10px 14px 0"><span class="note">Enemy/unit</span>
       <select id="isoEsel">${list.map(e=>`<option value="${e.id}">${e.id}: ${esc(e.name)} (HP ${e.hp})</option>`).join("")}</select></div>
+    <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).enemy||"")}</div>
     <div id="isoEbody"></div>`;
   $("isoEsel").onchange = () => renderEnemy(+$("isoEsel").value);
   if (list.length) renderEnemy(+list[0].id); else $("isoEbody").innerHTML = `<p class="note" style="padding:14px">No enemy records found.</p>`;

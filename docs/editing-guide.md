@@ -299,12 +299,13 @@ Each record is 0x7C bytes:
 | Potch reward | +0x16 | u16 | Money dropped |
 | Skill Pts reward | +0x18 | u16 | |
 | 14 elemental affinities | +0x1A … +0x27 | u8 each | **Enemy affinity scale: 0 = E … 5 = S**, in the same element order as characters |
-| 100% drop flag | +0x28 | u8 | `0x0F` makes the enemy drop its whole loot table every time |
+| Attribute flags | +0x28 | u8 | **Not a drop setting.** A bitmask the battle code copies onto the enemy and uses to gate which actions it may use; the individual bits are not yet identified |
 | Drop 40% | +0x2C | u16 | |
 | Drop 20% | +0x34 | u16 | |
 | Drop 10% | +0x3C | u16 | |
 | Drop 5% | +0x44 | u16 | |
 | Drop 1% | +0x4C | u16 | |
+| Food dish (Cook) | +0x54 | u16 | Separate slot with its own mechanic; see Drop slots below |
 
 Every stat is a u16, so **65535 is the ceiling** on a modded enemy. The editor caps at it
 rather than refusing the write when importing a sheet.
@@ -318,6 +319,19 @@ the editor shows a single dropdown per slot. The categories:
 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | None | Head Gear | Body Gear | Arm Gear | Foot Gear | Accessories | Orbs | Rune Pieces | Key Items | Healing Items | Scrolls | Party Items |
+
+The five percentage slots roll at fixed rates set by slot position (40/20/10/5/1 percent),
+each slot independently; the rates are constants in the battle code, not record bytes. A
+Treasure Discovery support skill in the party adds a rank bonus on top: up to +30 on the
+40/20/10 slots and up to +10 on the 5/1 slots at rank 7. Stacking the same item in several
+slots raises its chance (about 59 percent across all five), but a duplicate success merges
+into the same entry, so one enemy never yields more than one copy. Every rate clamps at
+99 percent, so no normal drop can be made certain.
+
+The sixth slot, Food dish (Cook) at +0x54, is separate: the dish is rolled at 100 percent
+(capped to 99) into its own candidate list, but it is awarded only when the party has the Cook support skill at
+rank 6 (20 percent chance) or rank 7 (30 percent), and at most one dish per battle. In the
+stock data every dish is a category 9 (Healing Items) cooked dish, and 62 enemies carry none.
 
 Ground truth for the whole layout: Nariqua (id 4) is Lv45, 1800 HP, 2500 potch, 135 skill
 points, with a 20% drop of category 7 item 0x10 = a Drain Piece. Holly Boy (id 1) is Lv10,

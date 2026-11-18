@@ -298,7 +298,8 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-enemy>
   <h2>Enemy Editor</h2>
-  <p class=sub>Edit enemy <b>Level</b>, combat stats, <b>Potch / Skill-Point rewards</b>, <b>elemental affinities</b> (E–S), and <b>item drops</b> (40/20/10/5/1% slots, picked by item name). Verified vs the game data (Nariqua = Lv45, 1800 HP, drops Drain Piece).</p>
+  <p class=sub>Edit enemy <b>Level</b>, combat stats, <b>Potch / Skill-Point rewards</b>, <b>elemental affinities</b> (E–S), and <b>item drops</b> (40/20/10/5/1% slots plus the Cook food dish, picked by item name). Verified vs the game data (Nariqua = Lv45, 1800 HP, drops Drain Piece).</p>
+  <p class=note id=enemyhelp style=display:none></p>
   <div class=row id=enrow style=display:none>
    <span class=note>Enemy</span>
    <select id=ensel onchange=loadEnemy()></select>
@@ -736,6 +737,8 @@ async function loadEnemy(){const sel=document.getElementById('ensel');if(!sel.va
  box.innerHTML='';const sec=document.createElement('div');sec.className='sec';
  sec.innerHTML='<h3 onclick=toggleSec(this)>enemy stats & drops</h3>';sec.appendChild(g);box.appendChild(sec);
  box.insertAdjacentHTML('beforeend',`<div class=sec><h3 class=closed onclick=toggleSec(this)>raw bytes · unit @0x${(s.rawOff||0).toString(16)}</h3><div style="display:none;padding:12px"><pre style="white-space:pre-wrap">${s.raw}</pre></div></div>`);
+ const eh=document.getElementById('enemyhelp');
+ if(eh&&MAPS.help&&MAPS.help.enemy){eh.textContent=MAPS.help.enemy;eh.style.display='';}
  document.getElementById('ensave').textContent='';refreshDirty();}
 function restoreEnemyField(btn){const i=document.querySelector('#enemysections [data-k="'+btn.dataset.k+'"]');
  if(i){i.value=ENORIG[btn.dataset.k];}refreshDirty();}
