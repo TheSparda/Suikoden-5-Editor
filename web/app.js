@@ -1236,7 +1236,7 @@ function renderChar(i){
     + `</div>`
     + `<div class="fnote" style="margin:2px 16px 0">Sharpen level of the character's own weapon (1 to 16). Which weapon it is comes from the ISO starting-loadout editor; this is the level the blacksmith raises.</div>`
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
-    + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot — needed to complete a 5-piece set.</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot: needed to complete a 5-piece set.</div>`
     + g(aBtn("accessory","Accessory",c.armor.accessory==null?0:c.armor.accessory))
     + sub("Held items")
     + `<div style="padding-top:8px">${(c.held || []).map((e, k) => heldRow(i, k, e)).join("")}</div>`

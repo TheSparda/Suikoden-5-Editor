@@ -1175,9 +1175,9 @@ VIEW_RENDER.patches = async (body) => {
   };
   const stateNote = (t) => t.state === "on" ? "<b>On</b>"
     : t.state === "off" ? "Off"
-    : t.state === "foreign" ? "<b>Blocked</b> — a patch site holds bytes this editor does not recognise"
-    : t.state === "not-found" ? "<b>Not found</b> — no patch site on this disc"
-    : `<b>${esc(t.state)}</b> — partly applied; restore it from the CLI to be safe`;
+    : t.state === "foreign" ? "<b>Blocked</b>: a patch site holds bytes this editor does not recognise"
+    : t.state === "not-found" ? "<b>Not found</b>: no patch site on this disc"
+    : `<b>${esc(t.state)}</b>: partly applied; restore it from the CLI to be safe`;
   const groups = [...new Set(toggles.map(t => t.group || "Code patches"))];
   body.innerHTML = groups.map(gname => `<div class="subhd">${esc(gname)}</div>
     <div class="grid" style="padding-top:0">` + toggles.filter(t => (t.group || "Code patches") === gname).map(t => {
