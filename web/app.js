@@ -140,6 +140,7 @@ function isoGlueHandles(){
     setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
     runealways:g("iso_runealways"), setrunealways:g("iso_setrunealways"),
     dawnrune:g("iso_dawnrune"), setdawnrune:g("iso_setdawnrune"),
+    toggles:g("iso_toggles"), settoggle:g("iso_settoggle"),
     effecttargets:g("iso_effecttargets"), customsetbonus:g("iso_customsetbonus"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
   };
@@ -167,6 +168,7 @@ import s5fields as F
 import s5patch as P
 import s5save as SV
 import s5changes as CH
+import s5toggles as TG
 SV.BACKUPS = False; P.BACKUPS = False   # no real files in the browser FS
 
 # ===== Save editor =====
@@ -606,6 +608,16 @@ def iso_dawnrune():
 def iso_setdawnrune(count):
     try:
         with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_dawn_unlock(g, int(count)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_toggles():
+    try:
+        with P.Iso(ISO) as g: return json.dumps({"toggles": TG.list_toggles(g)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_settoggle(tid, on, originals_json):
+    try:
+        orig = json.loads(originals_json) if originals_json else None
+        with P.Iso(ISO, writable=True) as g:
+            return json.dumps(TG.set_toggle(g, tid, bool(int(on)), orig))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_effecttargets():
     try:
