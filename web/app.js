@@ -751,7 +751,13 @@ async function pickViaFS(){
     const [h] = await window.showOpenFilePicker({ types: [{ description: "PS2 save",
       accept: { "application/octet-stream": [".ps2",".mc2",".mcd",".bin",".psu",".cbs",".xps",".sps"] } }] });
     saveHandle = h; const f = await h.getFile(); openFile(f, h);
-  }catch(e){ if(e && e.name !== "AbortError") toast("Could not open file: " + e.message, "bad"); }
+  }catch(e){
+    if(e && e.name === "AbortError") return;   // user cancelled the picker: stay silent
+    // The API exists but the platform blocked the call (embedded or automated
+    // browsers refuse with "not allowed by the user agent or the platform").
+    // Fall back to the plain file input so a save can still be opened.
+    $("file").click();
+  }
 }
 
 async function openFile(f, handle){

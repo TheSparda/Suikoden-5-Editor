@@ -100,11 +100,20 @@ async function pickISO() {
       const [h] = await window.showOpenFilePicker({
         types: [{ description: "PS2 ISO", accept: { "application/octet-stream": [".iso",".bin",".img"] } }] });
       await openISO(h);
-    } catch (e) { if (e && e.name !== "AbortError") toast("Could not open ISO: " + e.message, "bad"); }
-    return;
+      return;
+    } catch (e) {
+      if (e && e.name === "AbortError") return;   // user cancelled the picker: stay silent
+      // The API exists but the platform blocked the call (embedded or automated
+      // browsers refuse with "not allowed by the user agent or the platform").
+      // Fall through to the plain file input so a disc can still be opened.
+    }
   }
-  // fallback: plain file input (works on mobile / Firefox / Safari). No writable handle,
-  // so save-in-place is unavailable — but editing + recipe export work.
+  pickISOviaInput();
+}
+/* Plain file input path: mobile / Firefox / Safari, and the fallback when the
+ * FS Access picker exists but is blocked. No writable handle, so save-in-place
+ * is unavailable, but editing + recipe export work. */
+function pickISOviaInput() {
   const inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".iso,.bin,.img,application/octet-stream";
   inp.onchange = () => { if (inp.files[0]) openISO(inp.files[0]); };
