@@ -13,8 +13,8 @@ copy.
 > 💬 **Feature requests and support:** the Toran Castle Discord,
 > https://discord.gg/KesHMX5P2Z
 
-> 🖥️ There is also a legacy desktop app (`Editor/s5editor.py`). It is **retired**: it still
-> runs, but every new feature lands in the web editor. See
+> 🖥️ The desktop editor was retired after v1.20.7 and removed from this repo; its final
+> frozen build lives at the `v1.20.7` tag. The web editor is the only version now. See
 > [The desktop editor](#the-desktop-editor-retired).
 
 Current release: **v1.18.0**.
@@ -421,7 +421,7 @@ pure-Python modules **unchanged** inside Pyodide (CPython compiled to WebAssembl
 - **Saves**: [`Editor/s5save.py`](Editor/s5save.py). The picked file is written to
   `/save.bin` in Pyodide's in-memory filesystem, the module's normal path-based functions run
   against it, and the edited bytes are read back for download. Checksums, ECC and the
-  CodeBreaker / SharkPort containers are all handled by the trusted desktop code.
+  CodeBreaker / SharkPort containers are all handled by the same trusted engine code.
 - **ISO**: [`Editor/s5patch.py`](Editor/s5patch.py) plus
   [`Editor/s5fields.py`](Editor/s5fields.py). Because the disc is around 4 GB we do **not**
   load it into memory. We read a **~6.6 MB front slice** (`file.slice(0, 0x6A0000)`), which
@@ -481,23 +481,16 @@ internal working notes are all git-ignored and never distributed.
 
 ## The desktop editor (retired)
 
-The local app (`Editor/s5editor.py`, started by `Start Editor (Mac).command` or
-`Start Editor (Windows).bat`, Python 3.8+ and standard library only, serving
-`http://127.0.0.1:8055/`) is in **maintenance only**. It still runs and still edits what it
-always did, but it is no longer where the work happens.
+The desktop editor was retired after **v1.20.7**. That release is the final desktop
+build, frozen at the
+[`v1.20.7` tag](https://github.com/TheSparda/Suikoden-5-Editor/tree/v1.20.7), and the
+desktop code has been removed from this repo. The web editor is the only version now,
+and the only one receiving new features.
 
-- **Nothing is lost.** Both front-ends drive the same verified engine (`s5patch.py`,
-  `s5fields.py`, `s5save.py`), which is **not** retired. The web app runs those exact modules
-  in Pyodide and the CLI keeps working, so engine fixes reach both.
-- **Web-only features:** Sets, Passives, the Dawn Rune toggle, gear name and description
-  editing, the Excel / CSV round-trip with its capping and wrong-sheet guard, and the enemy
-  stat scaler.
-- **Still desktop and CLI only:** overlay extraction and re-insertion, the overlay text
-  editor for story and dialogue text (endings, letters, lore, newspaper), raw hex peeking,
-  and the boot-ELF string editor. ELF string editing was deliberately dropped from the web
-  build as unreliable.
-- **Your files are portable.** ISOs, saves and `.s5mod` recipes move between the two
-  unchanged, so you can switch mid-project.
+Nothing else was lost in the move: the desktop app and the web editor always drove the
+same verified engine (`s5patch.py`, `s5fields.py`, `s5save.py`), and those modules stay.
+The web app runs them in Pyodide, and the CLI below keeps working, including the
+overlay and xdelta commands that never had a web UI.
 
 ### xdelta, in one paragraph
 
@@ -543,8 +536,6 @@ Editor/
   s5fields.py            verified ISO tables and field schema (NTSC-U + PAL bases, region switch)
   s5save.py              PS2 memory-card and standalone-save engine (.ps2 / .psu / .xps / .sps / .cbs)
   s5_*.json              verified name and reference data (runes, items, armor, characters, ...)
-  s5editor.py            the retired local web app
-Start Editor (Mac).command / (Windows).bat   launchers for the retired desktop app
 ```
 
 ## Tests
