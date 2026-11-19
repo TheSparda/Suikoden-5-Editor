@@ -113,7 +113,7 @@ function isoGlueHandles(){
   const g = (n) => pyodide.globals.get(n);
   return {
     load:g("iso_load"), verify:g("iso_verify"), maps:g("iso_maps"), reference:g("iso_reference"),
-    changes:g("iso_changes"),
+    changes:g("iso_changes"), stageinfo:g("iso_stageinfo"),
     chars:g("iso_chars"), char:g("iso_char"), setchar:g("iso_setchar"),
     loadout:g("iso_loadout"), setloadout:g("iso_setloadout"),
     spellnames:g("iso_spellnames"), spell:g("iso_spell"), setspell:g("iso_setspell"),
@@ -245,6 +245,19 @@ def iso_changes():
         cur = open(ISO, "rb").read()
         base = open("/base.bin", "rb").read()
         return json.dumps(CH.diff_report(cur, base))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_stageinfo(path):
+    # {lba, size, slot} of the BATLE.ROM overlay on the disc image at path,
+    # or {} when the disc has none. The overlay's directory record lives in
+    # the front slice, so this works on the slice alone; the overlay BYTES
+    # sit far past it (US: byte 0xB54000), which is why the page stages them
+    # from the retained full-disc File at this lba/size before the drop-rate
+    # panel's engine calls run (issue #46).
+    try:
+        ov = next((o for o in P.list_overlays(path) if o["name"] == "BATLE.ROM"), None)
+        if not ov: return json.dumps({})
+        slot = ((ov["size"] + 2047) // 2048) * 2048
+        return json.dumps({"lba": ov["lba"], "size": ov["size"], "slot": slot})
     except Exception as e: return json.dumps({"error": str(e)})
 
 def _setter(fn):

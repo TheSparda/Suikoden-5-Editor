@@ -5,8 +5,12 @@
  * a ~6.6 MB TRUNCATED FRONT-SLICE of the ISO written to Pyodide's /iso.bin. Every
  * editable table (serial, stats, gear, spells, runes, rune/heal prices, enemies, unites, MP,
  * skill effects, names) lives below that offset, so absolute-seek reads/writes work on
- * the slice exactly as on the full disc. On Save we diff the edited slice against the
- * pristine one and write ONLY the changed byte-runs back into the real 4 GB file in
+ * the slice exactly as on the full disc. The ONE exception is the BATLE.ROM overlay
+ * (US: byte 0xB54000), whose drop-rate immediates the Enemies panel edits: its sector
+ * slot is staged on demand from the retained full-disc File at its real offset (see
+ * stageBatleInto below), with the pristine/undo baselines extended identically, so
+ * the diff machinery below never notices the join. On Save we diff the edited image
+ * against the pristine one and write ONLY the changed byte-runs back into the real 4 GB file in
  * place (keepExistingData) — never the whole disc. A .s5mod recipe lets edits be shared
  * without the disc. Version/region is gated before opening.
  *
@@ -22,6 +26,7 @@ const ISO_PATH = "/iso.bin";
 let isoHandle = null;              // FileSystemFileHandle (read+write)
 let ORIG = null;                  // pristine slice (Uint8Array) for diffing
 let isoFile = null;               // the whole disc, for the asset tools' range reads
+let batleStaged = false;          // BATLE.ROM slot staged into /iso.bin (+ baselines)
 let isoRegion = null;
 let isoMAPS = null;
 let SPELL_LIST = [];              // [{id,name}] for spellid pickers
@@ -118,6 +123,7 @@ async function openISO(src) {
     const load = JSON.parse(window.PYISO.load());
     if (load.error) { toast(load.error, "bad"); return; }
     isoHandle = isHandle ? src : null; ORIG = slice.slice(); ISO_PREV = slice.slice();
+    batleStaged = false;
     isoRegion = load.region; isoEdits = {}; ISO_PREV_EDITS = {}; undoStack.length = 0; redoStack.length = 0;
     $("isoFilename").textContent = `${file.name} · ${(file.size/1073741824).toFixed(2)} GB · ${load.regionName}${isHandle ? "" : " · read-only (recipe export only)"}`;
     isoMAPS = JSON.parse(window.PYISO.maps());
@@ -148,6 +154,52 @@ async function restoreLastISO() {
     } catch (e) { toast("Could not reopen: " + e.message, "bad"); }
   };
   $("isoLastX").onclick = async () => { await idbDel("iso:last"); row.classList.add("hidden"); };
+}
+
+/* ---------------- on-demand BATLE.ROM staging (issue #46) ----------------
+ * The drop-rate panel's engine calls (PYISO.droprates / setdroprates /
+ * dropratesrestore) read and rewrite the BATLE.ROM overlay by absolute offset,
+ * but the overlay sits far past the front slice, so on the bare slice those
+ * reads hit EOF and the panel refused on every disc. Stage the overlay's
+ * sector slot from the retained full-disc File into the Pyodide image at its
+ * real offset, zero-filling the gap; the engine then works exactly as on
+ * desktop, and its whole-sector rewrite stays inside the staged slot (a
+ * re-encoded container that outgrows the slot is refused there, never
+ * truncated). Returns {off, bytes} when it extended the image, else null
+ * (no BATLE.ROM on this disc, or the image is already long enough). */
+async function stageBatleInto(file, pyPath) {
+  const info = JSON.parse(window.PYISO.stageinfo(pyPath));
+  if (info.error || !info.lba) return null;
+  const off = info.lba * SECT, len = info.slot;
+  const cur = pyodide.FS.readFile(pyPath);
+  if (cur.length >= off + len) return null;
+  const bytes = new Uint8Array(await file.slice(off, off + len).arrayBuffer());
+  if (bytes.length < len) return null;      // truncated source: leave the image alone
+  const out = new Uint8Array(off + len);
+  out.set(cur, 0); out.set(bytes, off);
+  pyodide.FS.writeFile(pyPath, out);
+  return { off, bytes };
+}
+/* Stage BATLE.ROM into /iso.bin once per opened disc, extending the pristine
+ * (ORIG) and undo (ISO_PREV) baselines with the SAME bytes in the same step,
+ * so the diff/save/recipe/undo machinery sees one consistent image and the
+ * staging itself registers as no change. A failed attempt is retried on the
+ * next Enemies open; a disc without the overlay just lets the panel report
+ * the engine's own error. */
+async function ensureBatleStaged() {
+  if (batleStaged || !isoFile) return;
+  try {
+    const st = await stageBatleInto(isoFile, ISO_PATH);
+    if (st) {
+      const end = st.off + st.bytes.length;
+      const ext = (arr) => {
+        if (!arr || arr.length >= end) return arr;
+        const o = new Uint8Array(end); o.set(arr, 0); o.set(st.bytes, st.off); return o;
+      };
+      ORIG = ext(ORIG); ISO_PREV = ext(ISO_PREV);
+    }
+    batleStaged = true;
+  } catch (e) { console.error("BATLE.ROM staging failed:", e); }
 }
 
 /* ---------------- tab strip ---------------- */
@@ -1208,6 +1260,7 @@ VIEW_RENDER.enemy = async (body) => {
       <select id="isoEsel">${list.map(e=>`<option value="${e.id}">${e.id}: ${esc(e.name)} (HP ${e.hp})</option>`).join("")}</select></div>
     <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).enemy||"")}</div>
     <div id="isoEbody"></div>`;
+  await ensureBatleStaged();   // the drop-rate panel reads the BATLE overlay, past the slice
   renderDropRates();
   $("isoEsel").onchange = () => renderEnemy(+$("isoEsel").value);
   if (list.length) renderEnemy(+list[0].id); else $("isoEbody").innerHTML = `<p class="note" style="padding:14px">No enemy records found.</p>`;
@@ -1793,8 +1846,9 @@ async function pakZip(i) {
 
 /* Changes tab: a decoded diff of the open disc against a pristine base disc
  * the user picks. All decoding happens in Python (Editor/s5changes.py, whose
- * region map is built from s5fields' own table constants); this view only
- * ships the base disc's front slice to /base.bin and renders the rows.
+ * region map is built from s5fields' own table constants); this view ships
+ * the base disc's front slice (plus its staged BATLE.ROM region) to
+ * /base.bin and renders the rows.
  * Changed bytes no table claims are reported as Unmapped hex rows, never
  * dropped, so the list is complete. */
 VIEW_RENDER.changes = async (body) => {
@@ -1803,8 +1857,9 @@ VIEW_RENDER.changes = async (body) => {
     (including any edits made in this session) against a pristine, unmodified copy of the
     game. Every differing table field is listed with its old and new values. Changes in
     places no table covers (code patches, overlays) are shown as <b>Unmapped</b> hex rows
-    rather than hidden. Only the front slice of the base disc is read, the same slice the
-    editor itself works on. The comparison runs in the Python engine and can take a few
+    rather than hidden. The base disc is read the same way the editor reads the open
+    disc: its front slice plus the BATLE.ROM overlay region, so drop-rate edits are
+    covered too. The comparison runs in the Python engine and can take a few
     seconds on a large diff.</p>
     <div class="row" style="padding:8px 0">
       <button class="mini" id="chgPick">Choose pristine base ISO…</button>
@@ -1826,11 +1881,16 @@ VIEW_RENDER.changes = async (body) => {
     try {
       const slice = new Uint8Array(await baseFile.slice(0, ISO_END).arrayBuffer());
       pyodide.FS.writeFile("/base.bin", slice);
+      // stage the base's BATLE.ROM region too, matching the open disc's staged
+      // image, so a drop-rate edit appears below (as Unmapped rows) instead of
+      // falling past the compared length; best-effort (a base without the
+      // overlay, or a shorter file, just compares what was staged)
+      try { await stageBatleInto(baseFile, "/base.bin"); } catch (_) {}
       const rep = JSON.parse(window.PYISO.changes());
       if (rep.error) { out.innerHTML = `<span class="bad">${esc(rep.error)}</span>`; return; }
       const s = rep.summary;
       if (!rep.rows.length) {
-        out.innerHTML = `<p class="ok" style="padding:6px 0">No differences in the front slice.
+        out.innerHTML = `<p class="ok" style="padding:6px 0">No differences found.
           This disc matches the base everywhere the editor can see.</p>`;
         return;
       }
