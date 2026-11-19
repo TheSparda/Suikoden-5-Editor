@@ -382,6 +382,9 @@ and the two Cook award chances at rank 6 and rank 7 (stock 20 and 30). The slot 
 the dish rate live in the battle overlay (BATLE.ROM) and are rewritten through the overlay
 machinery; the Cook chances are data in the support-skill table. Restore stock writes the
 original constants back. There is no per-enemy rate: the game simply does not store one.
+Rebuilt discs whose BATLE.ROM sits in a stored or epb container instead of the stock szl
+form (the undub patch, some rips) work too: the overlay is read and rewritten in whichever
+form the disc already uses.
 
 ---
 

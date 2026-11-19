@@ -6,11 +6,18 @@ pristine file): stock reads are 40/20/10/5/1, dish 100, Cook 20/30; a custom
 write reads back; the byte diff stays inside the BATLE sector slot, its
 directory record and the four Cook bytes; restore returns the stock values
 with the overlay payload byte-identical to stock; out-of-range values and
-foreign layouts are refused before anything is written."""
-import glob, os, sys, tempfile
+foreign layouts are refused before anything is written. The same cycle
+then runs on copies whose BATLE.ROM has been repacked into the stored
+(non) and byte-pair (epb) container forms used by rebuilt discs (the
+undub patch), relocated to their own allocation as a rebuild would lay
+them out: the behavior must be identical, the write-back must keep the
+disc's own form, and an hff container must be refused with the form
+named."""
+import glob, os, struct, sys, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.join(ROOT, "Editor"))
 import s5patch as P
+import s5rom
 
 P.BACKUPS = False
 P.RECORD_MODS = False
@@ -113,6 +120,90 @@ for src in isos:
         check(f"{tag}: foreign drop processor refused", False)
     except ValueError:
         check(f"{tag}: foreign drop processor refused", True)
+
+    # Rebuilt-disc container forms: the stock payload repacked as a stored
+    # (non) and a byte-pair (epb) container, relocated past the slice end
+    # with its directory record repointed, the way a disc rebuild lays the
+    # file out (a stored BATLE.ROM is far larger than the stock szl slot).
+    # The whole cycle must behave exactly as on the stock form, and the
+    # write-back must keep the disc's own container form.
+    for form in ("non", "epb"):
+        container = s5rom.pack_container(stock_payload, form)
+        vslot = ((len(container) + 2047) // 2048) * 2048
+        vdata = bytearray(data)
+        vdata[rec_off + 2:rec_off + 6] = (end // 2048).to_bytes(4, "little")
+        vdata[rec_off + 6:rec_off + 10] = (end // 2048).to_bytes(4, "big")
+        vdata[rec_off + 10:rec_off + 14] = len(container).to_bytes(4, "little")
+        vdata[rec_off + 14:rec_off + 18] = len(container).to_bytes(4, "big")
+        vdata += container
+        vdata += b"\x00" * (end + vslot - len(vdata))
+        vwork = os.path.join(tempfile.mkdtemp(), f"slice-{form}.iso")
+        open(vwork, "wb").write(bytes(vdata))
+        vbase = end
+
+        with P.Iso(vwork) as g: r = P.read_drop_rates(g)
+        check(f"{tag}/{form}: stock drop rates read from a {form} BATLE.ROM",
+              r["slots"] == STOCK["slots"] and r["dish"] == STOCK["dish"]
+              and r["cook"] == STOCK["cook"], r)
+
+        with P.Iso(vwork, writable=True) as g:
+            P.write_drop_rates(g, CUSTOM["slots"], CUSTOM["dish"],
+                               CUSTOM["cook"])
+        with P.Iso(vwork) as g: r = P.read_drop_rates(g)
+        check(f"{tag}/{form}: custom rates write and read back",
+              r["slots"] == CUSTOM["slots"] and r["dish"] == CUSTOM["dish"]
+              and r["cook"] == CUSTOM["cook"], r)
+
+        vnow = open(vwork, "rb").read()
+        vdiffs = [i for i in range(len(vnow)) if vnow[i] != vdata[i]]
+        def vallowed(i):
+            return (vbase <= i < vbase + vslot
+                    or rec_off <= i < rec_off + rec_len
+                    or cook6 <= i < cook6 + 4)
+        check(f"{tag}/{form}: byte diff confined to the BATLE slot, its "
+              f"directory record and the Cook bytes",
+              bool(vdiffs) and all(vallowed(i) for i in vdiffs),
+              [hex(i) for i in vdiffs if not vallowed(i)][:5])
+        with open(vwork, "rb") as f:
+            f.seek(vbase + 8); type_word = f.read(4)
+        check(f"{tag}/{form}: write-back keeps the {form} container form",
+              type_word == struct.pack("<I", s5rom.TYPE_WORDS[form]))
+
+        with P.Iso(vwork, writable=True) as g: P.restore_drop_rates(g)
+        with P.Iso(vwork) as g:
+            r = P.read_drop_rates(g); payload = P._batle_bin(g)
+        check(f"{tag}/{form}: restore returns the stock rates",
+              r["slots"] == STOCK["slots"] and r["dish"] == STOCK["dish"]
+              and r["cook"] == STOCK["cook"], r)
+        check(f"{tag}/{form}: restored overlay payload is byte-identical "
+              f"to stock", payload == stock_payload)
+        with open(vwork, "rb") as f:
+            f.seek(vbase + 8); type_word = f.read(4)
+        check(f"{tag}/{form}: restore keeps the {form} container form",
+              type_word == struct.pack("<I", s5rom.TYPE_WORDS[form]))
+
+    # An hff BATLE.ROM is refused with the form named, before any write:
+    # the stock slice with only the container type word flipped.
+    hwork = os.path.join(tempfile.mkdtemp(), "slice-hff.iso")
+    hdata = bytearray(data)
+    hdata[base + 8:base + 12] = struct.pack("<I", s5rom.TYPE_WORDS["hff"])
+    open(hwork, "wb").write(bytes(hdata))
+    try:
+        with P.Iso(hwork) as g: P.read_drop_rates(g)
+        check(f"{tag}: hff BATLE.ROM refused with the form named", False)
+    except ValueError as e:
+        check(f"{tag}: hff BATLE.ROM refused with the form named",
+              "hff" in str(e), str(e))
+    try:
+        with P.Iso(hwork, writable=True) as g:
+            P.write_drop_rates(g, CUSTOM["slots"], CUSTOM["dish"],
+                               CUSTOM["cook"])
+        check(f"{tag}: hff write refused with the form named", False)
+    except ValueError as e:
+        check(f"{tag}: hff write refused with the form named",
+              "hff" in str(e), str(e))
+    check(f"{tag}: refused hff write changed nothing",
+          open(hwork, "rb").read() == bytes(hdata))
 
 check("at least one real ISO exercised", ran > 0, f"isos={isos}")
 print(f"\n{'ALL PASS' if not fails else 'FAILURES: ' + ', '.join(fails)}")

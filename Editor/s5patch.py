@@ -182,8 +182,8 @@ def apply_xdelta(pristine, patch, out):
 
 
 # ---- ISO9660 directory + compressed-overlay (.ROM) tools ---------------------
-# The disc's OVL/ folder holds LZSS-compressed engine overlays (BATLE.ROM, WAR.ROM,
-# FISHING.ROM, ...). Container: byte-reversed ASCII tags. "\x00mor"=rom hdr
+# The disc's OVL/ folder holds compressed engine overlays (BATLE.ROM, WAR.ROM,
+# FISHING.ROM, ...; LZSS on stock discs). Container: byte-reversed ASCII tags. "\x00mor"=rom hdr
 # (u32 tag, u32 hdrSize), then "\x00szl"=lzs chunk (u32 decSize, u32 compSize),
 # payload at fileStart+0x40. Compression is classic LZSS (4096-byte window, zero-init,
 # r=N-18, flag bit 1=literal else [lo | (hi&0xF0)<<4 offset, (hi&0x0F)+3 length]).
@@ -481,6 +481,124 @@ def _bpe_decompress(data, dec_size):
     return bytes(out[:dec_size])
 
 
+def _bpe_encode_header(Z, Y):
+    """Serialize a 256-entry epb pair table (Z/Y lists of ints) into the
+    run-coded block header _bpe_decompress parses. Literal runs are skipped
+    with >= 0x80 control bytes (each skip is followed by exactly one explicit
+    entry, unless the skip completes the table); pair entries are emitted in
+    explicit runs (< 0x80 control bytes, at most 128 entries per run),
+    absorbing isolated single literals between pairs into the run when that
+    is cheaper than a separate skip. Mirrors s5rom._epb_encode_header."""
+    out = bytearray()
+
+    def explicit(idx):
+        out.append(Z[idx])
+        if Z[idx] != idx:
+            out.append(Y[idx])
+
+    i = 0
+    while i < 256:
+        if Z[i] == i:
+            run = 0
+            while i + run < 256 and Z[i + run] == i + run:
+                run += 1
+            if i + run == 256:
+                rem = run
+                base = i
+                while rem > 0:
+                    if rem <= 128:
+                        out.append(0x7F + rem)
+                        rem = 0
+                    else:
+                        out.append(0xFF)  # skip 128, one explicit follows
+                        out.append(base + 128)  # explicit literal
+                        base += 129
+                        rem -= 129
+                i = 256
+            elif run <= 128:
+                out.append(0x7F + run)  # skip the run, one explicit follows
+                i += run
+                explicit(i)  # the non-literal that ended the run
+                i += 1
+            else:
+                out.append(0xFF)  # skip 128, one explicit follows
+                out.append(i + 128)  # explicit literal
+                i += 129
+        else:
+            count = 0
+            j = i
+            while j < 256 and count < 128:
+                if Z[j] != j:
+                    count += 1
+                    j += 1
+                elif (j + 1 < 256 and Z[j + 1] != j + 1
+                        and count + 2 <= 128):
+                    count += 1  # the gap literal; the pair counts next pass
+                    j += 1
+                else:
+                    break
+            if count == 0:
+                count = 1
+            out.append(count - 1)
+            for k in range(i, i + count):
+                explicit(k)
+            i += count
+    return bytes(out)
+
+
+# Output bytes per epb block; 2500 was measured to give the best size on
+# this corpus (smaller blocks see fewer distinct byte values, which leaves
+# more of the 256 symbols free to serve as pairs).
+_BPE_BLOCK_OUT = 2500
+# A pair must occur at least this many times in the current sequence to be
+# worth its 2 header bytes (self-pairs need one extra occurrence because
+# overlapping occurrences cannot all be replaced).
+_BPE_MIN_FREQ = 3
+
+
+def _bpe_compress(data):
+    """Greedy per-block byte-pair encoder inverting _bpe_decompress (and
+    mirroring s5rom.epb_compress): decode(encode(x)) == x.
+
+    The payload is split into blocks of at most _BPE_BLOCK_OUT bytes. Per
+    block, byte values present in the block must stay literals (a literal
+    symbol i is the only way to emit byte i), so pair symbols are allocated
+    from the byte values absent from the block. Merges are greedy: count
+    adjacent symbol pairs, take the most frequent (ties go to the lowest
+    pair), assign it the next free symbol, and replace all its
+    non-overlapping occurrences left to right. Counting uses
+    collections.Counter; replacement uses bytes split/join, whose
+    left-to-right non-overlapping matches are exactly the occurrences a
+    pair can claim (a pair of two different bytes can never overlap itself,
+    and split/join claims every other occurrence of a self-pair)."""
+    from collections import Counter
+    out = bytearray()
+    for off in range(0, len(data), _BPE_BLOCK_OUT):
+        chunk = data[off:off + _BPE_BLOCK_OUT]
+        distinct = set(chunk)
+        free = sorted(set(range(256)) - distinct)
+        Z = list(range(256))
+        Y = [0] * 256
+        seq = bytes(chunk)
+        while free and len(seq) >= 2:
+            counts = Counter(zip(seq, seq[1:]))
+            a = b = 0
+            cnt = -1
+            for pair, c in counts.items():
+                if c > cnt or (c == cnt and pair < (a, b)):
+                    (a, b), cnt = pair, c
+            if cnt < _BPE_MIN_FREQ + (1 if a == b else 0):
+                break
+            s = free.pop(0)
+            Z[s] = a
+            Y[s] = b
+            seq = bytes([s]).join(seq.split(bytes([a, b])))
+        out += _bpe_encode_header(Z, Y)
+        out += len(seq).to_bytes(2, "big")
+        out += seq
+    return bytes(out)
+
+
 def _datapak_read(iso_path, name):
     """Find an internal DATA.PAK file by exact then loose name; return (name, decoded_bytes,
     codec). non/szl/bpe are decoded; other codecs return the raw container."""
@@ -766,17 +884,28 @@ def datapak_extract(iso_path, name, out_dir):
 def reinsert_overlay(iso, name, bin_path):
     """Re-compress an edited overlay .bin and write it back into the ISO in place.
     The edited bin MUST be the same length as the original decompressed size (edit
-    values, not layout). Fails if the recompressed container exceeds the file's
-    sector slot. Updates the ISO9660 directory size (LE @+10 + BE @+14)."""
+    values, not layout). The container is rebuilt in the SAME form the disc
+    already uses (szl on stock discs; non or epb on rebuilt ones): the original
+    header bytes, including the type word, are preserved and only the stream is
+    re-encoded. Fails if the rebuilt container exceeds the file's sector slot.
+    Updates the ISO9660 directory size (LE @+10 + BE @+14)."""
     ov = next((o for o in list_overlays(iso.path) if o["name"] == name), None)
     if not ov: raise KeyError(f"no overlay {name!r}")
-    if ov["decSize"] is None: raise ValueError(f"{name} is not a compressed overlay")
-    edited = open(bin_path, "rb").read()
-    if len(edited) != ov["decSize"]:
-        raise ValueError(f"edited bin is {len(edited)} bytes; must equal original "
-                         f"decompressed size {ov['decSize']} (edit values, not size)")
     header = bytearray(iso.rd(ov["lba"] * _SECT, 0x40))   # preserve original header bytes
-    comp = _lzss_compress(edited)
+    codec = rom_codec(header) if bytes(header[0:4]) == b"\x00mor" else None
+    if codec not in ("szl", "non", "bpe"):
+        raise ValueError(f"{name} is not a compressed overlay")
+    dec_size = int.from_bytes(header[0x0C:0x10], "little")
+    edited = open(bin_path, "rb").read()
+    if len(edited) != dec_size:
+        raise ValueError(f"edited bin is {len(edited)} bytes; must equal original "
+                         f"decompressed size {dec_size} (edit values, not size)")
+    if codec == "szl":
+        comp = _lzss_compress(edited)
+    elif codec == "non":
+        comp = edited
+    else:  # bpe
+        comp = _bpe_compress(edited)
     header[0x0C:0x10] = len(edited).to_bytes(4, "little")   # decSize (unchanged)
     header[0x10:0x14] = len(comp).to_bytes(4, "little")     # compSize
     container = bytes(header) + comp
@@ -2754,17 +2883,40 @@ _DROP_SITES = (
 )
 
 
+# Display names for the .ROM container forms, keyed by rom_codec's names:
+# the canonical names are s5rom.TYPES' (this module calls the byte-pair
+# codec "bpe" and the Huffman codec "ffh"; users know them as epb and hff).
+_BATLE_FORM_NAMES = {"non": "non", "szl": "szl", "bpe": "epb", "ffh": "hff"}
+
+
 def _batle_bin(iso):
-    """The decompressed BATLE overlay bytes from this disc, in memory."""
+    """The decompressed BATLE overlay bytes from this disc, in memory.
+    Stock discs store the overlay as an szl (LZSS) container, but rebuilt
+    discs (the undub patch, some rips) may store it as a non (stored) or
+    epb (byte-pair) container instead; all three forms are read. Any other
+    form is refused with the form named, never guessed at."""
     ov = next((o for o in list_overlays(iso.path) if o["name"] == "BATLE.ROM"),
               None)
     if ov is None:
         raise ValueError("this disc has no BATLE.ROM overlay")
     raw = iso.rd(ov["lba"] * _SECT, ov["size"])
-    if raw[0:4] == b"\x00mor" and raw[8:12] == b"\x00szl":
-        dec = int.from_bytes(raw[0x0C:0x10], "little")
+    if raw[0:4] != b"\x00mor":
+        raise ValueError("BATLE.ROM is not in the expected container form")
+    codec = rom_codec(raw)
+    dec = int.from_bytes(raw[0x0C:0x10], "little")
+    if codec == "szl":
         return _lzss_decompress(raw[0x40:], dec)
-    raise ValueError("BATLE.ROM is not in the expected compressed form")
+    if codec == "non":
+        return bytes(raw[0x40:0x40 + dec])
+    if codec == "bpe":
+        return _bpe_decompress(raw[0x40:], dec)
+    name = _BATLE_FORM_NAMES.get(codec)
+    if name is not None:
+        raise ValueError("BATLE.ROM on this disc is stored in %s form, "
+                         "which the drop-rate editor cannot read" % name)
+    raise ValueError("BATLE.ROM on this disc has an unrecognised container "
+                     "form (type word 0x%08X), which the drop-rate editor "
+                     "cannot read" % int.from_bytes(raw[8:12], "little"))
 
 
 def _drop_site_rates(data):

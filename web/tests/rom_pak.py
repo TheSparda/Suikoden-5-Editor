@@ -56,7 +56,7 @@ def main():
     try:
         # ---- codec: synthetic round trips ----------------------------------
         payload = bytes(range(256)) * 40 + b"Suikoden V overlay test " * 64
-        for t in ("szl", "non"):
+        for t in ("szl", "non", "epb"):
             blob = s5rom.pack_container(payload, t)
             chk(f"pack/unpack round trip ({t})",
                 s5rom.unpack_image(blob) == payload)
@@ -83,7 +83,7 @@ def main():
             s5rom.unpack_image(chain) == a + b)
 
         # ---- codec: unsupported types --------------------------------------
-        for t in ("epb", "hff"):
+        for t in ("hff",):
             expect_rom_error(f"pack_container refuses to encode {t}",
                              lambda t=t: s5rom.pack_container(payload, t),
                              (s5rom.UnsupportedMemberError,))
@@ -154,25 +154,31 @@ def main():
         chk("CLI pak-extract README.TXT (6,098 bytes)",
             r.returncode == 0 and os.path.getsize(readme) == 6098)
 
-        # ---- a real epb-first ROM raises the unsupported error --------------
-        epb_path = None
+        # ---- real epb-first ROMs now unpack, cross-checked ----------------
+        epb_checked = None
         with s5pak.DataPak(ISO) as pak:
             for e in entries:
                 if not e["path"].endswith(".ROM"): continue
                 lba = e["extents"][0][0]
                 pak.f.seek(pak.base + lba * 2048)
-                if struct.unpack_from("<I", pak.f.read(16), 8)[0] == 0x62706500:
-                    epb_path = e["path"]; break
-        chk("found a real epb-first DATA.PAK ROM", epb_path is not None,
-            epb_path or "")
-        if epb_path:
-            raw_path = os.path.join(tmp, "epb.rom")
-            with s5pak.DataPak(ISO) as pak:
-                pak.extract(epb_path, raw_path)
-            blob = open(raw_path, "rb").read()
-            expect_rom_error("real epb ROM raises UnsupportedMemberError",
-                             lambda: s5rom.unpack(blob),
-                             (s5rom.UnsupportedMemberError,))
+                if struct.unpack_from("<I", pak.f.read(16), 8)[0] != 0x62706500:
+                    continue
+                raw_path = os.path.join(tmp, "epb.rom")
+                pak.extract(e["path"], raw_path)
+                blob = open(raw_path, "rb").read()
+                try:
+                    members = s5rom.unpack(blob)
+                except s5rom.UnsupportedMemberError:
+                    continue  # chain reaches an hff member; try the next
+                codec, first, decoded = s5patch.rom_decode(blob)
+                if decoded and members and members[0][2] == first:
+                    epb_checked = (e["path"], len(members))
+                    break
+        chk("a real epb-first DATA.PAK ROM unpacks in s5rom, first member "
+            "matching the engine's independent bpe decoder",
+            epb_checked is not None,
+            f"{epb_checked[0]} ({epb_checked[1]} members)"
+            if epb_checked else "")
 
         # ---- writes: overlay-set on a throwaway copy -------------------------
         import shutil
