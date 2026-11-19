@@ -986,8 +986,21 @@ async function openChars(i){const sv=window._saves[i];const box=document.getElem
  box.innerHTML=`<div class=row><span class=note>Character</span><select id="csel${i}" onchange="renderChar(${i})">${opts}</select>`
   +`<button onclick="writeChar(${i})">Write character</button></div><div id="cfld${i}"></div>`;
  renderChar(i);}
-/* Recruitment status line (issue #39): read-only, from the game's status
-   word via s5save.recruit_state. */
+/* Per-character recruit toggle (issue #39): a checkbox over the game's
+   status word, collected by writeChar and written by s5save.set_recruited
+   (0x0302 recruits, 0x0100 unrecruits; both proven on a roster screen,
+   ROSTER_VERIFY.md). The checkbox is live only where the engine will
+   write: a recruitable character whose record exists and who is not in
+   the party. Everywhere else it renders disabled with the reason,
+   mirroring the engine guards. */
+function recruitToggleHTML(i,c){
+ const dis=(checked,note)=>`<label class=chk><input type=checkbox ${checked?'checked':''} disabled> <span class=note>${note}</span></label>`;
+ if(!c.recruitable)return dis(false,'not recruitable');
+ if(c.inParty)return dis(true,'in party: remove from the party first to unrecruit');
+ if(c.recruitState==='none')return dis(false,'no record in this save yet');
+ return `<label class=chk><input type=checkbox id="ce${i}_rec" ${c.recruited?'checked':''}> <span class=note>in the roster</span></label>`;}
+/* Recruitment status line (issue #39), from the game's status word via
+   s5save.recruit_state. */
 function recruitStatusText(c){
  if(!c.recruitable)return 'not recruitable';
  if(c.recruitState==='party')return 'Recruited (in party)';
@@ -1007,7 +1020,7 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
    <input id="recfilter${i}" size=18 placeholder="search name…" oninput="recruitFilter(${i})">
    <span class=note>greyed = not recruitable (story/antagonist)</span>
   </div>
-  <div class=note style="padding:8px 14px 0;text-transform:none">Read from the game's status records; recruitment cannot be edited (issue #39).</div>
+  <div class=note style="padding:8px 14px 0;text-transform:none">Read from the game's status records (issue #39). To recruit or unrecruit someone, open them in the character panel and use the Recruited toggle.</div>
   <div id="pairwarn${i}"></div>
   <div id="recgrid${i}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px"></div></div>`;
  const grid=document.getElementById('recgrid'+i);
@@ -1024,13 +1037,14 @@ function recruitCount(i){const r=CHARDATA[i];if(!r)return;
  recruitPairWarn(i);}
 /* Eresh (10) and Euram (108) are mutually exclusive in normal play (issue #24).
    Both reading recruited is a state no played save produces, so this warns:
-   it names the likely source (a change made outside gameplay) and the repair
-   (restore a backup), since the editor itself cannot change recruitment. */
+   it names the likely sources (a change made outside gameplay, or this
+   editor's own recruit toggle) and the repair (unrecruit one of them, or
+   restore a backup). */
 function recruitPairWarn(i){const box=document.getElementById('pairwarn'+i);if(!box)return;
  const r=CHARDATA[i];if(!r){box.innerHTML='';return}
  const state={};r.chars.forEach(c=>{state[c.idx]=!!c.recruited;});
  box.innerHTML=(state[10]&&state[108])
-  ?'<div style="padding:10px 14px 0;color:#d97706">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside gameplay (a cheat device or another tool). This editor cannot change recruitment; if that was not deliberate, restore a backup.</div>'
+  ?'<div style="padding:10px 14px 0;color:#d97706">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside normal gameplay (a cheat device, another tool, or the Recruited toggle in this editor). If that was not deliberate, unrecruit one of them or restore a backup.</div>'
   :'';}
 function recruitFilter(i){const q=document.getElementById('recfilter'+i).value.trim().toLowerCase();
  document.querySelectorAll('#recgrid'+i+' .recrow').forEach(l=>{l.style.display=(!q||l.dataset.name.includes(q))?'':'none';});}
@@ -1057,9 +1071,9 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
   +`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`
   +`<div class=fld><label>EXP</label><div class=in><input type=number id="ce${i}_exp" value="${c.exp||0}" min=0 max=65535></div></div>`
   +`<div class=fld><label>SP</label><div class=in><input type=number id="ce${i}_sp" value="${c.sp||0}" min=0 max=65535></div></div>`
-  +`<div class=fld><label>Recruitment</label><div class=in><span class=note style="text-transform:none">${recruitStatusText(c)}</span></div></div>`
+  +`<div class=fld><label>Recruited</label><div class=in>${recruitToggleHTML(i,c)}</div></div>`
   +`</div>`
-  +`<div class=note style="margin:2px 16px 0;text-transform:none">Recruitment is read from the game's own status record and cannot be edited (issue #39).</div>`
+  +`<div class=note style="margin:2px 16px 0;text-transform:none">The Recruited toggle writes the game's own status record (issue #39): checking it recruits the character, unchecking returns them to not recruited. A character joins with the level, gear and skills already in their record; nothing else in the record is created or changed.</div>`
   +sub('Equipment')
   +`<div class=grid style="grid-template-columns:150px;padding-top:8px"><div class=fld><label>Weapon level</label><div class=in><input type=number id="ce${i}_wlv" value="${c.weaponLevel||1}" min=1 max=16></div></div></div>`
   +`<div class=note style="margin:2px 16px 0">Sharpen level of the character's own weapon (1 to 16); which weapon it is comes from the ISO starting-loadout editor.</div>`
@@ -1109,6 +1123,13 @@ async function writeChar(i){const sv=window._saves[i];const idx=+document.getEle
    const[cat,id]=sel.value.split(':').map(Number);
    const lim=(((r.stackLimits||{})[String(cat)]||[])[id-1])||0;
    edits['c'+idx+'_held'+k]={cat,id,qty:lim?Math.max(1,Math.min(lim,q||1)):0};}}
+ // Recruitment toggle: send the edit only when the checkbox actually
+ // differs from the character's current state, so an untouched toggle
+ // never rewrites the status word (its low byte is a counter the game
+ // keeps; see s5save.set_recruited).
+ {const rec=document.getElementById('ce'+i+'_rec');
+  if(rec&&!rec.disabled){const cur=(CHARDATA[i].chars||[]).find(x=>x.idx===idx);
+   if(!!(cur&&cur.recruited)!==rec.checked)edits['c'+idx+'_rec']=rec.checked?1:0;}}
  const bakOn=document.getElementById('bakToggle').checked;
  // Issue #6: warn when a removal strands a below-threshold slot empty.
  const warns=[];const c0=(CHARDATA[i].chars||[]).find(x=>x.idx===idx);
