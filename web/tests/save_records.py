@@ -141,8 +141,13 @@ if us:
     chk("US: emptying the slot restores the unrecruited read",
         SV.read_character(g3, 58)["recruited"] == 0)
     chk("US: party round trip is byte-identical", g3 == us)
-    g4, ch4 = SV.apply_gamedata_edits(us, {"c58_rec": 1})
-    chk("US: a rec edit is a no-op on a real save", ch4 == 0 and g4 == us)
+    # char 58 has no record in Kevin's save (word 0), so the toggle's
+    # recruit write is refused and the payload is untouched (issue #39)
+    try:
+        SV.apply_gamedata_edits(us, {"c58_rec": 1})
+        chk("US: recruiting a no-record character is refused", False)
+    except ValueError:
+        chk("US: recruiting a no-record character is refused", True)
     # #24 on real data: in Kevin's save neither rival reads recruited
     # (Eresh has no record, Euram's is initialized only). The old suite
     # expected Eresh set: that was the fake bitfield talking (issue #39).

@@ -98,23 +98,28 @@ chk("party assign never touches the old fake-field region",
 gd6, _ = SV.apply_gamedata_edits(gd5, {"party4": SV.PARTY_EMPTY})
 chk("emptying a slot leaves the status words alone",
     all(SV.status_word(gd6, i) == SV.status_word(gd5, i) for i in range(SV.NUM_CHARS)))
-# ---- issue #39: 'rec' edits no longer exist. A staged recruitment edit is
-# ignored outright (not applied, not counted), because the field it used to
-# write was never the recruitment record and corrupted other data.
-gd7, ch7 = SV.apply_gamedata_edits(gd, {"c57_rec": 1})
-chk("rec edit is a no-op", ch7 == 0 and gd7 == gd)
+# ---- issue #39: 'rec' edits write the status word (see set_recruited),
+# but only where the game has initialized a record. This synthetic payload
+# has all-zero words, so recruiting anyone is refused outright (a zeroed
+# record has nothing to join with), while unrecruiting a character who is
+# not recruited is a no-op that does not disturb a same-batch party edit.
+try:
+    SV.apply_gamedata_edits(gd, {"c57_rec": 1})
+    chk("recruit with no record is refused", False)
+except ValueError:
+    chk("recruit with no record is refused", True)
 gd7b, ch7b = SV.apply_gamedata_edits(gd, {"c57_rec": 0, "party4": 57})
-chk("same-batch rec edit ignored, party edit still applies",
+chk("same-batch unrecruit no-op, party edit still applies",
     ch7b == 1 and SV.read_character(gd7b, 57)["recruitState"] == "party")
 # ---- issue #24: Eresh (10) and Euram (108) are mutually exclusive in normal
-# play; with recruitment read-only there is nothing to set. Both read not
-# recruited in this fixture (their words are zero), and rec edits for the
-# pair change nothing; the impossibility warning is a UI concern over the
-# read state.
-gd8, ch8 = SV.apply_gamedata_edits(gd, {"c10_rec": 1, "c108_rec": 1})
-chk("Eresh+Euram rec edits are no-ops", ch8 == 0 and gd8 == gd
-    and SV.read_character(gd8, 10)["recruited"] == 0
-    and SV.read_character(gd8, 108)["recruited"] == 0)
+# play. Both read not recruited in this fixture (their words are zero), so
+# both rec edits are refused here; on a save where a rival's record exists
+# the toggle can recruit them, which is what the pair warning guards.
+try:
+    SV.apply_gamedata_edits(gd, {"c10_rec": 1, "c108_rec": 1})
+    chk("Eresh+Euram rec edits refused on zero words", False)
+except ValueError:
+    chk("Eresh+Euram rec edits refused on zero words", True)
 # ---- issues #2/#19: the byte at 0x12 is the cleared-game marker (a display
 # marker, not an NG+ or fast-forward switch). The relabel changes no data:
 # offset, width and cap are exactly as before, and an edit touches only 0x12.

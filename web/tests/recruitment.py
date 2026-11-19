@@ -4,12 +4,12 @@
 The editor used to read and write a "recruitment bitfield" at payload
 +0xD7CA. That field is fake: the bytes are the tail of an unrelated
 record array, the reads were wrong on genuine saves, and the writes
-corrupted data (RECRUIT_FIELD_AUDIT.md). Recruitment is now READ from
+corrupted data (RECRUIT_FIELD_AUDIT.md). Recruitment is now read from
 the game's own per-character status word, which persists at payload
-0x2A8 + (idx+1)*0x160 + 0xA0 (CHEAT_TABLE_RECRUITMENT.md), and it is
-not writable at all: roster-screen proof for toggle writes was never
-obtained (ROSTER_PROOF.md), so the toggle and Recruit All write paths
-are gone.
+0x2A8 + (idx+1)*0x160 + 0xA0 (CHEAT_TABLE_RECRUITMENT.md). Writing that
+word was later proven on a roster screen in both directions
+(ROSTER_VERIFY.md), so a per-character toggle writes it through
+s5save.set_recruited; Recruit All and every bulk path stay gone.
 
 This suite pins:
 - the word read law and the display rule on the three genuine saves
@@ -18,9 +18,13 @@ This suite pins:
   reading not recruited);
 - the state mapping on synthetic words, including the 0x13/0x17
   high-byte variants and party membership taking precedence;
-- write confinement: no edit the editor offers may move any status
-  word or the old fake-field region, and a 'rec' edit key is a no-op;
-- the write paths staying absent from both frontends and the engine.
+- write confinement: no edit other than a 'rec' toggle may move any
+  status word or the old fake-field region;
+- the toggle write path: canonical values (0x0302 recruit, 0x0100
+  unrecruit) at the reader's slot, a two-byte footprint, read-state
+  round trips, no-ops that move nothing, and the guards (party member,
+  no record, non-recruitable) refusing with ValueError;
+- no bulk write paths in either frontend.
 Real-save sections skip when a fixture is absent.
 """
 import os, sys
@@ -144,19 +148,98 @@ if us:
         [SV.status_word(g2, i) for i in range(SV.NUM_CHARS)] == words_before)
     chk("confinement: the fake-field region is byte-identical after edits",
         g2[FAKE_LO:FAKE_HI] == us[FAKE_LO:FAKE_HI])
-    g3, ch3 = SV.apply_gamedata_edits(us, {"c50_rec": 1, "c107_rec": 1, "c10_rec": 0})
-    chk("confinement: rec edits change nothing and count nothing",
-        ch3 == 0 and g3 == us)
 
-# ---------- the write paths stay absent ----------
+# ---------- the toggle write path ----------
+def diff_bytes(a, b):
+    return [i for i in range(len(a)) if a[i] != b[i]]
+
+def expect_raise(name, gd, edits):
+    try:
+        SV.apply_gamedata_edits(gd, edits)
+    except ValueError:
+        chk(name, True)
+    else:
+        chk(name, False, "no ValueError raised")
+
+if us:
+    off50 = SV.status_word_off(50)
+    g, ch = SV.apply_gamedata_edits(us, {"c50_rec": 1})
+    chk("US: recruiting Richard writes 0x0302 at his status slot",
+        ch == 1 and SV.status_word(g, 50) == SV.RECRUIT_WORD == 0x0302)
+    chk("US: the recruit write moves exactly the word's two bytes",
+        diff_bytes(us, g) == [off50, off50 + 1])
+    chk("US: Richard reads active/recruited after the write",
+        SV.recruit_state(g, 50)["state"] == "active"
+        and SV.recruit_state(g, 50)["recruited"])
+    chk("US: the recruit write leaves the fake-field region alone",
+        g[FAKE_LO:FAKE_HI] == us[FAKE_LO:FAKE_HI])
+    g2, ch2 = SV.apply_gamedata_edits(g, {"c50_rec": 0})
+    chk("US: unrecruiting Richard writes 0x0100, round trip byte-identical",
+        ch2 == 1 and SV.status_word(g2, 50) == SV.UNRECRUIT_WORD == 0x0100
+        and g2 == us)
+    g3, ch3 = SV.apply_gamedata_edits(us, {"c52_rec": 1})
+    chk("US: recruiting an already-recruited character is a no-op",
+        ch3 == 0 and g3 == us)
+    g4, ch4 = SV.apply_gamedata_edits(us, {"c50_rec": 0})
+    chk("US: unrecruiting a not-recruited character is a no-op",
+        ch4 == 0 and g4 == us)
+    off52 = SV.status_word_off(52)
+    g5, ch5 = SV.apply_gamedata_edits(us, {"c52_rec": 0})
+    chk("US: unrecruiting Luserina writes 0x0100, two-byte footprint",
+        ch5 == 1 and SV.status_word(g5, 52) == 0x0100
+        and diff_bytes(us, g5) == [off52, off52 + 1]
+        and SV.recruit_state(g5, 52)["state"] == "initialized")
+    expect_raise("US: unrecruiting a party member is refused (the hero)",
+                 us, {"c0_rec": 0})
+    expect_raise("US: recruiting a character with no record is refused (Wabon)",
+                 us, {"c51_rec": 1})
+    expect_raise("US: recruiting a non-recruitable story record is refused",
+                 us, {"c115_rec": 1})
+if early:
+    g, ch = SV.apply_gamedata_edits(early, {"c46_rec": 1})
+    chk("PAL early: recruiting Bastan writes 0x0302, two-byte footprint",
+        ch == 1 and SV.status_word(g, 46) == 0x0302
+        and diff_bytes(early, g) == [SV.status_word_off(46),
+                                     SV.status_word_off(46) + 1])
+    g, ch = SV.apply_gamedata_edits(early, {"c50_rec": 0})
+    chk("PAL early: unrecruiting Richard writes 0x0100",
+        ch == 1 and SV.status_word(g, 50) == 0x0100
+        and not SV.recruit_state(g, 50)["recruited"])
+if late:
+    # the exact pair of flips ROSTER_VERIFY proved on the roster screen
+    g, ch = SV.apply_gamedata_edits(late, {"c46_rec": 1})
+    chk("PAL late: recruiting Bastan writes 0x0302 (the ROSTER_VERIFY flip)",
+        ch == 1 and SV.status_word(g, 46) == 0x0302
+        and SV.recruit_state(g, 46)["recruited"])
+    g, ch = SV.apply_gamedata_edits(late, {"c50_rec": 0})
+    chk("PAL late: unrecruiting Richard writes 0x0100 (the ROSTER_VERIFY flip)",
+        ch == 1 and SV.status_word(g, 50) == 0x0100
+        and not SV.recruit_state(g, 50)["recruited"])
+    expect_raise("PAL late: unrecruiting a party member is refused (the hero)",
+                 late, {"c0_rec": 0})
+# the engine entry point itself, on a synthetic payload
+b = bytearray(SV.GAMEDATA_SIZE)
+off7 = SV.status_word_off(7)
+b[off7:off7 + 2] = (0x0100).to_bytes(2, "little")
+chk("engine: set_recruited writes at the reader's slot",
+    SV.set_recruited(b, 7, True) and SV.status_word(bytes(b), 7) == 0x0302)
+chk("engine: set_recruited unrecruit restores the initialized word",
+    SV.set_recruited(b, 7, False) and SV.status_word(bytes(b), 7) == 0x0100)
+
+# ---------- no bulk write paths; the per-character toggle is the only one ----------
 src = open(os.path.join(ED, "s5save.py"), encoding="utf-8").read()
 chk("engine: no RECRUIT_BASE remains", "RECRUIT_BASE" not in src)
+chk("engine: set_recruited is the write path", "def set_recruited" in src)
 app = open(os.path.join(WEB, "app.js"), encoding="utf-8").read()
-chk("web UI: no recruitment write functions",
+chk("web UI: no bulk recruitment write functions",
     all(s not in app for s in ("toggleRecruit", "writeRecruitOne", "recruitCheckAll", "recruitAll")))
+chk("web UI: the per-character toggle is rendered",
+    "function recruitToggleHTML" in app)
 desk = open(os.path.join(ED, "s5editor.py"), encoding="utf-8").read()
-chk("desktop UI: no recruitment write functions",
+chk("desktop UI: no bulk recruitment write functions",
     all(s not in desk for s in ("writeRecruit", "recruitCheckAll", "recruitAll")))
+chk("desktop UI: the per-character toggle is rendered",
+    "function recruitToggleHTML" in desk)
 
 print(f"\nrecruitment: {n - bad}/{n} checks passed")
 sys.exit(1 if bad else 0)

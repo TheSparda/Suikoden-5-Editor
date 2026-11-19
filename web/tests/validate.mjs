@@ -118,17 +118,26 @@ ok("armor names table has an accessory list",
 ok("pickBtn double-quotes its onclick", /class="pickbtn"[^`]*onclick="\$\{onPick\}"/.test(appSrc));
 
 // Recruitment display (#24, #39): both UIs warn on the impossible Eresh+Euram
-// pair. Since #39 the panel is read-only (recruitment comes from the game's
-// status records and cannot be edited), so the warning names an outside
-// change as the source and a backup restore as the repair.
+// pair. Recruitment comes from the game's status records; since the #39
+// toggle shipped, the warning names an outside change or the editor's own
+// toggle as the source and unrecruiting or a backup restore as the repair.
 ok("app.js defines recruitPairWarn (#24)", appSrc.includes("function recruitPairWarn"));
-ok("app.js pair warning is the read-only #39 wording (#24)",
+ok("app.js pair warning names the toggle-era sources (#24)",
    appSrc.includes("Eresh and Euram are both shown as recruited")
-   && appSrc.includes("cannot change recruitment"));
+   && appSrc.includes("the Recruited toggle in this editor"));
 const editorSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5editor.py"), "utf8");
 ok("desktop editor has the pair warning too (#24)",
    editorSrc.includes("function recruitPairWarn")
-   && editorSrc.includes("cannot change recruitment"));
+   && editorSrc.includes("the Recruited toggle in this editor"));
+// The per-character recruit toggle (#39): both UIs render it from the same
+// helper name, driven by the engine's status-word states, and the engine
+// carries the one write path.
+ok("app.js renders the recruit toggle (#39)",
+   appSrc.includes("function recruitToggleHTML") && appSrc.includes("recruitToggleHTML(i, c)"));
+ok("desktop editor renders the recruit toggle (#39)",
+   editorSrc.includes("function recruitToggleHTML") && editorSrc.includes("recruitToggleHTML(i,c)"));
+ok("engine carries set_recruited (#39)",
+   fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("def set_recruited"));
 
 // Save-editor rune names: save bytes follow the rune DEFINITION table's order,
 // not s5_rune_ids.json (the equip/code list). The save list must be the one the
