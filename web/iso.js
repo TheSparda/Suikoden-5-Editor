@@ -110,13 +110,32 @@ async function pickISO() {
   }
   pickISOviaInput();
 }
+/* Dynamically created file inputs are attached to the document (invisible)
+ * before being clicked: a detached input cannot be located by environments
+ * that find inputs in the page (browser automation, some embedded webviews,
+ * assistive tooling), which dead-ends the open entirely. Each input removes
+ * itself once its change event fires, and starting a new pick removes the
+ * previous input so cancelled picks do not pile up in the page. */
+let pendingPickerInput = null;
+function attachPickerInput(inp) {
+  dropPickerInput();
+  inp.style.display = "none";
+  document.body.appendChild(inp);
+  pendingPickerInput = inp;
+}
+function dropPickerInput(inp) {
+  const target = inp || pendingPickerInput;
+  if (target) target.remove();
+  if (target === pendingPickerInput) pendingPickerInput = null;
+}
 /* Plain file input path: mobile / Firefox / Safari, and the fallback when the
  * FS Access picker exists but is blocked. No writable handle, so save-in-place
  * is unavailable, but editing + recipe export work. */
 function pickISOviaInput() {
   const inp = document.createElement("input");
   inp.type = "file"; inp.accept = ".iso,.bin,.img,application/octet-stream";
-  inp.onchange = () => { if (inp.files[0]) openISO(inp.files[0]); };
+  inp.onchange = () => { dropPickerInput(inp); if (inp.files[0]) openISO(inp.files[0]); };
+  attachPickerInput(inp);
   inp.click();
 }
 /* Accepts a FileSystemFileHandle (desktop, writable) or a plain File (read-only reach). */
@@ -2116,6 +2135,7 @@ async function importXdelta(f) {
 function importRecipe() {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,.s5mod,.xdelta,application/json";
   inp.onchange = async () => {
+    dropPickerInput(inp);
     const f = inp.files[0]; if (!f) return;
     const head = new Uint8Array(await f.slice(0, 3).arrayBuffer());
     if (head[0] === 0xD6 && head[1] === 0xC3 && head[2] === 0xC4) { importXdelta(f); return; }
@@ -2129,5 +2149,6 @@ function importRecipe() {
       toast(`Applied recipe: ${r.appliedBytes} byte(s)${r.mismatchedRuns?` — ${r.mismatchedRuns} mismatch(es), check region`:""}.`, r.mismatchedRuns ? "bad" : "ok");
     } catch (e) { toast("Could not read recipe: " + (e.message || e), "bad"); }
   };
+  attachPickerInput(inp);
   inp.click();
 }

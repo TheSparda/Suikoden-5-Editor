@@ -5,7 +5,14 @@
  * instead of dead-ending on an error toast. A user cancel (AbortError) must
  * stay silent with no fallback. The real picker functions are extracted from
  * the shipped iso.js / app.js and run in a vm sandbox with a stubbed DOM, so
- * this exercises the shipped decision logic, not a copy of it. */
+ * this exercises the shipped decision logic, not a copy of it.
+ *
+ * The fallback inputs must also be attached to the document before they are
+ * clicked: a detached input cannot be located by environments that find
+ * inputs in the page (browser automation, some embedded webviews, assistive
+ * tooling), which dead-ends the open just as surely as a blocked picker.
+ * Each input removes itself once its change event fires, and a new pick
+ * removes the previous input so cancelled picks do not pile up. */
 import fs from "fs";
 import path from "path";
 import vm from "vm";
@@ -38,27 +45,56 @@ const blocked = Object.assign(
   { name: "NotAllowedError" });
 const cancelled = Object.assign(new Error("The user aborted a request."), { name: "AbortError" });
 
-/* ---------------- iso.js pickISO ---------------- */
+/* ---------------- iso.js pickISO + importRecipe ---------------- */
 const isoSrc = read("iso.js");
-const isoCode = ["pickISO", "pickISOviaInput"].map((f) => extractFn(isoSrc, f)).filter(Boolean).join("\n");
+const isoState = isoSrc.match(/let pendingPickerInput = null;/);
+const isoCode = [isoState ? isoState[0] : "",
+  ...["pickISO", "pickISOviaInput", "attachPickerInput", "dropPickerInput", "importRecipe"]
+  .map((f) => extractFn(isoSrc, f)).filter(Boolean)].join("\n");
+ok("iso.js declares the pending picker input state", !!isoState);
 ok("iso.js pickISO is extractable", isoCode.includes("function pickISO"));
 ok("iso.js factors the plain-input path into pickISOviaInput", isoCode.includes("function pickISOviaInput"));
+ok("iso.js attaches picker inputs via attachPickerInput", isoCode.includes("function attachPickerInput"));
+ok("iso.js importRecipe is extractable", isoCode.includes("function importRecipe"));
 
 function isoSandbox(picker) {
-  const calls = { inputs: [], opened: [], toasts: [] };
+  const calls = { inputs: [], opened: [], toasts: [], body: null };
+  const body = {
+    children: [],
+    appendChild(el) { el.parentNode = body; body.children.push(el); return el; },
+    removeChild(el) {
+      const i = body.children.indexOf(el);
+      if (i >= 0) body.children.splice(i, 1);
+      el.parentNode = null;
+      return el;
+    },
+  };
+  calls.body = body;
   const sandbox = {
     HAS_FS_ACCESS: true,
     console,
-    window: { showOpenFilePicker: picker },
+    window: {
+      showOpenFilePicker: picker,
+      PYISO: { importmod: () => JSON.stringify({ patchCount: 2, appliedBytes: 5, mismatchedRuns: 0 }) },
+    },
     document: {
+      body,
       createElement() {
         const el = { type: "", accept: "", files: [], onchange: null, clicked: false,
-                     click() { this.clicked = true; } };
+                     style: {}, parentNode: null, attachedAtClick: false,
+                     click() { this.clicked = true; this.attachedAtClick = !!this.parentNode; },
+                     remove() { if (this.parentNode) this.parentNode.removeChild(this); } };
         calls.inputs.push(el);
         return el;
       },
     },
     openISO: async (src) => { calls.opened.push(src); },
+    importXdelta: async () => {},
+    isoEdits: {},
+    curView: null,
+    selectView: () => {},
+    updateIsoToolbar: () => {},
+    captureUndoStep: () => {},
     toast: (msg, kind) => { calls.toasts.push({ msg, kind }); },
   };
   vm.createContext(sandbox);
@@ -75,10 +111,55 @@ function isoSandbox(picker) {
   ok("pickISO fallback shows no error toast", calls.toasts.length === 0,
      JSON.stringify(calls.toasts));
   ok("pickISO fallback does not open anything yet", calls.opened.length === 0);
+  // the fallback input must be in the document when clicked, and invisible
+  ok("pickISO fallback input is attached to the document before the click",
+     calls.inputs.length === 1 && calls.inputs[0].attachedAtClick === true);
+  ok("pickISO fallback input is invisible", calls.inputs.length === 1 && calls.inputs[0].style.display === "none");
+  ok("pickISO fallback input sits in the document body until a file is chosen",
+     calls.inputs.length === 1 && calls.body.children.includes(calls.inputs[0]));
   // the fallback input is wired: choosing a file opens it (read-only path)
   const fakeFile = { name: "game.iso" };
   if (calls.inputs[0]) { calls.inputs[0].files = [fakeFile]; calls.inputs[0].onchange(); }
   ok("pickISO fallback input opens the chosen file", calls.opened[0] === fakeFile);
+  ok("pickISO fallback input is gone from the document after the change",
+     calls.inputs.length === 1 && !calls.body.children.includes(calls.inputs[0]));
+}
+{ // a second pick replaces the first input instead of piling up in the page
+  const { sandbox, calls } = isoSandbox(async () => { throw blocked; });
+  await sandbox.pickISO();
+  await sandbox.pickISO();
+  ok("a later pick removes the previous fallback input",
+     calls.inputs.length === 2 && calls.inputs[0].parentNode === null);
+  ok("only the newest fallback input stays in the document",
+     calls.inputs.length === 2 && calls.body.children.length === 1 && calls.body.children[0] === calls.inputs[1]);
+}
+{ // importRecipe: attached before the click, removed after the change
+  const { sandbox, calls } = isoSandbox(async () => { throw blocked; });
+  sandbox.importRecipe();
+  ok("importRecipe creates one input", calls.inputs.length === 1);
+  const inp = calls.inputs[0];
+  ok("importRecipe input is attached to the document before the click",
+     !!inp && inp.attachedAtClick === true && inp.clicked === true);
+  ok("importRecipe input is invisible", !!inp && inp.style.display === "none");
+  const recipeFile = {
+    name: "patch.s5mod",
+    slice: () => ({ arrayBuffer: async () => new Uint8Array([0x7b, 0x22, 0x7d]).buffer }),
+    text: async () => JSON.stringify({ patches: [] }),
+  };
+  if (inp) { inp.files = [recipeFile]; await inp.onchange(); }
+  ok("importRecipe input is gone from the document after the change",
+     !!inp && !calls.body.children.includes(inp));
+  ok("importRecipe still applies the chosen recipe",
+     calls.toasts.some((t) => t.msg.startsWith("Applied recipe")) && !!sandbox.isoEdits.imported,
+     JSON.stringify(calls.toasts));
+}
+{ // importRecipe with no file chosen still removes its input
+  const { sandbox, calls } = isoSandbox(async () => { throw blocked; });
+  sandbox.importRecipe();
+  const inp = calls.inputs[0];
+  if (inp) { inp.files = []; await inp.onchange(); }
+  ok("importRecipe input is gone from the document after an empty change",
+     !!inp && !calls.body.children.includes(inp));
 }
 { // (b) user cancel: silent, no fallback, no toast
   const { sandbox, calls } = isoSandbox(async () => { throw cancelled; });
