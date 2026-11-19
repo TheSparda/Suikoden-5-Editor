@@ -12,7 +12,12 @@
  * inputs in the page (browser automation, some embedded webviews, assistive
  * tooling), which dead-ends the open just as surely as a blocked picker.
  * Each input removes itself once its change event fires, and a new pick
- * removes the previous input so cancelled picks do not pile up. */
+ * removes the previous input so cancelled picks do not pile up.
+ *
+ * The fallback inputs carry stable ids, and the ISO Editor also has a
+ * permanent labelled drop zone (id isoDrop, wired by wireIsoDrop in iso.js)
+ * mirroring the Save Editor's: a dropped file opens directly, and a click
+ * anywhere on the zone runs the same pick flow as the Choose ISO button. */
 import fs from "fs";
 import path from "path";
 import vm from "vm";
@@ -49,16 +54,38 @@ const cancelled = Object.assign(new Error("The user aborted a request."), { name
 const isoSrc = read("iso.js");
 const isoState = isoSrc.match(/let pendingPickerInput = null;/);
 const isoCode = [isoState ? isoState[0] : "",
-  ...["pickISO", "pickISOviaInput", "attachPickerInput", "dropPickerInput", "importRecipe"]
+  ...["pickISO", "pickISOviaInput", "attachPickerInput", "dropPickerInput", "importRecipe", "wireIsoDrop"]
   .map((f) => extractFn(isoSrc, f)).filter(Boolean)].join("\n");
 ok("iso.js declares the pending picker input state", !!isoState);
 ok("iso.js pickISO is extractable", isoCode.includes("function pickISO"));
 ok("iso.js factors the plain-input path into pickISOviaInput", isoCode.includes("function pickISOviaInput"));
 ok("iso.js attaches picker inputs via attachPickerInput", isoCode.includes("function attachPickerInput"));
 ok("iso.js importRecipe is extractable", isoCode.includes("function importRecipe"));
+ok("iso.js wires the ISO drop zone via wireIsoDrop", isoCode.includes("function wireIsoDrop"));
+
+/* ---------------- index.html: the permanent ISO drop zone ---------------- */
+const htmlSrc = read("index.html");
+ok("index.html has the ISO drop zone element", htmlSrc.includes('id="isoDrop"'));
+ok("ISO drop zone carries visible drop wording",
+   htmlSrc.includes("Drop a Suikoden V ISO here"));
+
+function fakeZone() {
+  const listeners = {};
+  const classes = new Set();
+  return {
+    listeners,
+    classList: {
+      add: (c) => classes.add(c),
+      remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+    },
+    addEventListener(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); },
+    dispatch(ev, e) { (listeners[ev] || []).slice().forEach((fn) => fn(e)); },
+  };
+}
 
 function isoSandbox(picker) {
-  const calls = { inputs: [], opened: [], toasts: [], body: null };
+  const calls = { inputs: [], opened: [], toasts: [], body: null, zone: fakeZone() };
   const body = {
     children: [],
     appendChild(el) { el.parentNode = body; body.children.push(el); return el; },
@@ -73,6 +100,7 @@ function isoSandbox(picker) {
   const sandbox = {
     HAS_FS_ACCESS: true,
     console,
+    $: (id) => (id === "isoDrop" ? calls.zone : null),
     window: {
       showOpenFilePicker: picker,
       PYISO: { importmod: () => JSON.stringify({ patchCount: 2, appliedBytes: 5, mismatchedRuns: 0 }) },
@@ -115,6 +143,9 @@ function isoSandbox(picker) {
   ok("pickISO fallback input is attached to the document before the click",
      calls.inputs.length === 1 && calls.inputs[0].attachedAtClick === true);
   ok("pickISO fallback input is invisible", calls.inputs.length === 1 && calls.inputs[0].style.display === "none");
+  ok("pickISO fallback input carries the isoFileInput id",
+     calls.inputs.length === 1 && calls.inputs[0].id === "isoFileInput",
+     `id=${calls.inputs[0] && calls.inputs[0].id}`);
   ok("pickISO fallback input sits in the document body until a file is chosen",
      calls.inputs.length === 1 && calls.body.children.includes(calls.inputs[0]));
   // the fallback input is wired: choosing a file opens it (read-only path)
@@ -141,6 +172,8 @@ function isoSandbox(picker) {
   ok("importRecipe input is attached to the document before the click",
      !!inp && inp.attachedAtClick === true && inp.clicked === true);
   ok("importRecipe input is invisible", !!inp && inp.style.display === "none");
+  ok("importRecipe input carries the isoImportInput id",
+     !!inp && inp.id === "isoImportInput", `id=${inp && inp.id}`);
   const recipeFile = {
     name: "patch.s5mod",
     slice: () => ({ arrayBuffer: async () => new Uint8Array([0x7b, 0x22, 0x7d]).buffer }),
@@ -172,6 +205,38 @@ function isoSandbox(picker) {
   const { sandbox, calls } = isoSandbox(async () => [handle]);
   await sandbox.pickISO();
   ok("pickISO success opens via the picker handle", calls.opened[0] === handle && calls.inputs.length === 0);
+}
+
+{ // the ISO drop zone: highlight on dragover, drop opens the file, click picks
+  const { sandbox, calls } = isoSandbox(async () => { throw blocked; });
+  ok("wireIsoDrop is callable in the sandbox", typeof sandbox.wireIsoDrop === "function");
+  if (typeof sandbox.wireIsoDrop === "function") sandbox.wireIsoDrop();
+  const zone = calls.zone;
+  ok("drop zone listens for dragover, drop and click",
+     ["dragover", "drop", "click"].every((ev) => (zone.listeners[ev] || []).length > 0),
+     JSON.stringify(Object.keys(zone.listeners)));
+  let prevented = 0;
+  zone.dispatch("dragover", { preventDefault: () => { prevented++; } });
+  ok("drop zone dragover prevents the default and highlights the zone",
+     prevented === 1 && zone.classList.contains("hot"));
+  const fakeFile = { name: "game.iso" };
+  zone.dispatch("drop", { preventDefault: () => {}, dataTransfer: { files: [fakeFile] } });
+  ok("drop zone drop opens the dropped file", calls.opened[0] === fakeFile);
+  ok("drop zone drop clears the highlight", !zone.classList.contains("hot"));
+  zone.dispatch("drop", { preventDefault: () => {}, dataTransfer: { files: [] } });
+  ok("drop zone drop with no file opens nothing", calls.opened.length === 1);
+  // a click on the zone body runs the pick flow (blocked picker -> fallback input)
+  zone.dispatch("click", { target: { closest: () => null } });
+  await new Promise((r) => setTimeout(r, 0));
+  ok("drop zone click runs the pick flow",
+     calls.inputs.length === 1 && calls.inputs[0].clicked === true,
+     `inputs=${calls.inputs.length}`);
+  // a click on the Choose ISO button inside the zone must not start a second pick
+  const btn = { closest: (sel) => (sel === "button" ? btn : null) };
+  zone.dispatch("click", { target: btn });
+  await new Promise((r) => setTimeout(r, 0));
+  ok("drop zone click on its button does not double-pick", calls.inputs.length === 1,
+     `inputs=${calls.inputs.length}`);
 }
 
 /* ---------------- app.js pickViaFS ---------------- */

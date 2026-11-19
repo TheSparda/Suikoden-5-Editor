@@ -68,6 +68,7 @@ const ISO_VIEWS = [
 window.isoReady = function () {
   $("isoOpen").classList.remove("hidden");
   $("isoPickBtn").onclick = pickISO;
+  wireIsoDrop();
   $("isoImportBtn").onclick = importRecipe;
   $("isoExportBtn").onclick = exportRecipe;
   $("isoXdeltaBtn").onclick = exportXdelta;
@@ -94,6 +95,28 @@ window.onIsoModeShown = function () {};
 window.isoHasUnsaved = () => !!ORIG && recomputeIsoDirty().runs > 0;
 
 /* ---------------- open an ISO ---------------- */
+/* The ISO drop zone mirrors the Save Editor's: drag a disc image onto it, or
+ * click anywhere on it to run the same pick flow as the Choose ISO button.
+ * A dropped file arrives as a plain File, so it opens read-only (recipe
+ * export), exactly like the fallback input path. A permanent labelled zone
+ * also gives environments that locate elements by role or name a stable
+ * target for the open, which a transient hidden input cannot. */
+function wireIsoDrop() {
+  const zone = $("isoDrop");
+  if (!zone) return;
+  ["dragenter", "dragover"].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.add("hot"); }));
+  ["dragleave", "drop"].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); zone.classList.remove("hot"); }));
+  zone.addEventListener("drop", e => {
+    const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) openISO(f); });
+  zone.addEventListener("click", e => {
+    // The Choose ISO button inside the zone runs pickISO itself; without this
+    // guard a click on it would bubble up and start a second pick.
+    if (e.target && e.target.closest && e.target.closest("button")) return;
+    pickISO();
+  });
+}
 async function pickISO() {
   if (HAS_FS_ACCESS) {
     try {
@@ -133,6 +156,7 @@ function dropPickerInput(inp) {
  * is unavailable, but editing + recipe export work. */
 function pickISOviaInput() {
   const inp = document.createElement("input");
+  inp.id = "isoFileInput";
   inp.type = "file"; inp.accept = ".iso,.bin,.img,application/octet-stream";
   inp.onchange = () => { dropPickerInput(inp); if (inp.files[0]) openISO(inp.files[0]); };
   attachPickerInput(inp);
@@ -2133,7 +2157,8 @@ async function importXdelta(f) {
 }
 
 function importRecipe() {
-  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".json,.s5mod,.xdelta,application/json";
+  const inp = document.createElement("input"); inp.id = "isoImportInput";
+  inp.type = "file"; inp.accept = ".json,.s5mod,.xdelta,application/json";
   inp.onchange = async () => {
     dropPickerInput(inp);
     const f = inp.files[0]; if (!f) return;
