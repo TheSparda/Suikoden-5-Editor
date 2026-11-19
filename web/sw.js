@@ -13,7 +13,7 @@
  * max-age=600 — that shipped a v1.13.0 index.html alongside a stale iso.js for ten
  * minutes, which looked exactly like a deploy that had silently failed. index.html also
  * version-stamps its script/link URLs, so a new release can never reuse an old script. */
-const CACHE = "s5editor-v24";
+const CACHE = "s5editor-v25";
 const SHARE_CACHE = "s5share";   // holds a file shared into the PWA; never purged
 
 const SHELL = [
@@ -23,7 +23,7 @@ const SHELL = [
   "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png",
   // Reused, unchanged from the desktop editor — single source of truth.
-  "../Editor/s5save.py", "../Editor/s5patch.py", "../Editor/s5fields.py",
+  "../Editor/s5save.py", "../Editor/s5patch.py", "../Editor/s5fields.py", "../Editor/s5toggles.py",
   "../Editor/s5_characters.json", "../Editor/s5_armor_names.json", "../Editor/s5_rune_ids.json",
   "../Editor/s5_rune_save_ids.json",
   "../Editor/s5_rune_names.json", "../Editor/s5_skill_names.json", "../Editor/s5_runeprice_names.json",

@@ -65,7 +65,7 @@ async function boot(){
 
     setBoot("Loading the editor engines…", 45);
     pyodide.FS.mkdirTree("/editor");
-    const modules = ["s5save.py","s5patch.py","s5fields.py","s5changes.py"];
+    const modules = ["s5save.py","s5patch.py","s5fields.py","s5changes.py","s5toggles.py"];
     await Promise.all(modules.map(async (m) => {
       const src = await (await fetch(`${EDITOR_DIR}/${m}`)).text();
       pyodide.FS.writeFile(`/editor/${m}`, src);
