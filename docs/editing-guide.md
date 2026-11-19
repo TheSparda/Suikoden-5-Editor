@@ -115,7 +115,9 @@ writes 0x0100. Both directions were proven on a roster screen in game: a
 character flipped to 0x0302 appeared in the Arrange Party Reserves and joined
 the entourage with his joining line, and a character flipped to 0x0100
 vanished from the same list. The toggle is per character only; there is no
-recruit-all. Three limits, all enforced by the editor:
+recruit-all. The same toggle also sits on every row of the Recruitment
+panel, so a character can be recruited or unrecruited from the roster
+list directly. Three limits, all enforced by the editor:
 
 - A character in the battle party or entourage cannot be unrecruited. Remove
   them from the party first.

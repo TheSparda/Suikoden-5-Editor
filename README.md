@@ -90,15 +90,15 @@ checksum** (the game validates three fixed header values only), so field edits a
 - **All 48 skill ranks** (None through SS). Support skills (Cook, Forge, Tutor and the rest)
   use the same scale as their fixed in-game grades.
 
-**Recruitment panel**: the 108 Stars as a searchable read-only roster, with a live recruited
+**Recruitment panel**: the 108 Stars as a searchable roster, with a live recruited
 counter and a name filter. Each character's status is read from the game's own status
 record (in party / recruited / not recruited). The field an earlier version wrote turned
 out not to be the recruitment record at all (issue #39); the real record is the status
-word, and writing it was proven on a roster screen in both directions, so the Characters
-panel carries a per-character Recruited toggle that writes it (0x0302 recruits, 0x0100
-unrecruits; a character in the party cannot be unrecruited, and a character with no
-record in the save yet cannot be recruited). Clicking a character in the panel still
-opens their recruitment guide entry.
+word, and writing it was proven on a roster screen in both directions, so every row of
+the panel carries the same per-character Recruited toggle as the Characters panel and
+writes it (0x0302 recruits, 0x0100 unrecruits; a character in the party cannot be
+unrecruited, and a character with no record in the save yet cannot be recruited).
+Clicking a character in the panel still opens their recruitment guide entry.
 
 Verified by an automated suite: full write, read-back round-trips of every field on every
 supported format (79 checks, NTSC-U and PAL).
