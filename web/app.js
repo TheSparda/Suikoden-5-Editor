@@ -1324,8 +1324,12 @@ async function setCharPick(i, field, id, displayName){
   await writeCharField(i, field, id, btn);
 }
 
-async function writeCharField(i, field, value, el){
-  const sv = saves[i], idx = +$(`csel${i}`).value;
+/* idxOverride: callers outside the character panel (the recruitment
+   roster) pass the row's character id, because the panel may be closed
+   or showing someone else; panel callers leave it off and the id comes
+   from the panel's character select, as before. */
+async function writeCharField(i, field, value, el, idxOverride){
+  const sv = saves[i], idx = idxOverride != null ? idxOverride : +$(`csel${i}`).value;
   const key = `c${idx}_${field}`;
   const c0 = ((CHARDATA[i] || {}).chars || []).find(x => x.idx === idx);   // pre-write state (for the #6 warning)
   spin(true);
@@ -1402,6 +1406,46 @@ function recruitToggleHTML(i, c){
   if(c.recruitState === "none") return dis(false, "no record in this save yet");
   return wrap(`<label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">in the roster</span></label>${REVERT_BTN_SAVE}`);
 }
+/* Roster-row recruit toggle: the character panel toggle
+   (recruitToggleHTML) without the field wrapper, for the recruitment
+   list rows. Same guards, same states: live only for a recruitable
+   character whose record exists and who is not in the party; everywhere
+   else it renders disabled with the panel's reason. The write goes
+   through the same writeCharField staging as the panel toggle, with
+   the row's own character id passed explicitly. */
+function recruitRowToggleHTML(i, c){
+  const dis = (checked, note) => `<label class="chk"><input type="checkbox" ${checked?"checked":""} disabled> <span class="note">${note}</span></label>`;
+  if(!c.recruitable) return dis(false, "not recruitable");
+  if(c.inParty) return dis(true, "in party: remove from the party first to unrecruit");
+  if(c.recruitState === "none") return dis(false, "no record in this save yet");
+  return `<label class="chk"><input type="checkbox" id="rec${i}_${c.idx}" ${c.recruited?"checked":""} data-orig="${c.recruited?1:0}" onchange="rosterRecToggle(${i},${c.idx},this)"> <span class="note">in the roster</span></label>`;
+}
+async function rosterRecToggle(i, idx, el){
+  const orig = el.dataset.orig;
+  await writeCharField(i, "rec", el.checked?1:0, el, idx);
+  refreshRecruitRow(i, idx, orig);
+}
+/* After a roster toggle, re-render that row's status line and toggle
+   from the refreshed cache and refresh the header count (recruitCount
+   also refreshes the Eresh/Euram pair warning). A refused write leaves
+   the cache untouched, so the row falls back to the true state. The new
+   toggle keeps the data-orig the row was rendered with, so toggling
+   back still clears the pending edit, like the character panel. */
+function refreshRecruitRow(i, idx, orig){
+  const r = CHARDATA[i]; if(!r) return;
+  const c = r.chars.find(x => x.idx === idx); if(!c) return;
+  const st = $(`recstat${i}_${idx}`); if(st) st.textContent = recruitStatusText(c);
+  const cell = $(`rectog${i}_${idx}`);
+  if(cell){
+    cell.innerHTML = recruitRowToggleHTML(i, c);
+    const nb = $(`rec${i}_${idx}`);
+    if(nb){
+      if(orig != null) nb.dataset.orig = orig;
+      if(sEdits[`c${idx}:rec`]) nb.classList.add("dirty");
+    }
+  }
+  recruitCount(i);
+}
 /* Recruitment status line (issue #39), from the game's status word via
    s5save.recruit_state. States: party / active count as recruited;
    initialized means the record exists but the character is not recruited;
@@ -1457,9 +1501,10 @@ function showRecGuide(i, idx){
    versions toggled a field at payload +0xD7CA believing it was a
    recruitment bitfield; it is the tail of an unrelated record array, so
    the toggles corrupted data while the display lied
-   (RECRUIT_FIELD_AUDIT.md). The roster list itself is a read-only
-   overview and guide index; the per-character toggle that writes the
-   real status word lives in the character panel (recruitToggleHTML). */
+   (RECRUIT_FIELD_AUDIT.md). The roster list doubles as a guide index,
+   and each row carries the same per-character toggle as the character
+   panel (recruitRowToggleHTML mirrors recruitToggleHTML), writing the
+   real status word through the same writeCharField staging. */
 async function openRecruit(i){
   const sv = saves[i], box = $(`recruit${i}`);
   if(box._loading) return;
@@ -1473,7 +1518,7 @@ async function openRecruit(i){
       <input id="recfilter${i}" size="18" placeholder="search name…" oninput="recruitFilter(${i})">
       <span class="note">greyed = not recruitable</span>
     </div>
-    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records (issue #39). To recruit or unrecruit someone, open them in the Characters panel and use the Recruited toggle. Tap a name here for its recruitment guide entry.</div>
+    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records (issue #39). To recruit or unrecruit someone, use the toggle on their row. Tap a name here for its recruitment guide entry.</div>
     <div id="pairwarn${i}"></div>
     <div id="guidenote${i}" style="padding:4px 16px 0"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
@@ -1481,7 +1526,10 @@ async function openRecruit(i){
     const dis = !c.recruitable;
     return `<div class="recrow" data-name="${esc(nameOf(c.idx).toLowerCase())}" style="display:flex;justify-content:space-between;gap:8px;padding:2px 0;cursor:pointer;${dis?"opacity:.4":""}" onclick="showRecGuide(${i},${c.idx})">
       <span class="note" style="text-transform:none">${c.idx}: ${esc(nameOf(c.idx))}</span>
-      <span class="note" style="text-transform:none">${recruitStatusText(c)}</span></div>`;
+      <span style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        <span class="note" style="text-transform:none" id="recstat${i}_${c.idx}">${recruitStatusText(c)}</span>
+        <span id="rectog${i}_${c.idx}" onclick="event.stopPropagation()">${recruitRowToggleHTML(i, c)}</span>
+      </span></div>`;
   }).join("");
   recruitCount(i);
 }
