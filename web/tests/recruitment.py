@@ -241,5 +241,33 @@ chk("desktop UI: no bulk recruitment write functions",
 chk("desktop UI: the per-character toggle is rendered",
     "function recruitToggleHTML" in desk)
 
+# ---------- the roster-row toggle (both frontends) ----------
+# The recruitment list carries the same toggle as the character panel,
+# so recruiting no longer requires leaving the list. These checks pin
+# the wiring: rows render the row toggle, the web write routes through
+# the panel's writeCharField staging with the row's own character id,
+# the desktop write sends only the rec edit through /api/savewrite,
+# and neither list still sends users to the character panel.
+chk("web UI: roster rows render the toggle",
+    "function recruitRowToggleHTML" in app and "recruitRowToggleHTML(i, c)" in app)
+chk("web UI: roster toggle routes through writeCharField with the row id",
+    "rosterRecToggle" in app
+    and 'writeCharField(i, "rec", el.checked?1:0, el, idx)' in app
+    and "idxOverride" in app)
+chk("web UI: roster refresh updates the row in place",
+    "function refreshRecruitRow" in app and "recstat" in app and "rectog" in app)
+chk("web UI: roster no longer sends users to the Characters panel",
+    "open them in the Characters panel and use the Recruited toggle" not in app)
+chk("desktop UI: roster rows render the toggle",
+    "function recruitRowToggleHTML" in desk and "recruitRowToggleHTML(i,c)" in desk)
+chk("desktop UI: roster toggle writes only the rec edit via savewrite",
+    "rosterRecToggle" in desk and "['c'+idx+'_rec']" in desk)
+chk("desktop UI: roster refresh updates the row in place",
+    "function refreshRecruitRow" in desk and "recstat" in desk and "rectog" in desk)
+chk("desktop UI: roster no longer sends users to the character panel",
+    "open them in the character panel and use the Recruited toggle" not in desk)
+chk("engine: set_recruited is still the only recruitment write path",
+    src.count("def set_recruited") == 1)
+
 print(f"\nrecruitment: {n - bad}/{n} checks passed")
 sys.exit(1 if bad else 0)
