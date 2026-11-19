@@ -81,7 +81,8 @@ checksum** (the game validates three fixed header values only), so field edits a
 
 **Characters panel**, for any of the 120 characters:
 
-- **Level** (1 to 99). Recruitment status is shown read-only (see the Recruitment panel).
+- **Level** (1 to 99). A **Recruited** toggle writes the game's own status record
+  (see the Recruitment panel).
 - **Equipped armor**: Helm, Armor, Gloves, Boots **and Accessory**, picked by name.
 - **Equipped runes**: Head, Right hand, Left hand, using the full **92-rune name table**
   extracted from the ISO (verified against innate runes: Zerase = Star, the Prince = Dawn).
@@ -91,10 +92,13 @@ checksum** (the game validates three fixed header values only), so field edits a
 
 **Recruitment panel**: the 108 Stars as a searchable read-only roster, with a live recruited
 counter and a name filter. Each character's status is read from the game's own status
-record (in party / recruited / not recruited). Recruitment cannot be edited: the field an
-earlier version wrote turned out not to be the recruitment record at all, and whether
-writing the real record is enough to recruit in game was never proven, so the panel only
-reports status (issue #39). Clicking a character still opens their recruitment guide entry.
+record (in party / recruited / not recruited). The field an earlier version wrote turned
+out not to be the recruitment record at all (issue #39); the real record is the status
+word, and writing it was proven on a roster screen in both directions, so the Characters
+panel carries a per-character Recruited toggle that writes it (0x0302 recruits, 0x0100
+unrecruits; a character in the party cannot be unrecruited, and a character with no
+record in the save yet cannot be recruited). Clicking a character in the panel still
+opens their recruitment guide entry.
 
 Verified by an automated suite: full write, read-back round-trips of every field on every
 supported format (79 checks, NTSC-U and PAL).
@@ -569,8 +573,9 @@ npm run test:all          # both
   real US and PAL fixture saves.
 - **`recruitment.mjs`**: the recruitment status-word suite (issue #39): the read
   law and display mapping on the genuine US and PAL saves, the state mapping on
-  synthetic words, and write confinement (no edit moves a status word or the old
-  fake-field region, and recruitment edits no longer exist).
+  synthetic words, write confinement (no other edit moves a status word or the
+  old fake-field region), and the toggle write path (canonical values, two-byte
+  footprint, round trips, and the party / no-record / non-recruitable guards).
 - **`sets-unit.mjs`**, **`sets-iso.mjs`**: the armor-set decode and rewrite, checked against
   the Suikosource guide as ground truth.
 - **`runes-always.mjs`**, **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,

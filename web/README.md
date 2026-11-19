@@ -119,9 +119,10 @@ npm run test:all          # both
   Game Plus, active party, per character level, armor, accessory, runes, skill slots,
   skill ranks, and the three inventory lists: party bag, warehouse and key
   items, with the game's own stack limits enforced). Fields whose offsets are not
-  reverse-engineered yet are intentionally not exposed. Recruitment status is shown
-  read-only, read from the game's own per-character status record; it is not editable
-  (issue #39).
+  reverse-engineered yet are intentionally not exposed. Recruitment status is read
+  from the game's own per-character status record, and the Characters panel's
+  Recruited toggle writes that record (issue #39; proven in game in both
+  directions, with the party, no-record and non-recruitable guards enforced).
 - The save editor also carries two read-only helpers. The **health check** audits a save
   against rules the game itself keeps (recruitment impossibilities such as Eresh and Euram
   both recruited, party members whose recruitment record is not active, inventory entries judged against the

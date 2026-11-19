@@ -92,7 +92,7 @@ Everything here is indexed by character id. The playable roster and its ids are 
 `Editor/s5_characters.json`; ids not in that list are NPCs and unused slots that still have
 records on the disc.
 
-### Recruitment status (save side, read-only)
+### Recruitment status (save side)
 
 Whether a character has joined is not an ISO field; in a save it is read from the
 character's own status word, a u16 the game keeps in the live character record at
@@ -104,12 +104,29 @@ recruited (active record), not recruited (initialized only), and not recruited
 (no record). Party membership is read from the real party arrays and counts as
 recruited on its own.
 
-Recruitment is display-only. An earlier version of the editor read and wrote a
-"recruitment bitfield" at payload +0xD7CA; that field was never the recruitment
-record (the bytes belong to an unrelated record array), its reads were wrong on
-genuine saves, and its writes corrupted data. Whether writing the status word
-alone makes the game treat a character as recruited was never proven on a
-roster screen, so the editor does not write it (issue #39).
+An earlier version of the editor read and wrote a "recruitment bitfield" at
+payload +0xD7CA; that field was never the recruitment record (the bytes belong
+to an unrelated record array), its reads were wrong on genuine saves, and its
+writes corrupted data (issue #39).
+
+The character panel's **Recruited** toggle writes the status word itself:
+checking it writes 0x0302 (the value the cheat tables prescribe), unchecking
+writes 0x0100. Both directions were proven on a roster screen in game: a
+character flipped to 0x0302 appeared in the Arrange Party Reserves and joined
+the entourage with his joining line, and a character flipped to 0x0100
+vanished from the same list. The toggle is per character only; there is no
+recruit-all. Three limits, all enforced by the editor:
+
+- A character in the battle party or entourage cannot be unrecruited. Remove
+  them from the party first.
+- A character with no record in the save yet (word 0, never met) cannot be
+  recruited: the proof covers records the game has initialized, and a zeroed
+  record has no level, gear or skills to join with.
+- Story records (ids 109 to 119) are never offered the toggle.
+
+A recruited character joins with whatever state their record already holds:
+the level, gear, skills and held items in the record are the ones they arrive
+with, and the toggle changes nothing but the two status-word bytes.
 
 ### Stats and growth
 
