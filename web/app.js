@@ -850,7 +850,7 @@ function renderSaves(){
           <div class="fnote">clear-data marker: turns the hero name green in the load list. Does not enable New Game Plus on a save that has not finished the game.</div></div>
       </div>
       ${ro?"":`<div class="subhd">Active party
-        <span class="note">— tap a slot to choose; recruited characters are listed first</span></div>
+        <span class="note">: tap a slot to choose; recruited characters are listed first</span></div>
       <div id="pwarn${i}"></div>
       ${partyGroup(i, fl.party||[], 0, 6, "Battle members")}
       ${partyGroup(i, fl.party||[], 6, 10, "Support members")}`}
