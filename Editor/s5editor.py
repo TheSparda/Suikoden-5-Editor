@@ -999,6 +999,38 @@ function recruitToggleHTML(i,c){
  if(c.inParty)return dis(true,'in party: remove from the party first to unrecruit');
  if(c.recruitState==='none')return dis(false,'no record in this save yet');
  return `<label class=chk><input type=checkbox id="ce${i}_rec" ${c.recruited?'checked':''}> <span class=note>in the roster</span></label>`;}
+/* Roster-row recruit toggle: the character panel toggle
+   (recruitToggleHTML) shaped for the recruitment list rows. Same
+   guards, same states: live only for a recruitable character whose
+   record exists and who is not in the party; everywhere else it
+   renders disabled with the panel's reason. */
+function recruitRowToggleHTML(i,c){
+ const dis=(checked,note)=>`<label class=chk><input type=checkbox ${checked?'checked':''} disabled> <span class=note>${note}</span></label>`;
+ if(!c.recruitable)return dis(false,'not recruitable');
+ if(c.inParty)return dis(true,'in party: remove from the party first to unrecruit');
+ if(c.recruitState==='none')return dis(false,'no record in this save yet');
+ return `<label class=chk><input type=checkbox id="rec${i}_${c.idx}" ${c.recruited?'checked':''} onchange="rosterRecToggle(${i},${c.idx},this)"> <span class=note>in the roster</span></label>`;}
+/* Roster toggle write: like writeChar and saveWrite, the desktop
+   editor writes on confirm. Sends only this row's rec edit through
+   /api/savewrite, so s5save.set_recruited and its guards stay the only
+   write path; a refusal toasts and the checkbox reverts. */
+async function rosterRecToggle(i,idx,el){const sv=window._saves[i];
+ const want=el.checked?1:0;
+ const bakOn=document.getElementById('bakToggle').checked;
+ if(!confirm((want?'Recruit':'Unrecruit')+' character #'+idx+' on '+sv.card+'?'+(bakOn?'  A .bak is made.':'  No .bak (backups OFF).'))){el.checked=!el.checked;return;}
+ const r=await j('/api/savewrite',{card:sv.cardPath,folder:sv.folder,edits:{['c'+idx+'_rec']:want}});
+ if(r.error){toast('Error: '+r.error,'bad');el.checked=!el.checked;return;}
+ toast('Wrote 1 field(s)','ok');
+ const rr=await j('/api/savechars',{card:sv.cardPath,folder:sv.folder});if(!rr.error)CHARDATA[i]=rr;
+ refreshRecruitRow(i,idx);}
+/* Re-render one roster row's status line and toggle from the refreshed
+   cache and refresh the header count (recruitCount also refreshes the
+   Eresh/Euram pair warning). */
+function refreshRecruitRow(i,idx){const r=CHARDATA[i];if(!r)return;
+ const c=r.chars.find(x=>x.idx===idx);if(!c)return;
+ const st=document.getElementById('recstat'+i+'_'+idx);if(st)st.textContent=recruitStatusText(c);
+ const cell=document.getElementById('rectog'+i+'_'+idx);if(cell)cell.innerHTML=recruitRowToggleHTML(i,c);
+ recruitCount(i);}
 /* Recruitment status line (issue #39), from the game's status word via
    s5save.recruit_state. */
 function recruitStatusText(c){
@@ -1020,7 +1052,7 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
    <input id="recfilter${i}" size=18 placeholder="search name…" oninput="recruitFilter(${i})">
    <span class=note>greyed = not recruitable (story/antagonist)</span>
   </div>
-  <div class=note style="padding:8px 14px 0;text-transform:none">Read from the game's status records (issue #39). To recruit or unrecruit someone, open them in the character panel and use the Recruited toggle.</div>
+  <div class=note style="padding:8px 14px 0;text-transform:none">Read from the game's status records (issue #39). To recruit or unrecruit someone, use the toggle on their row.</div>
   <div id="pairwarn${i}"></div>
   <div id="recgrid${i}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:4px 12px;padding:10px 14px 14px"></div></div>`;
  const grid=document.getElementById('recgrid'+i);
@@ -1028,7 +1060,9 @@ async function openRecruit(i){const sv=window._saves[i];const box=document.getEl
   const dis=!c.recruitable;
   return `<div class=recrow data-name="${c.name.toLowerCase()}" style="display:flex;justify-content:space-between;gap:8px;${dis?'opacity:.4':''}">`
    +`<span class=note style="text-transform:none">${c.idx}: ${c.name}</span>`
-   +`<span class=note style="text-transform:none">${recruitStatusText(c)}</span></div>`;}).join('');
+   +`<span style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap">`
+   +`<span class=note style="text-transform:none" id="recstat${i}_${c.idx}">${recruitStatusText(c)}</span>`
+   +`<span id="rectog${i}_${c.idx}">${recruitRowToggleHTML(i,c)}</span></span></div>`;}).join('');
  recruitCount(i);}
 function recruitCount(i){const r=CHARDATA[i];if(!r)return;
  const chars=r.chars.filter(c=>c.recruitable);
