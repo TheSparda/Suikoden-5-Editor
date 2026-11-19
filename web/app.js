@@ -1065,7 +1065,7 @@ function partyGroup(i, party, from, to, title){
 /* Searchable picker (not a 120-entry native dropdown): recruited characters first,
    already-in-party marked. Unrecruited characters are listed last and labelled with
    what assigning them does: the write changes only the party arrays (the real
-   party storage, issue #32). The editor never writes recruitment state
+   party storage, issue #32). Assigning never writes recruitment state
    (issue #39), so an assigned character's status record stays as it was and
    the health audit flags the mismatch. */
 function partyList(i){
@@ -1228,9 +1228,9 @@ function renderChar(i){
     + `<div class="fld"><label>Level</label><div class="in"><input type="number" id="ce${i}_level" value="${c.level}" min="1" max="99" data-cf="${i}:level" data-orig="${c.level}" onchange="writeCharField(${i},'level',this.value,this)">${REVERT_BTN_SAVE}</div></div>`
     + numFld("exp", "EXP", c.exp || 0, 0, 65535)
     + numFld("sp", "SP", c.sp || 0, 0, 65535)
-    + `<div class="fld"><label>Recruitment</label><div class="in"><span class="note" style="text-transform:none">${recruitStatusText(c)}</span></div></div>`
+    + recruitToggleHTML(i, c)
     + `</div>`
-    + `<div class="fnote" style="margin:2px 16px 0">Recruitment is read from the game's own status record and cannot be edited (issue #39).</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">The Recruited toggle writes the game's own status record (issue #39): checking it recruits the character, unchecking returns them to not recruited. A character joins with the level, gear and skills already in their record; nothing else in the record is created or changed.</div>`
     + guideHTML(idx)
     + sub("Equipment")
     + `<div class="grid" style="grid-template-columns:150px;padding-top:8px">`
@@ -1369,8 +1369,22 @@ function revertSaveField(btn){
     }
   }
 }
-/* Recruitment status line (issue #39): read-only, from the game's status
-   word via s5save.recruit_state. States: party / active count as recruited;
+/* Per-character recruit toggle (issue #39): a checkbox over the game's
+   status word, written by s5save.set_recruited (0x0302 recruits, 0x0100
+   unrecruits; both proven on a roster screen, ROSTER_VERIFY.md). The
+   checkbox is live only where the engine will write: a recruitable
+   character whose record exists and who is not in the party. Everywhere
+   else it renders disabled with the reason, mirroring the engine guards. */
+function recruitToggleHTML(i, c){
+  const wrap = (inner) => `<div class="fld"><label>Recruited</label><div class="in">${inner}</div></div>`;
+  const dis = (checked, note) => wrap(`<label class="chk"><input type="checkbox" ${checked?"checked":""} disabled> <span class="note">${note}</span></label>`);
+  if(!c.recruitable) return dis(false, "not recruitable");
+  if(c.inParty) return dis(true, "in party: remove from the party first to unrecruit");
+  if(c.recruitState === "none") return dis(false, "no record in this save yet");
+  return wrap(`<label class="chk"><input type="checkbox" id="ce${i}_rec" ${c.recruited?"checked":""} data-cf="${i}:rec" data-orig="${c.recruited?1:0}" onchange="writeCharField(${i},'rec',this.checked?1:0,this)"> <span class="note">in the roster</span></label>${REVERT_BTN_SAVE}`);
+}
+/* Recruitment status line (issue #39), from the game's status word via
+   s5save.recruit_state. States: party / active count as recruited;
    initialized means the record exists but the character is not recruited;
    none means no record at all. */
 function recruitStatusText(c){
@@ -1392,6 +1406,7 @@ function charFieldLabel(field){
            rhead:"Rune (head)", rright:"Rune (right)", rleft:"Rune (left)" }[field] || field;
 }
 function charFieldDisplay(field, v){
+  if(field === "rec") return v ? "recruited" : "not recruited";
   if(field.startsWith("sk")) return RANK_NAMES[v] || String(v);
   if(field.startsWith("ss")) return v ? (SKILL_NAMES[v-1]||"#"+v) : "empty";
   if(field === "accessory") return (NAMES.accNames||{})[String(v)] || (String(v)==="0"?"Nothing":"#"+v);
@@ -1418,14 +1433,14 @@ function showRecGuide(i, idx){
     ${g.missable ? `<div class="warnbox" style="margin:6px 0 2px">Missable: ${esc(g.missable)}</div>` : ""}</div>` : "";
 }
 
-/* ---------- recruitment roster (read-only, issue #39) ---------- */
-/* Recruitment state comes from the game's own status records; the editor
-   reads them and never writes them. Earlier versions toggled a field at
-   payload +0xD7CA believing it was a recruitment bitfield; it is the tail
-   of an unrelated record array, so the toggles corrupted data while the
-   display lied (RECRUIT_FIELD_AUDIT.md). Whether writing the real status
-   word recruits in game is unproven on a roster screen (ROSTER_PROOF.md),
-   so there is deliberately nothing here to click but the guide. */
+/* ---------- recruitment roster (issue #39) ---------- */
+/* Recruitment state comes from the game's own status records. Earlier
+   versions toggled a field at payload +0xD7CA believing it was a
+   recruitment bitfield; it is the tail of an unrelated record array, so
+   the toggles corrupted data while the display lied
+   (RECRUIT_FIELD_AUDIT.md). The roster list itself is a read-only
+   overview and guide index; the per-character toggle that writes the
+   real status word lives in the character panel (recruitToggleHTML). */
 async function openRecruit(i){
   const sv = saves[i], box = $(`recruit${i}`);
   if(box._loading) return;
@@ -1439,7 +1454,7 @@ async function openRecruit(i){
       <input id="recfilter${i}" size="18" placeholder="search name…" oninput="recruitFilter(${i})">
       <span class="note">greyed = not recruitable</span>
     </div>
-    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records; recruitment cannot be edited (issue #39). Tap a name for its recruitment guide entry.</div>
+    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records (issue #39). To recruit or unrecruit someone, open them in the Characters panel and use the Recruited toggle. Tap a name here for its recruitment guide entry.</div>
     <div id="pairwarn${i}"></div>
     <div id="guidenote${i}" style="padding:4px 16px 0"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
@@ -1460,16 +1475,16 @@ function recruitCount(i){
 }
 /* Eresh (10) and Euram (108) are mutually exclusive in normal play: the game
    lets you recruit only one of them (issue #24). Both reading recruited is a
-   state no played save produces, so this warns: it names the likely source
-   (a change made outside gameplay) and the repair (restore a backup), since
-   the editor itself cannot change recruitment. */
+   state no played save produces, so this warns: it names the likely sources
+   (a change made outside gameplay, or this editor's own recruit toggle) and
+   the repair (unrecruit one of them, or restore a backup). */
 function recruitPairWarn(i){
   const box = $(`pairwarn${i}`); if(!box) return;
   const r = CHARDATA[i]; if(!r){ box.innerHTML = ""; return; }
   const state = {};
   r.chars.forEach(c => { state[c.idx] = !!c.recruited; });
   box.innerHTML = (state[10] && state[108])
-    ? `<div class="warnbox" style="margin:10px 14px 0">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside gameplay (a cheat device or another tool). This editor cannot change recruitment; if that was not deliberate, restore a backup.</div>`
+    ? `<div class="warnbox" style="margin:10px 14px 0">⚠ Eresh and Euram are both shown as recruited, but the game only lets you recruit one of them. A save showing both was changed outside normal gameplay (a cheat device, another tool, or the Recruited toggle in this editor). If that was not deliberate, unrecruit one of them or restore a backup.</div>`
     : "";
 }
 function recruitFilter(i){
