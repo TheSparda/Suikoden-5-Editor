@@ -117,7 +117,7 @@ ok("armor names table has an accessory list",
 // onclick attribute must be double-quoted or the handler is cut off and clicks do nothing (#17).
 ok("pickBtn double-quotes its onclick", /class="pickbtn"[^`]*onclick="\$\{onPick\}"/.test(appSrc));
 
-// Recruitment display (#24, #39): both UIs warn on the impossible Eresh+Euram
+// Recruitment display (#24, #39): the UI warns on the impossible Eresh+Euram
 // pair. Recruitment comes from the game's status records; since the #39
 // toggle shipped, the warning names an outside change or the editor's own
 // toggle as the source and unrecruiting or a backup restore as the repair.
@@ -125,23 +125,16 @@ ok("app.js defines recruitPairWarn (#24)", appSrc.includes("function recruitPair
 ok("app.js pair warning names the toggle-era sources (#24)",
    appSrc.includes("Eresh and Euram are both shown as recruited")
    && appSrc.includes("the Recruited toggle in this editor"));
-const editorSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5editor.py"), "utf8");
-ok("desktop editor has the pair warning too (#24)",
-   editorSrc.includes("function recruitPairWarn")
-   && editorSrc.includes("the Recruited toggle in this editor"));
-// The per-character recruit toggle (#39): both UIs render it from the same
-// helper name, driven by the engine's status-word states, and the engine
-// carries the one write path.
+// The per-character recruit toggle (#39): the UI renders it, driven by the
+// engine's status-word states, and the engine carries the one write path.
 ok("app.js renders the recruit toggle (#39)",
    appSrc.includes("function recruitToggleHTML") && appSrc.includes("recruitToggleHTML(i, c)"));
-ok("desktop editor renders the recruit toggle (#39)",
-   editorSrc.includes("function recruitToggleHTML") && editorSrc.includes("recruitToggleHTML(i,c)"));
 ok("engine carries set_recruited (#39)",
    fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("def set_recruited"));
 
 // Save-editor rune names: save bytes follow the rune DEFINITION table's order,
 // not s5_rune_ids.json (the equip/code list). The save list must be the one the
-// save editor loads, in both UIs, and its anchors are the innate-rune calibration.
+// save editor loads, and its anchors are the innate-rune calibration.
 const saveRunes = JSON.parse(fs.readFileSync(path.join(web, "..", "Editor", "s5_rune_save_ids.json"), "utf8"));
 ok("save rune list has one entry per definition record", saveRunes.length === 99, `${saveRunes.length}`);
 for (const [idx, nm] of [[13, "Star Rune"], [16, "Beast Rune"], [20, "Darkness Rune"],
@@ -153,7 +146,6 @@ for (const [idx, nm] of [[13, "Star Rune"], [16, "Beast Rune"], [20, "Darkness R
 ok("save rune list has no phantom Critical/Magic",
    !saveRunes.includes("Critical Rune") && !saveRunes.includes("Magic Rune"));
 ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.json"));
-ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune_save_ids.json"));
 
 // Service worker shell: every module the app loads at runtime is precached
 // (health-core.js and vcdiff.js were missing; noted in the v1.17.8 ship
@@ -194,8 +186,6 @@ ok("s5patch defines the loadout engine (#28)",
 const saveSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8");
 ok("app.js labels it Cleared-game marker (#2)", appSrc.includes("Cleared-game marker")
    && !appSrc.includes("enables the fast-forward option"));
-ok("desktop editor labels it Cleared-game marker (#2)", editorSrc.includes("Cleared-game marker")
-   && !editorSrc.includes("New Game Plus (fast-forward)"));
 ok("s5save.py comments carry the correction (#2)", saveSrc.includes("cleared-game marker")
    && !saveSrc.includes("enables fast-forward"));
 
