@@ -168,10 +168,12 @@ RUNE_SLOTS  = ("rhead", "rright", "rleft")         # +0xEC,+0xED,+0xEE (VERIFIED
 #   The game's real per-character recruitment record is the STATUS WORD:
 #   the u16 the cheat tables expose at live record +0x150, persisted in the
 #   NEXT character's save record at +0xA0 (see status_word() below). It is
-#   composite (high byte = engagement band, low byte = a usage counter) and
-#   the editor READS it but never writes it: whether a word write alone
-#   recruits in game has not been proven on a roster screen (ps2-re
-#   games/suikoden5/ROSTER_PROOF.md), so recruitment is display-only.
+#   composite (high byte = engagement band, low byte = a usage counter).
+#   Writing the word was proven on a roster screen in both directions
+#   (ps2-re games/suikoden5/ROSTER_VERIFY.md): 0x0302 recruits, 0x0100
+#   unrecruits, and the game treats the flipped character exactly like a
+#   genuine recruit. set_recruited() below is the editor's only write path
+#   to it; the per-character toggle in both frontends drives it.
 # CHAR_SLOTS @+0xF2/+0xF3: the two EQUIPPED skill slots (1-based skill id, 0=empty).
 #   VERIFIED: 100% of slotted skills are ones the character has a rank in (566 recruited
 #   records, all saves) + identity fits (Prince slots Royal Paradise, Jeane slots Rune Sage).
@@ -202,19 +204,24 @@ CHAR_RUNE_FLAGS = 0xEF
 #                           non-recruitable story NPCs (ids 109-119).
 STATUS_WORD_OFF = 0xA0
 
+def status_word_off(idx):
+    """Payload offset of character idx's status word: the (idx+1) record's
+    +0xA0 slot. Reader and writer share this one computation."""
+    return CHAR_BASE + (idx + 1) * CHAR_STRIDE + STATUS_WORD_OFF
+
 def status_word(gd, idx):
     """Character idx's recruitment status word (u16), or None out of range."""
-    off = CHAR_BASE + (idx + 1) * CHAR_STRIDE + STATUS_WORD_OFF
+    off = status_word_off(idx)
     if off + 2 > len(gd): return None
     return int.from_bytes(gd[off:off + 2], "little")
 
 def recruit_state(gd, idx):
-    """Recruitment display state for one character, from the status word and
+    """Recruitment state for one character, from the status word and
     the real party arrays. Returns {word, state, recruited, inParty} with
     state one of "party" (in the battle party or entourage), "active"
     (recruited, active record), "initialized" (record exists, not recruited),
     "none" (no record). recruited is True for "party" and "active". This is
-    a READ model only: nothing in the editor writes the status word."""
+    the read model both frontends render; set_recruited() is the write side."""
     w = status_word(gd, idx)
     in_party = idx in (gd[PARTY_BATTLE_OFF:PARTY_BATTLE_OFF + PARTY_BATTLE_SLOTS]
                        + gd[PARTY_ENTOUR_OFF:PARTY_ENTOUR_OFF + PARTY_ENTOUR_SLOTS]) \
@@ -229,6 +236,58 @@ def recruit_state(gd, idx):
         state = "initialized"
     return {"word": w, "state": state,
             "recruited": state in ("party", "active"), "inParty": in_party}
+
+# The two canonical words the toggle writes. 0x0302 is the value the cheat
+# tables prescribe for recruiting, and 0x0100 is the initialized-only word
+# every unrecruited-but-met character carries. Both were proven on a roster
+# screen in game (ROSTER_VERIFY.md): Bastan flipped to 0x0302 appeared in
+# the Arrange Party Reserves and joined the entourage with his joining
+# line; Richard flipped to 0x0100 vanished from the same list. The write
+# replaces the whole word (the low byte is a usage counter the game keeps;
+# the canonical values are what the proof exercised).
+RECRUIT_WORD = 0x0302
+UNRECRUIT_WORD = 0x0100
+
+def set_recruited(b, idx, recruited):
+    """Write character idx's recruitment status word in bytearray b (a
+    gamedata payload being edited). Recruit writes RECRUIT_WORD, unrecruit
+    writes UNRECRUIT_WORD, at the same slot status_word() reads. Only the
+    word's two bytes ever change. Returns True when the word was written,
+    False when the character already reads the way the caller asked (a
+    no-op, so an active character's counter byte is never stomped by a
+    redundant toggle). Raises ValueError when the write is not offered:
+    - idx out of range, or a non-recruitable story record (ids 109-119);
+    - recruiting a character with no record in this save (word 0): the
+      in-game proof covers initialized records only, and a zeroed record
+      has no level, gear or skills to join with;
+    - unrecruiting a character who is in the battle party or entourage:
+      remove them from the party first, or the party arrays would point
+      at a character the roster no longer holds."""
+    if not (0 <= idx < NUM_CHARS):
+        raise ValueError(f"character {idx} out of range")
+    if idx in NON_RECRUITABLE:
+        raise ValueError(f"character {idx} is not recruitable (story record); "
+                         "recruitment is not offered for it")
+    off = status_word_off(idx)
+    if off + 2 > len(b):
+        raise ValueError(f"character {idx} status word out of range")
+    st = recruit_state(bytes(b), idx)
+    if recruited:
+        if st["recruited"]: return False
+        if st["word"] is None or st["word"] == 0:
+            raise ValueError(f"character {idx} has no record in this save yet; "
+                             "recruiting is only offered once the game has "
+                             "initialized their record")
+        b[off:off + 2] = RECRUIT_WORD.to_bytes(2, "little")
+    else:
+        if not st["recruited"]: return False
+        if st["inParty"]:
+            raise ValueError(f"character {idx} is in the party; remove them "
+                             "from the battle party or entourage before "
+                             "unrecruiting")
+        b[off:off + 2] = UNRECRUIT_WORD.to_bytes(2, "little")
+    return True
+
 # CHAR_EXP @+0xCE / CHAR_SP @+0xD0: u16 EXP and skill points (VERIFIED
 # 2026-11-18 by static correlation against live-record dumps of two saves,
 # US + PAL: the live record carries EXP at +0x1E and SP at +0x20 and the
@@ -574,7 +633,9 @@ def _apply_char_edit(b, key, val):
     Returns True if applied. Slots: helm/body/glove/foot (armor), rhead/rright/rleft (rune),
     level, exp, sp, wlv (weapon sharpen level, displayed units 1..16), ruse0..ruse3
     (current rune spell uses per spell level), held0..held3 (held items, dict values),
-    sk<n> (skill ranks), ss0/ss1 (equipped skill slots), rec (recruitment bit)."""
+    sk<n> (skill ranks), ss0/ss1 (equipped skill slots), rec (recruitment toggle:
+    1 recruits, 0 unrecruits; writes the status word via set_recruited, whose
+    guards raise ValueError)."""
     if not key.startswith("c") or "_" not in key: return False
     idx_s, slot = key[1:].split("_", 1)
     if not idx_s.isdigit(): return False
@@ -612,6 +673,8 @@ def _apply_char_edit(b, key, val):
         b[r + CHAR_SKILLS + sn] = max(0, min(7, int(val)))
     elif slot in ("ss0", "ss1"):
         b[r + CHAR_SLOTS + int(slot[2])] = max(0, min(SKILL_COUNT, int(val)))
+    elif slot == "rec":
+        return set_recruited(b, idx, bool(int(val)))
     else:
         return False
     return True
@@ -796,9 +859,11 @@ def apply_gamedata_edits(gd, edits):
     per-character equipment keyed 'c<idx>_<slot>' (helm/body/glove/foot, rhead/rright/rleft).
     Party assignments are collected and applied LAST, after every other edit:
     the final party is written to the real battle/entourage arrays with the
-    browser summary regenerated from them (see _write_party). Recruitment is
-    never written (issue #39): the status word is the game's own record and
-    no editor write to it is proven, so a party edit does not touch it.
+    browser summary regenerated from them (see _write_party). A party edit
+    does not touch the status word. Recruitment itself is written only by
+    the per-character 'c<idx>_rec' toggle (see set_recruited), whose guards
+    judge party membership against the arrays as they stand in the save
+    being edited, before any party edit in the same call is applied.
     Assigning a character whose record is not active is allowed (the arrays
     are the real party storage, proven in issue #32); the health audit flags
     the mismatch instead of the write path faking the record."""
