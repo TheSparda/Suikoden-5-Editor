@@ -34,7 +34,7 @@ ok("index has no-FS ISO note (A3)", html.includes('id="isoNoFsNote"'));
 
 // 3) service worker precaches shell + every engine JSON app.js loads
 const sw = read("sw.js");
-for (const s of ["common.js", "app.js", "iso.js", "diff-core.js", "s5save.py", "s5patch.py", "s5fields.py"])
+for (const s of ["common.js", "app.js", "iso.js", "diff-core.js", "s5save.py", "s5patch.py", "s5fields.py", "s5toggles.py"])
   ok(`sw precaches ${s}`, sw.includes(s));
 const app = read("app.js");
 const m = app.match(/const ENGINE_JSON = \[([\s\S]*?)\]/);
@@ -44,6 +44,39 @@ if (m) {
   ok("ENGINE_JSON non-empty", jsons.length >= 10, `${jsons.length} files`);
   const missing = jsons.filter((j) => !sw.includes(j));
   ok("sw precaches every ENGINE_JSON", missing.length === 0, missing.join(","));
+}
+
+// 3a) Pyodide module manifest: every Editor module imported on the boot path
+// must be in the app.js modules list, because boot writes only those files
+// into the Pyodide FS before running the GLUE. v1.19.0 shipped without
+// s5toggles.py in the list: the GLUE imports it eagerly, so both editors died
+// with ModuleNotFoundError while the native suite stayed green (on disk the
+// file sits beside s5patch.py; the web manifest is separate). Scanned here:
+// the GLUE block in app.js plus every import in each bootstrapped module.
+// Function-level imports inside s5patch's desktop CLI handlers (s5rom, s5pak,
+// s5vcdiff) never run in the browser and are allowlisted; any other sibling
+// import missing from the list fails this check.
+{
+  const boot = app.match(/const modules = \[([\s\S]*?)\]/);
+  ok("app.js declares the Pyodide modules list", !!boot);
+  const shipped = boot ? [...boot[1].matchAll(/"([^"]+\.py)"/g)].map((x) => x[1]) : [];
+  const editorDir = path.join(web, "..", "Editor");
+  const cliOnly = new Set(["s5rom.py", "s5pak.py", "s5vcdiff.py"]);
+  const imported = new Set();
+  const scan = (src) => {
+    for (const mm of src.matchAll(/(?:^|\n)\s*(?:import|from)\s+(s5\w+)\b/g))
+      imported.add(mm[1] + ".py");
+  };
+  scan(app);   // the GLUE block lives in app.js and runs at boot
+  for (const mod of shipped) {
+    ok(`bootstrapped module ${mod} exists`, fs.existsSync(path.join(editorDir, mod)));
+    scan(fs.readFileSync(path.join(editorDir, mod), "utf8"));
+  }
+  const missing = [...imported].filter((f) =>
+    fs.existsSync(path.join(editorDir, f)) && !shipped.includes(f) && !cliOnly.has(f));
+  ok("every Editor module imported on the boot path is in the app.js modules list",
+     missing.length === 0, missing.join(","));
+  ok("app.js modules list includes s5toggles.py", shipped.includes("s5toggles.py"));
 }
 
 // 3b) new-feature wiring guards (behavioral coverage for undo/redo is in e2e/manual)
@@ -120,8 +153,8 @@ ok("desktop editor loads the save-space rune names", editorSrc.includes("s5_rune
   const swSrc = fs.readFileSync(path.join(web, "sw.js"), "utf8");
   ok("sw.js precaches health-core.js", swSrc.includes('"./health-core.js"'));
   ok("sw.js precaches vcdiff.js", swSrc.includes('"./vcdiff.js"'));
-  ok("sw.js cache name bumped with the v1.18.0 version bump",
-     swSrc.includes('const CACHE = "s5editor-v23"'));
+  ok("sw.js cache name bumped with the v1.19.1 version bump",
+     swSrc.includes('const CACHE = "s5editor-v25"'));
 }
 
 // Rune slot availability (#6, display only): the save character view shows

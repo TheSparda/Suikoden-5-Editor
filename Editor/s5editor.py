@@ -401,7 +401,7 @@ pre{background:var(--input);padding:12px;border-radius:9px;overflow:auto;border:
 
  <section class=panel id=p-save>
   <h2>Save Editor</h2>
-  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, the cleared-game marker, and, per character, <b>equipped armor</b> (Helm/Armor/Gloves/Boots) and <b>runes</b> (Head/Right/Left) via the <b>Characters</b> button. ECC and a <code>.bak</code> are handled automatically on write (S5 has no save-body checksum). Offsets reverse-engineered from the game and cross-verified against the item tables.</p>
+  <p class=sub>Edit PS2 memory-card saves. Verified fields: hero name, castle name, the cleared-game marker, and, per character, <b>equipped armor</b> (Helm/Armor/Gloves/Boots), <b>runes</b> (Head/Right/Left), <b>EXP / SP</b>, <b>weapon sharpen level</b>, <b>rune spell uses left</b> and <b>held items</b> via the <b>Characters</b> button. ECC and a <code>.bak</code> are handled automatically on write (S5 has no save-body checksum). Offsets reverse-engineered from the game and cross-verified against the item tables.</p>
   <div class=row>
    <button onclick=browseSave()>Open save file…</button>
    <input id=savepath size=40 placeholder="/path/to/save.ps2" onkeydown="if(event.key=='Enter')openSaveFile()">
@@ -1046,18 +1046,32 @@ function renderChar(i){const r=CHARDATA[i];const idx=+document.getElementById('c
  const rsel=(slot,lbl,val)=>`<div class=fld><label>${lbl}</label><div class=in>${_sel('ce'+i+'_'+slot,RN,val)}</div></div>`;
  const sub=t=>`<div style="font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;margin:12px 14px 0">${t}</div>`;
  const g=inner=>`<div class=grid style="padding-top:8px">${inner}</div>`;
+ const heldOpts=(cur)=>{let h=`<option value="0" ${cur?'':'selected'}>— empty —</option>`;
+   const cats=Object.keys(r.itemMaxId||{}).map(Number).sort((a,b)=>a-b);
+   for(const cat of cats)for(let id=1;id<=r.itemMaxId[cat];id++){
+    const v=cat+':'+id;h+=`<option value="${v}" ${cur===v?'selected':''}>${(r.itemCats||{})[cat]||('Cat '+cat)} · ${(r.itemNames||{})[v]||('#'+id)}</option>`;}
+   return h;};
  document.getElementById('cfld'+i).innerHTML=
    sub('Level & recruitment')
-  +`<div class=grid style="grid-template-columns:150px 260px;padding-top:8px">`
+  +`<div class=grid style="grid-template-columns:150px 150px 150px 260px;padding-top:8px">`
   +`<div class=fld><label>Level</label><div class=in><input type=number id="ce${i}_level" value="${c.level}" min=1 max=99></div></div>`
+  +`<div class=fld><label>EXP</label><div class=in><input type=number id="ce${i}_exp" value="${c.exp||0}" min=0 max=65535></div></div>`
+  +`<div class=fld><label>SP</label><div class=in><input type=number id="ce${i}_sp" value="${c.sp||0}" min=0 max=65535></div></div>`
   +`<div class=fld><label>Recruitment</label><div class=in><span class=note style="text-transform:none">${recruitStatusText(c)}</span></div></div>`
   +`</div>`
   +`<div class=note style="margin:2px 16px 0;text-transform:none">Recruitment is read from the game's own status record and cannot be edited (issue #39).</div>`
   +sub('Equipment')
+  +`<div class=grid style="grid-template-columns:150px;padding-top:8px"><div class=fld><label>Weapon level</label><div class=in><input type=number id="ce${i}_wlv" value="${c.weaponLevel||1}" min=1 max=16></div></div></div>`
+  +`<div class=note style="margin:2px 16px 0">Sharpen level of the character's own weapon (1 to 16); which weapon it is comes from the ISO starting-loadout editor.</div>`
   +g(asel('helm','Helm',c.armor.helm)+asel('body','Armor',c.armor.body)+asel('glove','Gloves',c.armor.glove)+asel('foot','Boots',c.armor.foot))
+  +sub('Held items')
+  +`<div style="padding:8px 14px 0">${(c.held||[]).map((e,k)=>`<div class=row style="align-items:center;gap:8px;padding:2px 0"><span class=note style="min-width:52px">Slot ${k+1}</span><select id="ce${i}_held${k}">${heldOpts(e&&e.cat?e.cat+':'+e.id:'')}</select>${e&&e.max?`<input type=number id="ce${i}_heldq${k}" value="${e.qty}" min=1 max=${e.max} style="width:64px"> <span class=note>of ${e.max} max</span>`:`<span class=note>single</span>`}</div>`).join('')}</div>`
+  +`<div class=note style="margin:2px 16px 0">Items the character carries personally. Slot 1 shares its item byte with the equipped accessory: when slot 1 holds an accessory (category 5), that accessory is the equipped one.</div>`
   +sub('Runes')
   +g(rsel('rhead','Head',c.runes.rhead)+rsel('rright','Right hand',c.runes.rright)+rsel('rleft','Left hand',c.runes.rleft))
   +runeStatesHTML(c)
+  +`<div class=grid style="grid-template-columns:repeat(4,110px);padding-top:8px">${[0,1,2,3].map(k=>`<div class=fld><label>Lv${k+1} uses left</label><div class=in><input type=number id="ce${i}_ruse${k}" value="${(c.runeUses||[0,0,0,0])[k]}" min=0 max=9></div></div>`).join('')}</div>`
+  +`<div class=note style="margin:2px 16px 0">Spell uses left per spell level (of ${(c.runeUsesMax||[0,0,0,0]).join(' / ')} at this level and rune). The game loads these counts from the save.</div>`
   +sub('Equipped skill slots')
   +g([0,1].map(k=>{const names={'0':'— empty —'};(r.skillNames||[]).forEach((n,s)=>{if(s!==26)names[String(s+1)]=n;});
      return `<div class=fld><label>Slot ${k+1}</label><div class=in>${_sel('ce'+i+'_ss'+k,names,(c.slots||[0,0])[k])}</div></div>`;}).join(''))
@@ -1081,10 +1095,20 @@ function runeStatesHTML(c){
  const anyCommunity=sts.some(st=>st.community);
  return `<div class=note style="margin:2px 16px 0">Rune slots${anyCommunity?' (unlock levels are community-derived, not read from the game)':''}: ${parts.join(' · ')}</div>`;}
 async function writeChar(i){const sv=window._saves[i];const idx=+document.getElementById('csel'+i).value;
- const edits={};for(const s of ['level','helm','body','glove','foot','rhead','rright','rleft']){
+ const edits={};for(const s of ['level','exp','sp','wlv','helm','body','glove','foot','rhead','rright','rleft']){
   const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
  for(let s=0;s<48;s++){const el=document.getElementById('ce'+i+'_sk'+s);if(el)edits['c'+idx+'_sk'+s]=+el.value;}
- for(const s of ['ss0','ss1']){const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
+ for(const s of ['ss0','ss1','ruse0','ruse1','ruse2','ruse3']){const el=document.getElementById('ce'+i+'_'+s);if(el)edits['c'+idx+'_'+s]=+el.value;}
+ {const r=CHARDATA[i];const c0=(r.chars||[]).find(x=>x.idx===idx);
+  for(let k=0;k<4;k++){const sel=document.getElementById('ce'+i+'_held'+k);if(!sel)continue;
+   const cur=c0?(c0.held||[])[k]:null;const curV=cur&&cur.cat?cur.cat+':'+cur.id:'0';
+   const qEl=document.getElementById('ce'+i+'_heldq'+k);
+   const q=qEl?+qEl.value:(cur?cur.qty:0);
+   if(sel.value===curV&&(!qEl||q===(cur?cur.qty:0)))continue;
+   if(sel.value==='0'){edits['c'+idx+'_held'+k]={cat:0};continue;}
+   const[cat,id]=sel.value.split(':').map(Number);
+   const lim=(((r.stackLimits||{})[String(cat)]||[])[id-1])||0;
+   edits['c'+idx+'_held'+k]={cat,id,qty:lim?Math.max(1,Math.min(lim,q||1)):0};}}
  const bakOn=document.getElementById('bakToggle').checked;
  // Issue #6: warn when a removal strands a below-threshold slot empty.
  const warns=[];const c0=(CHARDATA[i].chars||[]).find(x=>x.idx===idx);
@@ -2075,8 +2099,19 @@ class H(http.server.BaseHTTPRequestHandler):
                     "Escape Route","Healing","Treatment","Haggle","Trade In","Cook","Rune Sage","Bard",
                     "Perfect Pitch","Appraisal","Bath","Tutor"]
                 rankNames = ["None","E","D","C","B","A","S","SS"]
+                # Held-item names: the verified drop table plus category 15
+                # (Trade Goods), mirroring the web editor's save_item_names.
+                itemCats = dict(F.DROP_TABLE.get("categories", {}))
+                itemNames = dict(F.DROP_TABLE.get("items", {}))
+                itemCats["15"] = "Trade Goods"
+                for _i, _n in enumerate(["Sugar","Salt","Soybeans","Vegetables","Fruit","Wheat",
+                    "Rice","Folk Crafts","Spices","Coffee","Tea","Iron","Gold and Silver",
+                    "Pearls","Miso and Soy Sauce","Beer","Wine","Sake","Golden Craftwork"], 1):
+                    itemNames[f"15:{_i}"] = _n
                 return self._send(200, json.dumps({"chars": chars, "armorNames": armorNames,
-                    "runeNames": runeNames, "skillNames": skillNames, "rankNames": rankNames}))
+                    "runeNames": runeNames, "skillNames": skillNames, "rankNames": rankNames,
+                    "itemCats": itemCats, "itemNames": itemNames,
+                    "itemMaxId": SV.ITEM_CAT_MAXID, "stackLimits": SV.STACK_LIMITS}))
             if self.path == "/api/peek":
                 off = int(str(d.get("off", "0")), 0); ln = max(1, min(256, int(str(d.get("len", "16")), 0)))
                 with P.Iso(iso) as g: b = g.rd(off, ln)

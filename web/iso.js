@@ -43,6 +43,7 @@ const ISO_VIEWS = [
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
   { id: "passive",  label: "Passives" },
+  { id: "patches",  label: "Code patches" },
   { id: "runeprice",label: "Rune prices" },
   { id: "healprice",label: "Heal prices" },
   { id: "enemy",    label: "Enemies" },
@@ -324,6 +325,10 @@ function afterIsoWrite(view, ident, el) {
     if (lbl) lbl.innerHTML = el.checked ? "<b>On</b> — always active, no rune needed"
                                         : "Off — vanilla: only works while equipped";
   }
+  if (view === "toggle") {
+    const lbl = el && el.nextElementSibling;
+    if (lbl) lbl.innerHTML = el.checked ? "<b>On</b>" : "Off";
+  }
   /* Caption-only update, like runealways: re-rendering would reset data-orig and take
    * the ↺ baseline with it. */
   if (view === "dawnrune") {
@@ -364,6 +369,8 @@ async function applyIsoWrite(el, value) {
     else if (view === "runealways") res = window.PYISO.setrunealways(+el.dataset.rid, value ? 1 : 0,
       JSON.stringify(RUNE_GATE_WORDS[el.dataset.rid] || {}));
     else if (view === "dawnrune") res = window.PYISO.setdawnrune(value ? 4 : 0);
+    else if (view === "toggle") res = window.PYISO.settoggle(el.dataset.tid, value ? 1 : 0,
+      JSON.stringify(TOGGLE_ORIGINALS[el.dataset.tid] || {}));
     const r = JSON.parse(res);
     if (r.error) { toast("Write rejected: " + r.error, "bad"); return false; }
     return true;
@@ -1143,6 +1150,50 @@ VIEW_RENDER.passive = async (body) => {
       disc is byte-identical. <b>Verified:</b> the equip check really is bypassed and nothing else
       on the disc moves. <b>Not verified in-game:</b> the encounter runes' effect. The party
       perks above are confirmed <b>not</b> to work.</div>`;
+};
+
+/* ---- Code patches: the s5toggles registry, one checkbox per toggle ----------
+ * The registry locates every site by signature on the actual disc and refuses
+ * foreign bytes; gate toggles (the not-working perks) need their displaced
+ * originals back to restore, so an off toggle's span bytes are remembered here
+ * at render time, the RUNE_GATE_WORDS pattern. The five CT-survey toggles are
+ * self-restoring and do not need them. */
+const TOGGLE_ORIGINALS = {};
+VIEW_RENDER.patches = async (body) => {
+  const r = JSON.parse(window.PYISO.toggles());
+  if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
+  const toggles = r.toggles || [];
+  for (const t of toggles) {
+    if (t.state !== "off") continue;               // never overwrite remembered originals with patched bytes
+    TOGGLE_ORIGINALS[t.id] = Object.fromEntries(
+      (t.sites || []).flatMap(s => (s.spans || []).map(sp => [sp.off, sp.cur])));
+  }
+  const EFFECT_NOTE = {
+    "proven": "Proven in game.",
+    "code-verified": "Patch site and effect verified by disassembly against the pristine disc; an in-game A/B run is still pending.",
+    "not-working": "Registered so an already-patched disc can be verified and restored; the patch itself is proven not to work in game.",
+  };
+  const stateNote = (t) => t.state === "on" ? "<b>On</b>"
+    : t.state === "off" ? "Off"
+    : t.state === "foreign" ? "<b>Blocked</b>: a patch site holds bytes this editor does not recognise"
+    : t.state === "not-found" ? "<b>Not found</b>: no patch site on this disc"
+    : `<b>${esc(t.state)}</b>: partly applied; restore it from the CLI to be safe`;
+  const groups = [...new Set(toggles.map(t => t.group || "Code patches"))];
+  body.innerHTML = groups.map(gname => `<div class="subhd">${esc(gname)}</div>
+    <div class="grid" style="padding-top:0">` + toggles.filter(t => (t.group || "Code patches") === gname).map(t => {
+      const dis = (t.state === "on" || t.state === "off") ? "" : "disabled";
+      return `<div class="fld"><label>${esc(t.label)}</label><div class="in">
+        <label class="chk"><input type="checkbox" ${t.state === "on" ? "checked" : ""} ${dis}
+          data-key="toggle:${esc(t.id)}" data-view="toggle" data-tid="${esc(t.id)}"
+          data-kind="num" data-orig="${t.state === "on" ? 1 : 0}"
+          data-lbl="${esc(t.label)}" data-grp="Code patches"
+          onchange="onIsoField(this)">
+          <span class="note">${stateNote(t)}</span></label>${REVERT_BTN}</div>
+        <div class="fnote">${esc(t.blurb || "")} ${esc(EFFECT_NOTE[t.effect] || "")}</div></div>`;
+    }).join("") + `</div>`).join("")
+    + `<div class="fnote" style="margin:10px 14px 0">Every patch is one or two words, located by
+      signature on this disc (NTSC-U and PAL alike), and fully reversible: switch it back off and
+      the disc is byte-identical.</div>`;
 };
 
 VIEW_RENDER.runeprice = priceView(() => window.PYISO.runeprices(), "runeprice",

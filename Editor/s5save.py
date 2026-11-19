@@ -229,6 +229,43 @@ def recruit_state(gd, idx):
         state = "initialized"
     return {"word": w, "state": state,
             "recruited": state in ("party", "active"), "inParty": in_party}
+# CHAR_EXP @+0xCE / CHAR_SP @+0xD0: u16 EXP and skill points (VERIFIED
+# 2026-11-18 by static correlation against live-record dumps of two saves,
+# US + PAL: the live record carries EXP at +0x1E and SP at +0x20 and the
+# save record is the live record shifted +0xB0 for builder-written fields;
+# both matched 120/120 characters on both saves). Real saves run EXP
+# 0..993 and SP 0..7745, far inside the u16 storage.
+CHAR_EXP, CHAR_SP = 0xCE, 0xD0
+# CHAR_RUNE_USES @+0xC6..+0xC9: current spell uses left, one byte per spell
+# level (live +0x16..+0x19); CHAR_RUNE_USES_MAX @+0xCA..+0xCD is the
+# per-level maximum (derived from level and rune, display only). VERIFIED
+# 2026-11-18: on the PAL saves the current bytes match the live CURRENT
+# uses 120/120 while the max bytes match live max, and characters with
+# spent uses persist them (5 on the early PAL save), so the game loads
+# current uses from the save; it does not refill them on load.
+CHAR_RUNE_USES, CHAR_RUNE_USES_MAX = 0xC6, 0xCA
+# CHAR_WEAPON_ID @+0xEA / CHAR_WEAPON_LEVEL @+0xEB (live +0x3A/+0x3B,
+# VERIFIED 2026-11-18, 120/120 on US + PAL saves): the character's weapon
+# id (equal to the ISO starting-loadout table's W byte for every
+# character) and the sharpen-level byte. The level byte is 0-based: the
+# stat code reads the weapon growth table as growth[level] over its 16
+# entries for sharpen levels 1..16, so the stored byte is (displayed
+# level - 1), range 0..15. read_character reports weaponLevel in
+# displayed units (1..16) and writes convert back. (The community pnach
+# "Sword Modifier" rewrites the weapon ID byte, not the level; the id is
+# not offered here, the ISO loadout editor owns starting weapons.)
+CHAR_WEAPON_ID, CHAR_WEAPON_LEVEL = 0xEA, 0xEB
+# CHAR_HELD @+0xF8: four 8-byte held-item entries per character,
+# [category][id][qty][limit][value u32 LE]; note the value trails, unlike
+# inventory slots where it leads. VERIFIED 2026-11-18 on three saves
+# (US + two PAL): 295 entries, every (cat, id) valid, every limit byte
+# equal to stack_limit(cat, id), every qty inside the inventory rules
+# (limit 0 => qty 0). An empty entry is all zero (no 0x13 marker, unlike
+# inventory). Entry 0's id byte IS CHAR_ACCESSORY (+0xF9): when entry 0
+# holds a category-5 item, that item is the equipped accessory, so the
+# accessory field and held slot 1 are two views of the same byte.
+CHAR_HELD = 0xF8
+HELD_COUNT = 4
 
 # ---- Rune slot availability (issue #6, DISPLAY ONLY) ------------------------
 # Slot availability is computed at menu time from the character's current
@@ -463,6 +500,12 @@ def read_character(gd, idx):
     active = any(gd[r + CHAR_ACTIVE:r + CHAR_ACTIVE + 47])
     skills = list(gd[r + CHAR_SKILLS:r + CHAR_SKILLS + SKILL_COUNT])
     rs = recruit_state(gd, idx)
+    held = []
+    for k in range(HELD_COUNT):
+        o = r + CHAR_HELD + 8 * k
+        held.append({"cat": gd[o], "id": gd[o + 1], "qty": gd[o + 2],
+                     "max": gd[o + 3],
+                     "value": int.from_bytes(gd[o + 4:o + 8], "little")})
     return {"idx": idx, "active": active, "level": gd[r + CHAR_LEVEL],
             "recruited": 1 if rs["recruited"] else 0,
             "recruitState": rs["state"], "statusWord": rs["word"],
@@ -471,7 +514,14 @@ def read_character(gd, idx):
             "slots": [gd[r + CHAR_SLOTS], gd[r + CHAR_SLOTS + 1]],
             "armor": armor, "runes": runes, "skills": skills,
             "runeFlags": [gd[r + CHAR_RUNE_FLAGS + i] for i in range(3)],
-            "slotStates": rune_slot_states(gd, idx)}
+            "slotStates": rune_slot_states(gd, idx),
+            "exp": int.from_bytes(gd[r + CHAR_EXP:r + CHAR_EXP + 2], "little"),
+            "sp": int.from_bytes(gd[r + CHAR_SP:r + CHAR_SP + 2], "little"),
+            "weaponLevel": gd[r + CHAR_WEAPON_LEVEL] + 1,
+            "runeUses": list(gd[r + CHAR_RUNE_USES:r + CHAR_RUNE_USES + 4]),
+            "runeUsesMax": list(gd[r + CHAR_RUNE_USES_MAX:
+                                     r + CHAR_RUNE_USES_MAX + 4]),
+            "held": held}
 
 def read_all_characters(gd):
     return [c for i in range(NUM_CHARS) if (c := read_character(gd, i))]
@@ -495,9 +545,36 @@ def read_gamedata_payload(path, folder=None):
     if not tgt: return None
     return card.read_file(tgt["cluster"], tgt["length"], tgt["folder"])
 
+def _apply_held_edit(b, r, k, val):
+    """Apply one held-item edit to the record at byte offset r, entry k.
+    val = {"cat": c, "id": i, "qty": q} sets the entry; {"cat": 0} (or
+    0/None) clears it to all-zero. The four entries are fixed positions
+    (no compaction, unlike the inventory lists). Changing the item zeroes
+    the per-instance value; a quantity-only edit keeps it, mirroring
+    _apply_inv_edit. Raises ValueError on an unverified category/id or an
+    out-of-range quantity, so a bad edit fails the whole write."""
+    o = r + CHAR_HELD + 8 * k
+    if not val or not int(val.get("cat", 0)):
+        b[o:o + 8] = b"\x00" * 8
+        return
+    cat, iid, qty = int(val["cat"]), int(val["id"]), int(val.get("qty", 0))
+    if cat not in ITEM_CAT_MAXID or not 1 <= iid <= ITEM_CAT_MAXID[cat]:
+        raise ValueError(f"unverified item category/id: {cat}/{iid}")
+    mx = stack_limit(cat, iid)
+    if mx and not 1 <= qty <= mx:
+        raise ValueError(f"quantity {qty} outside 1..{mx} for item {cat}/{iid}")
+    if not mx and qty != 0:
+        raise ValueError(f"item {cat}/{iid} is one-per-slot; quantity must be 0")
+    if (b[o], b[o + 1]) != (cat, iid):
+        b[o + 4:o + 8] = b"\x00" * 4   # new item: fresh instance value
+    b[o:o + 4] = bytes((cat, iid, qty, mx))
+
 def _apply_char_edit(b, key, val):
     """Apply a per-character equipment edit keyed 'c<idx>_<slot>' to bytearray b.
-    Returns True if applied. Slots: helm/body/glove/foot (armor), rhead/rright/rleft (rune)."""
+    Returns True if applied. Slots: helm/body/glove/foot (armor), rhead/rright/rleft (rune),
+    level, exp, sp, wlv (weapon sharpen level, displayed units 1..16), ruse0..ruse3
+    (current rune spell uses per spell level), held0..held3 (held items, dict values),
+    sk<n> (skill ranks), ss0/ss1 (equipped skill slots), rec (recruitment bit)."""
     if not key.startswith("c") or "_" not in key: return False
     idx_s, slot = key[1:].split("_", 1)
     if not idx_s.isdigit(): return False
@@ -512,6 +589,23 @@ def _apply_char_edit(b, key, val):
         b[r + CHAR_RUNE + RUNE_SLOTS.index(slot)] = int(val) & 0xFF
     elif slot == "level":
         b[r + CHAR_LEVEL] = max(1, min(99, int(val)))
+    elif slot == "exp":
+        b[r + CHAR_EXP:r + CHAR_EXP + 2] = \
+            max(0, min(0xFFFF, int(val))).to_bytes(2, "little")
+    elif slot == "sp":
+        b[r + CHAR_SP:r + CHAR_SP + 2] = \
+            max(0, min(0xFFFF, int(val))).to_bytes(2, "little")
+    elif slot == "wlv":
+        # displayed level 1..16; the stored byte is level - 1 (see CHAR_WEAPON_LEVEL)
+        b[r + CHAR_WEAPON_LEVEL] = max(1, min(16, int(val))) - 1
+    elif slot.startswith("ruse"):
+        rn = int(slot[4:])
+        if not (0 <= rn < 4): return False
+        b[r + CHAR_RUNE_USES + rn] = max(0, min(9, int(val)))
+    elif slot.startswith("held"):
+        hn = int(slot[4:])
+        if not (0 <= hn < HELD_COUNT): return False
+        _apply_held_edit(b, r, hn, val)   # raises ValueError on an unverified item
     elif slot.startswith("sk"):
         sn = int(slot[2:])
         if not (0 <= sn < SKILL_COUNT): return False

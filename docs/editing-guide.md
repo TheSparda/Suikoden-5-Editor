@@ -482,6 +482,30 @@ call at `0x436548`; Prosperity and Godspeed are checked some other way that hasn
 
 ---
 
+## Code patches
+
+One-word code patches, listed with their live state on the open disc. Every site is located
+by a signature search of the executable (never a hard-coded address), must match exactly
+once, and is refused untouched if the bytes there are neither the stock nor the patched
+form. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
+toggles above are in this list too; the five below come from the community cheat table,
+with their sites found by disassembly and verified on both the NTSC-U and PAL discs.
+Their effect is labelled **code-verified**: the patched instruction does what the label
+says by construction, but no in-game A/B run has exercised them yet.
+
+| Toggle | What it patches |
+|---|---|
+| Training does not use SP | The store that writes the party SP pool back in `spendSP`, the function training pays with, becomes a NOP, so the pool never goes down (NTSC-U `0x31AAB0`, PAL `0x31B710`) |
+| Training increases SP | `spendSP`'s subtraction becomes an addition, so paying SP adds it to the pool instead (NTSC-U `0x31AAA8`, PAL `0x31B708`) |
+| Train skill once for SS rank | The training routine adds 1 to a skill's rank after paying; the add becomes "set to 7", so one paid session maxes the rank (NTSC-U `0x27CEB8`, PAL `0x27D6B8`) |
+| Forge once sets weapon level to max | The forge helper adds 1 to the weapon level byte; the add becomes "set to 15", sharpen level 16 (NTSC-U `0x332DC8`, PAL `0x333BA8`) |
+| Blacksmiths can forge to max level | The forge menu compares each weapon's level against a cap the caller passes in (the blacksmith's limit); the move that loads the cap becomes "16" for every blacksmith (NTSC-U `0x345BA4`, PAL `0x346954`) |
+
+The two training SP toggles patch different words of the same function and can be on at
+the same time (the store is NOPed, so the addition is computed but never written back).
+
+---
+
 ## Prices
 
 The game stores prices in separate tables, not one master list:
@@ -623,6 +647,10 @@ Verified and editable:
 | Cleared-game marker | 1 = set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list (it does not enable New Game Plus) |
 | Active party | 10 slots (6 battle + 4 entourage), written to the game's real party arrays; the hero can sit in any slot |
 | Per character | Equipped armor (4 slots + accessory), equipped runes (head / right / left), skill ranks |
+| Per character: EXP, SP | The character's own EXP and skill points (u16 each). Not the shared party SP pool above |
+| Per character: Weapon level | Sharpen level of the character's own weapon, 1-16. The record stores it 0-based (the stat code indexes the 16-entry growth table with it directly); the editor shows and writes displayed levels. Which weapon it is comes from the ISO starting-loadout table |
+| Per character: Rune uses left | Current spell uses per spell level (Lv1-Lv4). The game loads these counts from the save and does not refill them on load, so a character saved mid-dungeon keeps their spent uses; the per-level maxima are derived by the game and shown read-only |
+| Per character: Held items | Four fixed item slots per character (starting items, rune orbs, accessories), same item and stack rules as the inventory lists. Slot 1 shares its item byte with the accessory field: when slot 1 holds an accessory, that accessory is the equipped one |
 
 Playtime is shown read-only — it's a display cache.
 

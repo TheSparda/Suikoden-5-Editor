@@ -31,6 +31,12 @@ script-VM condition resolver that battle code never consumes
 patch point that would make them work. They are in the registry so a
 disc already patched with them can be verified and restored exactly,
 not as a recommendation to apply them.
+
+The five CT-survey toggles (training SP x2, train-to-SS, forge x2) are
+the community cheat table's code patches with their sites located by
+signature and their semantics verified by disassembly on both regions;
+they carry effect "code-verified" because no in-game A/B run has
+exercised them yet (ps2-re games/suikoden5/CT_FEATURES_BUILD.md).
 """
 import struct
 
@@ -143,6 +149,142 @@ def _gate_sites(rune_id):
     return find
 
 
+# ---------------------------------------------------------------------------
+# CT-survey toggles (2026-11-18): the five code patches the community cheat
+# table applies at runtime, located statically in the ELF text window (the
+# window the Dawn finder scans) and verified instruction by instruction
+# against the pristine discs of BOTH regions (ps2-re CT_FEATURES_BUILD.md).
+# Every stock word is a constant, so all five are self-restoring. Their
+# semantics are proven by disassembly; none has had an in-game A/B run yet,
+# so they carry effect "code-verified", below the Dawn toggle's "proven".
+# ---------------------------------------------------------------------------
+
+def _scan_blob(iso):
+    return iso.rd(F.DAWN_SCAN_LO, F.DAWN_SCAN_HI - F.DAWN_SCAN_LO)
+
+
+def _bytes_hits(blob, pat):
+    out, i = [], blob.find(pat)
+    while i != -1:
+        out.append(i)
+        i = blob.find(pat, i + 1)
+    return out
+
+
+def _one_site(iso, hits, rel, stock, patched, label):
+    """Build the single site for a signature hit list; [] unless exactly
+    one hit (the framework's uniqueness rule for signature-located sites)."""
+    if len(hits) != 1:
+        return []
+    off = F.DAWN_SCAN_LO + hits[0] + rel
+    return [{"label": label % off,
+             "spans": [{"off": off, "stock": struct.pack("<I", stock),
+                        "patched": struct.pack("<I", patched),
+                        "cur": iso.rd(off, 4)}]}]
+
+
+# spendSP (the party-SP payment function training uses) has an identical
+# 10-word body in both regions; the two training-SP toggles patch two
+# different words of it: the subu that subtracts the cost from the pool,
+# and the sw that stores the pool back. The locator anchors on the
+# invariant words only (the two patched words are left to the span
+# classification), so a patched disc still locates, like the Dawn site.
+_SPENDSP_PREFIX = struct.pack(
+    "<6I", 0x8C820004, 0x0045082B, 0x10200003, 0x00000000, 0x10000004,
+    0x0000102D)
+
+
+def _spendsp_hits(iso):
+    blob = _scan_blob(iso)
+    hits = []
+    for i in _bytes_hits(blob, _SPENDSP_PREFIX):
+        if i % 4 or i + 40 > len(blob):
+            continue
+        w7 = struct.unpack_from("<I", blob, i + 0x1C)[0]
+        w9 = struct.unpack_from("<I", blob, i + 0x24)[0]
+        if w7 == 0x24020001 and w9 == 0x03E00008:
+            hits.append(i)
+    return hits
+
+
+def _training_sp_free_sites(iso):
+    return _one_site(iso, _spendsp_hits(iso), 0x20,
+                     0xAC830004, 0x00000000,
+                     "spendSP pool store @0x%X")
+
+
+def _training_sp_gain_sites(iso):
+    return _one_site(iso, _spendsp_hits(iso), 0x18,
+                     0x00451823, 0x00451821,
+                     "spendSP pool subtract @0x%X")
+
+
+def _train_ss_sites(iso):
+    """The training routine's rank increment: lbu $v0, 0x68($v1) (the rank
+    byte, just below the rank array at record +0x69 for 1-based skill
+    ids), addiu $v0, $v0, 1, a jal to the stat recompute, and the store
+    sb $v0, 0x68($v1) in its delay slot. The jal target differs per
+    region, so the pattern is structural: first and fourth words exact,
+    third any jal. The increment word itself is not part of the anchor,
+    so a patched or foreign word still locates and the span
+    classification decides state."""
+    blob = _scan_blob(iso)
+    hits = []
+    for i in _bytes_hits(blob, struct.pack("<I", 0x90620068)):
+        if i % 4 or i + 16 > len(blob):
+            continue
+        w1, w2, w3 = struct.unpack_from("<3I", blob, i + 4)
+        if (w2 >> 26) == 0x03 and w3 == 0xA0620068:
+            hits.append(i)
+    return _one_site(iso, hits, 4, 0x24420001, 0x24020007,
+                     "training rank increment @0x%X")
+
+
+def _forge_once_sites(iso):
+    """The forge helper reads the weapon level byte (record +0x3B), adds
+    1 and stores it back. Anchor: the lbu, with the sb and the jr $ra
+    exact at +8/+12; the increment word at +4 is the span, not part of
+    the anchor, so patched and foreign forms still locate."""
+    blob = _scan_blob(iso)
+    hits = []
+    for i in _bytes_hits(blob, struct.pack("<I", 0x9083003B)):
+        if i % 4 or i + 16 > len(blob):
+            continue
+        w1, w2, w3 = struct.unpack_from("<3I", blob, i + 4)
+        if w2 == 0xA083003B and w3 == 0x03E00008:
+            hits.append(i)
+    return _one_site(iso, hits, 4, 0x24630001, 0x2403000F,
+                     "forge level increment @0x%X")
+
+
+# The forge menu handler moves its cap argument into $s3 in its prologue
+# (daddu $s3, $a1, $zero between the saved-register stores) and compares
+# each weapon's level against $s3 (slt $at, $v0, $s3 after lw $v0, 0x10).
+# The prologue shape occurs twice per disc; only the forge handler is
+# followed by the forgeable check within 0x900 bytes. The cap word
+# itself is the span, not part of the anchor, so patched and foreign
+# forms still locate.
+_SMITH_PROLOGUE_PREFIX = struct.pack("<3I", 0x7FB40040, 0x7FB30030,
+                                     0x7FB20020)
+_FORGEABLE_CHECK = struct.pack("<3I", 0x8C420010, 0x0053082A, 0x10200005)
+
+
+def _smith_cap_sites(iso):
+    blob = _scan_blob(iso)
+    hits = []
+    for start in _bytes_hits(blob, _SMITH_PROLOGUE_PREFIX):
+        if start % 4 or start + 24 > len(blob):
+            continue
+        s1, s0 = struct.unpack_from("<2I", blob, start + 16)
+        if (s1, s0) != (0x7FB10010, 0x7FB00000):
+            continue
+        daddu = start + 12
+        if blob[daddu:daddu + 0x900].find(_FORGEABLE_CHECK) != -1:
+            hits.append(daddu)
+    return _one_site(iso, hits, 0, 0x00A0982D, 0x24130010,
+                     "forge menu level cap @0x%X")
+
+
 TOGGLES = [
     {"id": "dawn-unlock", "label": "Dawn Rune: unlock all four spells",
      "group": "Code patches", "effect": "proven",
@@ -167,6 +309,43 @@ TOGGLES = [
               "movement or escape code (PASSIVES_CATHARI.md); registered "
               "for exact verification and restore of already-patched discs.",
      "find": _gate_sites(82), "self_restoring": False},
+    {"id": "training-sp-free", "label": "Training does not use SP",
+     "group": "Code patches", "effect": "code-verified",
+     "blurb": "NOPs the pool store in spendSP, the function training "
+              "pays party SP with, so training a skill costs no party "
+              "SP. Site located by the spendSP body signature, unique "
+              "in both regions; semantics verified by disassembly, "
+              "in-game A/B pending.",
+     "find": _training_sp_free_sites, "self_restoring": True},
+    {"id": "training-sp-gain", "label": "Training increases SP",
+     "group": "Code patches", "effect": "code-verified",
+     "blurb": "Turns spendSP's pool subtraction into an addition, so "
+              "training a skill adds party SP instead of spending it. "
+              "Same signature-located function as Training does not "
+              "use SP; semantics verified by disassembly, in-game "
+              "A/B pending.",
+     "find": _training_sp_gain_sites, "self_restoring": True},
+    {"id": "train-ss-rank", "label": "Train skill once for SS rank",
+     "group": "Code patches", "effect": "code-verified",
+     "blurb": "The training routine adds 1 to a skill's rank after "
+              "paying its SP cost; this makes one paid session set "
+              "the rank straight to 7 (SS). Site verified in the "
+              "training routine in both regions; in-game A/B pending.",
+     "find": _train_ss_sites, "self_restoring": True},
+    {"id": "forge-once-max", "label": "Forge once sets weapon level to max",
+     "group": "Code patches", "effect": "code-verified",
+     "blurb": "The forge helper adds 1 to the weapon level byte; "
+              "this makes a single forge set it to 15, sharpen "
+              "level 16. Site verified in both regions; in-game "
+              "A/B pending.",
+     "find": _forge_once_sites, "self_restoring": True},
+    {"id": "smith-forge-max", "label": "Blacksmiths can forge to max level",
+     "group": "Code patches", "effect": "code-verified",
+     "blurb": "The forge menu tests each weapon's level against a "
+              "cap passed in by the caller (the blacksmith's limit); "
+              "this fixes the cap at 16 for every blacksmith. Site "
+              "verified in both regions; in-game A/B pending.",
+     "find": _smith_cap_sites, "self_restoring": True},
 ]
 _BY_ID = {t["id"]: t for t in TOGGLES}
 
