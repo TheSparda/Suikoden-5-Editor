@@ -218,15 +218,26 @@ async function restoreLastISO() {
  * desktop, and its whole-sector rewrite stays inside the staged slot (a
  * re-encoded container that outgrows the slot is refused there, never
  * truncated). Returns {off, bytes} when it extended the image, else null
- * (no BATLE.ROM on this disc, or the image is already long enough). */
+ * (no BATLE.ROM on this disc, the image is already long enough, or the
+ * source file ends before the container's last byte). A source that holds
+ * the whole container but ends inside the final sector still stages: the
+ * slot's tail past the container is padding and is staged as zeros. */
 async function stageBatleInto(file, pyPath) {
   const info = JSON.parse(window.PYISO.stageinfo(pyPath));
   if (info.error || !info.lba) return null;
   const off = info.lba * SECT, len = info.slot;
   const cur = pyodide.FS.readFile(pyPath);
   if (cur.length >= off + len) return null;
-  const bytes = new Uint8Array(await file.slice(off, off + len).arrayBuffer());
-  if (bytes.length < len) return null;      // truncated source: leave the image alone
+  const got = new Uint8Array(await file.slice(off, off + len).arrayBuffer());
+  if (got.length < info.size) return null;  // container itself truncated: leave the image alone
+  /* The container is fully present, but the source may end inside the
+   * overlay's final sector (a trimmed image whose file stops at the
+   * container's last byte), short of the sector-rounded slot. The rest of
+   * the slot is sector padding, so stage zeros there: the same bytes a
+   * full disc carries in that range, and the same padding the engine's
+   * own overlay writer produces when it rewrites the container. */
+  const bytes = new Uint8Array(len);
+  bytes.set(got, 0);
   const out = new Uint8Array(off + len);
   out.set(cur, 0); out.set(bytes, off);
   pyodide.FS.writeFile(pyPath, out);
