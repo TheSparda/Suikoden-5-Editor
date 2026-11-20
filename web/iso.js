@@ -433,6 +433,11 @@ function revertIsoField(btn) {
  * so the per-spell editors below refresh to the new set. */
 function afterIsoWrite(view, ident, el) {
   if (view === "rune") { try { renderRune(JSON.parse(ident).id); } catch (_) {} }
+  /* Issue #50: a caps write changes which starting ranks the loadout
+   * selects may offer; refresh them from the new caps in place. */
+  if (view === "char" && el && el.dataset.table === "equipable skills") {
+    try { refreshLoadoutCaps(JSON.parse(ident).id); } catch (_) {}
+  }
   // reassigning a set's effect changes which magnitudes exist -> re-render the panel
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
   if (view === "runealways") {
@@ -573,6 +578,7 @@ function renderCharTables(cid) {
  * generic field path, because rune words are signed s32 values. */
 let LO_CUR = null;   // the loadout payload currently rendered
 let LO_ORIG = null;  // its values as rendered (the dirty-tracking baseline)
+let LO_CID = null;   // the character LO_CUR belongs to
 function loWordLabel(lo, r) {
   if (r.kind === "rune") return r.runeName || ("#" + r.runeId);
   if (r.kind === "unlock") return `Empty: unlocks at Lv ${r.unlockLevel}`;
@@ -588,6 +594,7 @@ function renderLoadoutSection(cid, name) {
       NTSC-U only. The PAL offsets of the rune and skill-rank tables are not
       verified, so nothing is shown here rather than wrong data.</div>`;
   LO_CUR = lo;
+  LO_CID = cid;
   LO_ORIG = JSON.parse(JSON.stringify(lo));
   const armorNames = (slot, v) => nameFor(slot, v);
   let h = `<div class="subhd">starting loadout (new game)</div>
@@ -622,6 +629,43 @@ function renderLoadoutSection(cid, name) {
       <div class="fnote">effective at start: <span id="loEff${sk.index}">${esc(RK[sk.effective] || sk.effective)}</span></div></div>`;
   }).join("") + `</div>`;
   return h;
+}
+/* Issue #50: the selects above are built from the caps snapshot taken when
+ * the panel rendered, so raising a cap in the equipable skills table left
+ * the skill unselectable until the ISO was reopened (the engine would have
+ * accepted the rank all along; only the DOM options were stale). After a
+ * successful caps write, rebuild the selects in place from a fresh loadout
+ * payload: options over the new 0..cap range, cap pills and LO_CUR updated.
+ * No full re-render: that would reset the data-orig baselines the revert
+ * buttons rely on. A selection above a newly lowered cap is clamped by
+ * writing the cap value through the normal loadout write path, so the
+ * staged ISO, the select and the change journal stay in agreement (the
+ * engine rejects a rank above the cap on any later write). */
+function refreshLoadoutCaps(cid) {
+  if (!LO_CUR || LO_CID !== cid) return;
+  let lo;
+  try { lo = JSON.parse(window.PYISO.loadout(cid)).loadout; } catch (_) { return; }
+  if (!lo || lo.gated) return;
+  const RK = isoMAPS.ranks || [];
+  for (const sk of lo.skills) {
+    const cur = LO_CUR.skills[sk.index];
+    if (cur) { cur.cap = sk.cap; cur.effective = sk.effective; }
+    const eff = $("loEff" + sk.index);
+    const fld = eff && eff.closest ? eff.closest(".fld") : null;
+    if (!fld) continue;
+    const pill = fld.querySelector(".pill");
+    if (pill) pill.textContent = "cap " + (RK[sk.cap] || sk.cap);
+    if (eff) eff.textContent = RK[sk.effective] || sk.effective;
+    const sel = fld.querySelector("select");
+    if (!sel) continue;
+    const prev = +sel.value || 0;
+    let opts = "";
+    for (let v = 0; v <= sk.cap; v++)
+      opts += `<option value="${v}">${esc(RK[v] || v)}</option>`;
+    sel.innerHTML = sk.cap ? opts : `<option value="0">${esc(RK[0] || "None")}</option>`;
+    sel.value = String(Math.min(prev, sk.cap));
+    if (prev > sk.cap) loSetSkill(cid, sk.index, sel);   // write the clamp through
+  }
 }
 function loTrack(cid, name, key, label, to, origTo, el) {
   if (String(to) === String(origTo)) { delete isoEdits[key]; if (el) markDirty(el, false); }
