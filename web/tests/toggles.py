@@ -53,10 +53,11 @@ def file_bytes():
 
 with P.Iso(tmp, writable=True) as g:
     sts = {s["id"]: s for s in T.list_toggles(g)}
-    chk("registry holds the nine toggles",
+    chk("registry holds the ten toggles",
         set(sts) == {"dawn-unlock", "fortune-always", "prosperity-always",
                      "godspeed-always", "training-sp-free", "training-sp-gain",
-                     "train-ss-rank", "forge-once-max", "smith-forge-max"},
+                     "train-ss-rank", "forge-once-max", "smith-forge-max",
+                     "sig-skills-normal"},
         ", ".join(sorted(sts)))
     chk("dawn is the proven toggle; the perks are labelled not-working",
         sts["dawn-unlock"]["effect"] == "proven"
@@ -128,6 +129,43 @@ with P.Iso(tmp, writable=True) as g:
         and T.toggle_status(g, "training-sp-gain")["state"] == "on")
     T.set_toggle(g, "training-sp-free", False)
     T.set_toggle(g, "training-sp-gain", False)
+
+    # Signature-skill toggle (issue #16): the two range compares of
+    # func_0043A430, located by the mode 2 constant-chain anchor at the
+    # offsets the in-game proof established for NTSC-U. One toggle, two
+    # sites, both words patched and restored together.
+    SIG_US = (0x3E7DC0, 0x3E7DD8)
+    st = sts["sig-skills-normal"]
+    chk("sig-skills-normal is proven, off, two sites at 0x3E7DC0/0x3E7DD8",
+        st["effect"] == "proven" and st["state"] == "off"
+        and len(st["sites"]) == 2
+        and [s["spans"][0]["off"] for s in st["sites"]] == list(SIG_US),
+        "%s %s" % (st["effect"], st["state"]))
+    r = T.set_toggle(g, "sig-skills-normal", True)
+    chk("sig-skills-normal apply changes both compare words",
+        r["changed"] == 2
+        and [g.ru(o, 4) for o in SIG_US] == [0x28410031, 0x28610031],
+        "changed %d" % r["changed"])
+    chk("sig-skills-normal reads on after apply",
+        T.toggle_status(g, "sig-skills-normal")["state"] == "on")
+    others = {s["id"]: s["state"] for s in T.list_toggles(g)
+              if s["id"] != "sig-skills-normal"}
+    chk("the other toggles are unaffected while sig-skills-normal is on",
+        all(others[k] == sts[k]["state"] for k in others),
+        ", ".join("%s=%s" % (k, v) for k, v in sorted(others.items())))
+    T.set_toggle(g, "sig-skills-normal", False)
+    chk("sig-skills-normal reads off after restore",
+        T.toggle_status(g, "sig-skills-normal")["state"] == "off")
+    # Half-patched (one compare widened by hand): reads mixed, and apply
+    # completes the pair rather than refusing or double-writing.
+    g.wu(SIG_US[0], 4, 0x28410031)
+    chk("a half-patched sig-skills-normal reads as mixed",
+        T.toggle_status(g, "sig-skills-normal")["state"] == "mixed")
+    r = T.set_toggle(g, "sig-skills-normal", True)
+    chk("apply over the half-patched pair changes only the stock word",
+        r["changed"] == 1
+        and T.toggle_status(g, "sig-skills-normal")["state"] == "on")
+    T.set_toggle(g, "sig-skills-normal", False)
 chk("apply/restore cycles leave the file byte-identical", file_bytes() == pristine)
 
 with P.Iso(tmp, writable=True) as g:
@@ -172,6 +210,22 @@ with P.Iso(tmp, writable=True) as g:
     except ValueError:
         chk("apply over a foreign forge word refuses", True)
     g.wu(site["off"], 4, 0x24630001)   # back to stock
+
+    # One sig-skill compare corrupted: the anchor still locates the
+    # pair, the toggle reads foreign, and apply refuses before writing
+    # anything (the other compare must stay stock).
+    g.wu(0x3E7DD8, 4, 0x28610099)
+    chk("a corrupted sig-skill compare reads as foreign",
+        T.toggle_status(g, "sig-skills-normal")["state"] == "foreign")
+    before = g.rd(0, len(pristine))
+    try:
+        T.set_toggle(g, "sig-skills-normal", True)
+        chk("apply over a foreign sig-skill compare refuses", False, "no error")
+    except ValueError:
+        chk("apply over a foreign sig-skill compare refuses", True)
+    chk("the refused sig-skill apply wrote nothing",
+        g.rd(0, len(pristine)) == before)
+    g.wu(0x3E7DD8, 4, 0x28610017)   # back to stock
 chk("foreign-byte experiments leave the file byte-identical",
     file_bytes() == pristine)
 
@@ -208,6 +262,23 @@ if pal_iso:
             chk("PAL smith-forge-max reads on after apply",
                 T.toggle_status(g, "smith-forge-max")["state"] == "on")
             T.set_toggle(g, "smith-forge-max", False)
+            # Signature-skill toggle: the PAL predicate is byte-identical,
+            # so the same anchor lands at the PAL offsets.
+            SIG_PAL = (0x3E9580, 0x3E9598)
+            st = T.toggle_status(g, "sig-skills-normal")
+            chk("PAL sig-skills-normal is off, two sites at 0x3E9580/0x3E9598",
+                st["state"] == "off" and len(st["sites"]) == 2
+                and [s["spans"][0]["off"] for s in st["sites"]] == list(SIG_PAL),
+                st["state"])
+            r = T.set_toggle(g, "sig-skills-normal", True)
+            chk("PAL sig-skills-normal apply changes both compare words",
+                r["changed"] == 2
+                and [g.ru(o, 4) for o in SIG_PAL] == [0x28410031, 0x28610031])
+            chk("PAL sig-skills-normal reads on after apply",
+                T.toggle_status(g, "sig-skills-normal")["state"] == "on")
+            T.set_toggle(g, "sig-skills-normal", False)
+            chk("PAL sig-skills-normal reads off after restore",
+                T.toggle_status(g, "sig-skills-normal")["state"] == "off")
         with open(tmp2, "rb") as f:
             chk("PAL apply/restore cycle leaves the file byte-identical",
                 f.read() == pristine2)
