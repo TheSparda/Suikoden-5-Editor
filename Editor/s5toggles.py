@@ -285,6 +285,59 @@ def _smith_cap_sites(iso):
                      "forge menu level cap @0x%X")
 
 
+# ---------------------------------------------------------------------------
+# Signature-skill toggle (issue #16): the skill menu's Equip, Remove and
+# Move SP handlers all ask func_0043A430 whether a skill is "normal", and
+# that predicate is a hardcoded range check: only 1-based skill ids below
+# 0x17 count, so every skill from 0-based 22 (Thief) upward, including all
+# the signature skills, is refused with "Can't remove unique skills." No
+# data table gates it: raising caps and granting starting ranks were both
+# patched in test ISOs and the refusal was unchanged. Widening the two
+# range compares from 0x17 to 0x31 (the full 48-skill array plus the
+# 1-based shift) makes every skill pass, and with exactly those two bytes
+# changed the Prince equipped Analyze through the stock menu in game
+# (ps2-re games/suikoden5/SIGNATURE_SKILLS.md). The mode 2 service-skill
+# whitelist later in the same function is untouched.
+#
+# The locator anchors on the function's invariant mode 2 constant chain
+# (the 0x2E / 0x2B / 0x30 / 0x20 / 0x1F loads and their branches, unique
+# in the scan window in both regions), which excludes both patched words,
+# so a patched or foreign disc still locates and the span classification
+# decides state. The function body is byte-identical in PAL, so the same
+# anchor lands there too. The two compares are two sites of the one
+# toggle, the gate toggles' shape: set_toggle classifies every site
+# before writing any byte, so a foreign word at either compare refuses
+# the whole toggle untouched, and the pair always patches and restores
+# together. Self-restoring: both stock words are constants.
+# ---------------------------------------------------------------------------
+
+_SIGSKILL_ANCHOR = struct.pack(
+    "<27I",
+    0x308300FF, 0x2402002E, 0x1062000F, 0x00000000, 0x2402002B, 0x1062000C,
+    0x00000000, 0x24020030, 0x10620009, 0x00000000, 0x24020020, 0x10620006,
+    0x00000000, 0x2402001F, 0x10620003, 0x00000000, 0x10000004, 0x0000102D,
+    0x10000011, 0x24020001, 0x0000102D, 0x1000000E, 0x00000000, 0x308200FF,
+    0x0002082A, 0x1020FFFA, 0x00000000)
+
+
+def _sigskill_sites(iso):
+    hits = _bytes_hits(_scan_blob(iso), _SIGSKILL_ANCHOR)
+    if len(hits) != 1:
+        return []
+    base = F.DAWN_SCAN_LO + hits[0]
+    out = []
+    for rel, mode, stock, patched in ((0x6C, 0, 0x28410017, 0x28410031),
+                                      (0x84, 1, 0x28610017, 0x28610031)):
+        off = base + rel
+        out.append({"label": "skill-id range check, mode %d compare @0x%X"
+                             % (mode, off),
+                    "spans": [{"off": off,
+                               "stock": struct.pack("<I", stock),
+                               "patched": struct.pack("<I", patched),
+                               "cur": iso.rd(off, 4)}]})
+    return out
+
+
 TOGGLES = [
     {"id": "dawn-unlock", "label": "Dawn Rune: unlock all four spells",
      "group": "Code patches", "effect": "proven",
@@ -346,6 +399,20 @@ TOGGLES = [
               "this fixes the cap at 16 for every blacksmith. Site "
               "verified in both regions; in-game A/B pending.",
      "find": _smith_cap_sites, "self_restoring": True},
+    {"id": "sig-skills-normal", "label": "Signature skills are normal skills",
+     "group": "Code patches", "effect": "proven",
+     "blurb": "The skill menu refuses every skill from Thief upward "
+              "(Analyze, Freeze, Barrage and the rest of the signature "
+              "skills) with the message \"Can't remove unique skills.\" "
+              "The refusal is a hardcoded range check in the menu code: "
+              "only the first 22 skills count as normal. This widens "
+              "the check so every skill can be equipped, removed and "
+              "moved like a normal skill, including owners removing "
+              "their own signature skill. It grants no ranks: a "
+              "character still needs a rank in the skill (save editor, "
+              "or ISO starting ranks with a matching cap) before it "
+              "can be equipped. HQ service skills are unaffected.",
+     "find": _sigskill_sites, "self_restoring": True},
 ]
 _BY_ID = {t["id"]: t for t in TOGGLES}
 
