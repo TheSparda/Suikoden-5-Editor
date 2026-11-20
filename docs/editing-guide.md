@@ -168,6 +168,11 @@ to train the skill to; they still start unlearned and spend skill points to clim
 cap doesn't grant the skill, it permits it. The panel has presets to max or clear a whole
 character's array at once.
 
+The starting loadout section under the character tables reads these caps live:
+editing a cap updates that character's starting-rank choices straight away
+(issue #50), and lowering a cap below a starting rank already chosen clamps
+that rank to the new cap.
+
 Slot 26 in this list is an unused skill (`??? (unused)`) — see the skill-effects section, where
 its two rows also read as unknown.
 
@@ -526,6 +531,15 @@ says by construction, but no in-game A/B run has exercised them yet.
 The two training SP toggles patch different words of the same function and can be on at
 the same time (the store is NOPed, so the addition is computed but never written back).
 
+One further patch is listed with them: **Signature skills are normal skills**
+(issue #16). It patches two words, not one: the two range compares of the skill
+menu's normal-skill predicate, widened from 0x17 to 0x31 so every skill in the
+48-skill array counts as normal (NTSC-U `0x3E7DC0` and `0x3E7DD8`, PAL `0x3E9580`
+and `0x3E9598`). Its sites are located by the predicate's own constant chain, it
+restores exactly like the others, and its effect is labelled **proven**: the
+refusal and its removal were both exercised in game. The HQ service skills use a
+separate whitelist in the same function and are unaffected.
+
 ---
 
 ## Prices
@@ -732,19 +746,34 @@ Honest list of the gaps, so you know where the map ends:
   is zero padding for all 120 characters. The flag bytes stay uneditable until their
   meaning is pinned down; writing them on a guess could seal or unseal slots in ways the
   editor could not describe honestly.
-- **Unique (Epic) skills in the normal skill slots** (issue #16): already how the game
-  works, so there is nothing to add. The four Epic skills (Divine Right, Zen Sword,
-  Sacred Oath, Royal Paradise) are ordinary entries in the 48-skill array: they have
-  caps and ranks like any other skill, they occupy the same two equipped-slot bytes
-  (+0xF2/+0xF3), and real saves use them there (the Prince slots Royal Paradise). The
-  Save editor already edits their ranks and slots, and the ISO editor edits their caps.
-  The one skill that cannot be offered is index 26, the unnamed slot between Freeze and
-  Barrage: it has no name in any of the game's lists (47 named skills), no character has
-  a nonzero cap for it (0 of 113), and no save record ranks or slots it. Its two
-  skill-effect rows carry real magnitudes (an activation row identical to Barrage's and
-  a target-count row that differs only at SS rank), so it looks like a reserved or
-  cut weapon-class skill, but nothing verifies that the game would honor it in an
-  equip slot, so it stays hidden rather than being offered on a guess.
+- **Signature skills in the normal skill slots** (issue #16): handled by the
+  "Signature skills are normal skills" code patch (see Code patches), and the
+  history is worth recording because this entry used to answer the wrong
+  question. The reporter meant the signature skills (Thief, Mow Down, Pierce,
+  Freeze, Barrage, Long Throw, Dragon Special, Forge, Combat Teacher, Chain
+  Magic, Analyze, and the support skills from Potch Finder onward), not the
+  Epic skills. The Epic skills are indeed ordinary entries in the 48-skill
+  array and were never blocked. Signature skills are blocked by the game
+  itself: the skill menu's equip, remove and move-SP handlers ask a predicate
+  function whether a skill counts as normal, and the predicate is a hardcoded
+  range check that accepts only 1-based skill ids below 0x17. Every skill
+  from index 22 (Thief) upward fails it and is refused with "Can't remove
+  unique skills." No data table gates it: raising a character's caps and
+  granting starting ranks were both tried on patched test discs and the
+  refusal was unchanged. The code patch widens the two range compares from
+  0x17 to 0x31, and with exactly those two bytes changed the Prince equipped
+  Analyze through the stock menu in game. Two limits remain. The patch grants
+  no ranks: a character still needs a rank in the skill before it appears in
+  the equip list, granted with the Save editor on an existing save or with
+  starting ranks (and a matching cap) on a new game. And index 26, the
+  unnamed slot between Freeze and Barrage, stays hidden in the editor: it
+  has no name in any of the game's lists (47 named skills), no character has
+  a nonzero cap for it (0 of 113), and no save record ranks or slots it. Its
+  two skill-effect rows carry real magnitudes (an activation row identical
+  to Barrage's and a target-count row that differs only at SS rank), so it
+  looks like a reserved or cut weapon-class skill, but with no name and no
+  ranks anywhere it never appears in the equip list even with the gate
+  lifted, so there is nothing to offer for it.
 
 ---
 
