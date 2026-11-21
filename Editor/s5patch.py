@@ -3011,6 +3011,127 @@ def restore_drop_rates(iso):
                             list(DROP_COOK_STOCK))
 
 
+# ---- Gear equip requirements (issue #49): the Corruption Shell (equip id
+# 70) and the Saint's Cloak (equip id 71) are the only Type 6 body armors,
+# and Type 6 routes to a special gate inside the shared can-equip
+# predicate func_0038A4B0 instead of the generic class-allowance check.
+# The requirements are NOT in the armor records (a full-record scan finds
+# no threshold values anywhere); they are four slti immediates in that
+# predicate:
+#   Shell: pass iff max HP >= imm AND kills >= imm
+#   Cloak: pass iff max HP >= imm AND kills < imm
+# "HP" is MAX HP (the gate loads the live record field at +0x14); the
+# kill count is the per-character u16 at live record +0x148. Proven in
+# game at the exact boundaries, and with tweak and disable ISOs carrying
+# edited immediates (lab: GEAR_REQUIREMENTS.md). The Cloak's cap is
+# "kills < imm", so its field shows a maximum-kills value of imm - 1:
+# stock imm 31 displays as 30 (the item description's "under 30" is off
+# by one from the code; exactly 30 kills can equip the Cloak).
+GEAR_REQ_TOP = 0x2842                    # slti $v0, $v0, imm: top halfword
+GEAR_REQ_FIELDS = [
+    # (field, label, stock imm, display shift, max display value,
+    #  {region: ISO offset of the gate word})
+    ("shell_hp", "Corruption Shell: minimum max HP", 350, 0, 0x7FFF,
+     {"ntsc-u": 0x337ECC, "pal": 0x338C9C}),
+    ("shell_kills", "Corruption Shell: minimum kills", 100, 0, 0x7FFF,
+     {"ntsc-u": 0x337EE8, "pal": 0x338CB8}),
+    ("cloak_hp", "Saint's Cloak: minimum max HP", 300, 0, 0x7FFF,
+     {"ntsc-u": 0x337F24, "pal": 0x338CF4}),
+    ("cloak_kills", "Saint's Cloak: maximum kills", 31, -1, 0x7FFE,
+     {"ntsc-u": 0x337F44, "pal": 0x338D14}),
+]
+# The gear-requirements-off toggle's patched immediates: the >= compares
+# pass at 0, and the Cloak's < compare passes below 0x7FFF (the kill
+# counter is u16 and real counts never approach it).
+GEAR_REQ_OFF_IMMS = {"shell_hp": 0, "shell_kills": 0, "cloak_hp": 0,
+                     "cloak_kills": 0x7FFF}
+
+
+def _gear_req_spec(field):
+    for spec in GEAR_REQ_FIELDS:
+        if spec[0] == field:
+            return spec
+    raise KeyError("unknown gear requirement field %r" % (field,))
+
+
+def _gear_req_offset(iso, field):
+    region = region_of(iso)
+    offs = _gear_req_spec(field)[5]
+    if region not in offs:
+        raise ValueError("unrecognized disc: no gear requirement sites "
+                         "for region %r" % (region,))
+    return offs[region]
+
+
+def _gear_req_word(iso, field):
+    """(offset, word) of one gate instruction, after checking the word
+    really is the traced slti: a disc whose code shape differs is never
+    written over."""
+    off = _gear_req_offset(iso, field)
+    w = iso.ru(off, 4)
+    if w >> 16 != GEAR_REQ_TOP:
+        raise ValueError("gear requirement site for %s not recognised "
+                         "(word 0x%08X at 0x%X)" % (field, w, off))
+    return off, w
+
+
+def read_gear_requirements(iso):
+    """The four equip-requirement thresholds on this disc, as display
+    values: {region, fields: [{field, label, value, stock, min, max,
+    kind, width}]}. The Cloak's maximum kills is the stored immediate
+    minus 1 (the gate passes iff kills < imm)."""
+    out = []
+    for field, label, stock_imm, shift, vmax, _offs in GEAR_REQ_FIELDS:
+        _off, w = _gear_req_word(iso, field)
+        out.append({"field": field, "label": label,
+                    "value": (w & 0xFFFF) + shift,
+                    "stock": stock_imm + shift,
+                    "min": 0, "max": vmax, "kind": "num", "width": 2})
+    return {"region": region_of(iso), "fields": out}
+
+
+def write_gear_requirement(iso, field, value):
+    """Write one equip-requirement threshold (a display value; the
+    Cloak's maximum kills is stored as value + 1). The site word is
+    anchor-checked before writing and re-read after."""
+    _f, label, _stock, shift, vmax, _offs = _gear_req_spec(field)
+    v = int(value)
+    if not 0 <= v <= vmax:
+        raise ValueError("%s must be from 0 to %d" % (label, vmax))
+    off, _w = _gear_req_word(iso, field)
+    imm = v - shift
+    iso.wu(off, 4, (GEAR_REQ_TOP << 16) | imm)
+    if iso.ru(off, 4) != (GEAR_REQ_TOP << 16) | imm:
+        raise AssertionError("gear requirement write at 0x%X did not "
+                             "verify" % off)
+    return {"ok": True, "field": field, "value": v, "imm": imm}
+
+
+def gear_requirement_sites(iso):
+    """The four gate words as s5toggles sites (stock forms vs the
+    requirements-off patched forms), shared by the Gear view's threshold
+    fields and the gear-requirements-off toggle so the two can never
+    disagree about where the gates live. An unrecognized region finds
+    no sites (the toggle reads not-found); a word that is neither the
+    stock nor the patched form keeps its bytes and classifies as
+    foreign in the toggle, which then refuses to write."""
+    region = region_of(iso)
+    out = []
+    for field, label, stock_imm, _shift, _vmax, offs in GEAR_REQ_FIELDS:
+        if region not in offs:
+            return []
+        off = offs[region]
+        out.append({"label": "%s gate @0x%X" % (label, off),
+                    "spans": [{"off": off,
+                               "stock": struct.pack(
+                                   "<I", (GEAR_REQ_TOP << 16) | stock_imm),
+                               "patched": struct.pack(
+                                   "<I", (GEAR_REQ_TOP << 16)
+                                   | GEAR_REQ_OFF_IMMS[field]),
+                               "cur": iso.rd(off, 4)}]})
+    return out
+
+
 # --------------------------------------------------------------------------- CLI
 def _verify(a):
     with Iso(a.iso) as g: r = region_of(g)
