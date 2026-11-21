@@ -73,12 +73,22 @@ PAYLOAD_IS_FOLDER_NAME = True   # payload filename == folder name (not "gamedata
 # VERIFIED cleared-game marker: gamedata byte @0x12, 1=on 0=off. The game sets
 # it on the clear save it creates at the ending. Confirmed 6/6 across saves:
 # every clear save reads 1, every in-progress save 0 (isolated by diffing a
-# same-playthrough pre-end vs post-end save pair). It is a display marker, not
-# a switch: on a mid-game save it only turns the hero name green in the load
-# list. It does NOT enable New Game Plus or the fast run (the run is
-# unconditional); both PCSX2-verified 2026-11-15, see ps2-re
-# games/suikoden5/NGPLUS.md (issues #2 and #19).
-NG_PLUS_OFF = 0x12
+# same-playthrough pre-end vs post-end save pair). On its own it is a display
+# marker, not a switch: it turns the hero name green in the load list, and
+# PCSX2 tests in 2026-11 showed editing it alone enables neither New Game
+# Plus nor the fast run (ps2-re games/suikoden5/NGPLUS.md, issues #2 and #19).
+# CORRECTED 2026-11-21 (ps2-re games/suikoden5/DASH_GATE_CODE.md): @0x12 is a
+# save-time COPY, refreshed from the real carry byte by the save gather on
+# every save the game writes; the load path never reads it. The real New Game
+# Plus carry byte lives in the mirrored state struct at payload 0x120E8 (live
+# EE 0xA46320): genuine NG+ opening saves hold 1, first-run saves hold 0, and
+# on a CONTINUE load the game runs its NG+ carry-over build only when the
+# byte is 1, then advances it to 2, where it rests. The same byte is the
+# field motor's dash-tier admission input, alongside Cathari in the party.
+# The newGamePlus control below binds to the real byte: reads may return 2
+# on a save written after an NG+ load (nonzero means on); writes store 1/0.
+NG_PLUS_OFF = 0x120E8
+CLEARED_MARKER_OFF = 0x12   # display copy of the carry byte; refreshed by the game on every save, never read back
 # VERIFIED gamedata fields (confirmed across multiple saves): hero + castle + NG+ + level.
 # CORRECTION: 0x28 IS the lead character's level (u8). Confirmed 5/5 vs the icon.sys
 # title level across diverse saves: 57,58,99,99,58. (The earlier "not level / 39/58/867.."
@@ -87,7 +97,7 @@ NG_PLUS_OFF = 0x12
 S5_FIELDS = {
     "heroName":    (0x00, 16, "str"),
     "castleName":  (0x14, 16, "str"),
-    "newGamePlus": (0x12, 1,  "num"),   # 1 = cleared-game marker set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list. Does NOT enable New Game Plus or fast-forward (PCSX2-verified 2026-11-15, ps2-re games/suikoden5/NGPLUS.md)
+    "newGamePlus": (0x120E8, 1, "num"),   # the real NG+ carry byte (see the note above NG_PLUS_OFF): nonzero = the game treats the save as a New Game Plus run on load, carry-over build included; the byte at 0x12 is only its display copy
     "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
     # ---- Global game-state struct, serialized at save+0xD8 (VERIFIED 2026-08-23 by ELF RE:
     # live struct 0xA31C10 [potch u32][partySP u32][hero 17B][army 17B][castle 17B] mirrors
