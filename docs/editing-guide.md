@@ -198,7 +198,9 @@ the reframe (issue #22) fixes both.
 Both live in the same record (base 0x493110, stride 0x18).
 
 - **Starting level and Weapon id**: record bytes +0 and +1: the level the character starts
-  at (0 reads as level 1) and the Weapon id above (0-81, validated on write).
+  at (0 builds as level 1. Most characters with 0 are set to a scaled level by event scripts
+  when they appear, so 0 is not the level they join at) and the Weapon id above (0-81,
+  validated on write).
 - **Starting equipment**: four armor ids at +2..+5: Head, Body, Arm (gloves), Feet. `0` means nothing
   equipped. The ids are the game's armor ids, which the editor offers as name dropdowns.
   Ground truth, byte-checked against game-written starting records: Richard starts with

@@ -2406,7 +2406,9 @@ def csv_legends():
         ],
         "char-equipment": [
             "Weapon id must be 0-81 (0 = no weapon record); it is validated, "
-            "not capped. Starting level 0 means level 1.",
+            "not capped. Starting level: 0 builds as level 1. Most characters "
+            "with 0 are set to a scaled level by event scripts when they appear, "
+            "so 0 is not the level they join at.",
         ],
         "spells": [
             "Element: " + codes(F.ELEMENT_NAMES),

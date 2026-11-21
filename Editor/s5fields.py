@@ -145,7 +145,9 @@ TABLES = {
     # Starting-equipment record, reframed 2026-11-16 (issue #22): the builder
     # (func_002CEE90) reads the record at 0x493110 (vaddr 0x4E5810), stride
     # 0x18; the editor's old base 0x493112 sat 2 bytes late, hiding the first
-    # two bytes. True layout: +0x00 starting level (0 reads as level 1),
+    # two bytes. True layout: +0x00 starting level (the builder substitutes
+    # 1 for a stored 0, and event scripts set the real join level for most
+    # characters who carry 0, so 0 is not the level they join at),
     # +0x01 weapon record id W (see "weapon growth"), +0x02..+0x05 starting
     # armor ids, +0x08/+0x0C/+0x10/+0x14 starting held-item pointers. The
     # armor and item VALUES are unchanged by the reframe: base -2 and field
@@ -606,7 +608,7 @@ RANK_HELP = "skill rank byte: 0..7 (higher = better; 07 ~ SS)"
 SECTION_HELP = {
     "stats":      "Character starting stats (HP, Attack, Technique, Magic, Evasion, PDF, MDF, Speed, Luck) plus each stat's per-level Growth. Base stats apply to a NEW GAME; growth affects level-ups. Verified byte-for-byte in-game (Dinn/Lance match exactly).",
     "weapon growth": "Attack power at sharpen levels 1-16 for this character's WEAPON RECORD (the Weapon id in Starting equipment). Weapon records are shared: every character with the same Weapon id uses the same record, so an edit here changes all of them. A Weapon id of 0 means no weapon record (non-combat, support, or body-weapon unit). Verified against the game's builder and stat code (issue #22).",
-    "starting equipment": "New-game start: the character's starting level (0 = level 1), Weapon id (which shared weapon record drives Weapon growth; 0 = none, max 81), and armor equipped at start: Head / Body / Arm (gloves) / Feet, dropdowns of the game's armor ids (0 = Nothing). Verified byte-for-byte against game-written starting records.",
+    "starting equipment": "New-game start: the character's starting level (0 builds as level 1. Most characters with 0 are set to a scaled level by event scripts when they appear, so 0 is not the level they join at), Weapon id (which shared weapon record drives Weapon growth; 0 = none, max 81), and armor equipped at start: Head / Body / Arm (gloves) / Feet, dropdowns of the game's armor ids (0 = Nothing). Verified byte-for-byte against game-written starting records.",
     "starting items": "Up to four items/accessories a unit starts holding (stored as name pointers). Choices are the closed set of items the game actually assigns; 'Nothing' clears a slot. Verified: Prince = Lightning Amulet, Richard = Sun Badge + Jewel Necklace.",
     "runes":      "Runes equipped at the start of a new game (head / right / left slots). Rune id space is unconfirmed — labels are best-effort.",
     "gear":       "Armor pieces (Head / Body / Arm / Foot). Fully editable, verified vs the Armor List guide: DEF, buy/sell price, weight Type (1=Light/2=Medium/3=Heavy) + SPD penalty, stat bonuses (HP/Attack/Technique/Magic/Evasion/MDEF/Speed/Luck), proc effects (auto-heal/HP-drain/status-resist/potch/counter %), and per-element ATK & DEF for all 14 elements. The read-only summary below is just the game's own description text.",
