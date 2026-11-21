@@ -406,14 +406,15 @@ def _godspeed_dash_sites(iso):
 TOGGLES = [
     {"id": "dawn-unlock", "label": "Dawn Rune: unlock all four spells",
      "group": "Code patches", "effect": "proven",
-     "blurb": "Forces the Dawn Rune's spell count to 4 from the start "
-              "(write_dawn_unlock's mechanism, one signature-located word).",
+     "blurb": "Gives the Dawn Rune all four spells from the start of "
+              "the game.",
      "find": _dawn_sites, "self_restoring": True},
     {"id": "fortune-always", "label": "Fortune always-on (not working in game)",
      "group": "Code patches", "effect": "not-working",
-     "blurb": "NOPs Fortune's script-resolver gates. Proven not to reach "
-              "battle rewards (PASSIVES_CATHARI.md); registered for exact "
-              "verification and restore of already-patched discs.",
+     "blurb": "Does not work: the gates this removes feed a script "
+              "check that battle rewards never use. Listed so a disc "
+              "already patched with it can be checked and restored "
+              "exactly.",
      "find": _gate_sites(77), "self_restoring": False},
     {"id": "prosperity-always", "label": "Prosperity always-on (not working in game)",
      "group": "Code patches", "effect": "not-working",
