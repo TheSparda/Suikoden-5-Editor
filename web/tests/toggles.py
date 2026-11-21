@@ -53,11 +53,11 @@ def file_bytes():
 
 with P.Iso(tmp, writable=True) as g:
     sts = {s["id"]: s for s in T.list_toggles(g)}
-    chk("registry holds the ten toggles",
+    chk("registry holds the eleven toggles",
         set(sts) == {"dawn-unlock", "fortune-always", "prosperity-always",
                      "godspeed-always", "training-sp-free", "training-sp-gain",
                      "train-ss-rank", "forge-once-max", "smith-forge-max",
-                     "sig-skills-normal"},
+                     "sig-skills-normal", "gear-requirements-off"},
         ", ".join(sorted(sts)))
     chk("dawn is the proven toggle; the perks are labelled not-working",
         sts["dawn-unlock"]["effect"] == "proven"
@@ -166,6 +166,40 @@ with P.Iso(tmp, writable=True) as g:
         r["changed"] == 1
         and T.toggle_status(g, "sig-skills-normal")["state"] == "on")
     T.set_toggle(g, "sig-skills-normal", False)
+
+    # Gear requirements toggle (issue #49): the four slti gate words of
+    # the can-equip predicate at their traced NTSC-U offsets. Apply
+    # writes the disable immediates (0 / 0 / 0 / 0x7FFF, the lab's
+    # proven disable ISO: exactly 7 bytes differ from stock) and
+    # restore returns the four stock words.
+    GEAR_US = (0x337ECC, 0x337EE8, 0x337F24, 0x337F44)
+    st = sts["gear-requirements-off"]
+    chk("gear-requirements-off is proven, off, four sites at the traced offsets",
+        st["effect"] == "proven" and st["state"] == "off"
+        and len(st["sites"]) == 4
+        and [s["spans"][0]["off"] for s in st["sites"]] == list(GEAR_US),
+        "%s %s" % (st["effect"], st["state"]))
+    before = g.rd(0, len(pristine))
+    r = T.set_toggle(g, "gear-requirements-off", True)
+    chk("gear-requirements-off apply changes the four gate words",
+        r["changed"] == 4
+        and [g.ru(o, 4) for o in GEAR_US]
+            == [0x28420000, 0x28420000, 0x28420000, 0x28427FFF],
+        "changed %d" % r["changed"])
+    after = g.rd(0, len(pristine))
+    diff = [i for i in range(len(pristine)) if before[i] != after[i]]
+    chk("gear-requirements-off apply touches no byte outside the four gate words",
+        len(diff) == 7
+        and all(any(o <= i < o + 4 for o in GEAR_US) for i in diff),
+        "%d bytes differ" % len(diff))
+    chk("gear-requirements-off reads on after apply",
+        T.toggle_status(g, "gear-requirements-off")["state"] == "on")
+    T.set_toggle(g, "gear-requirements-off", False)
+    chk("gear-requirements-off reads off after restore",
+        T.toggle_status(g, "gear-requirements-off")["state"] == "off")
+    chk("gear-requirements-off restore returns the four stock words",
+        [g.ru(o, 4) for o in GEAR_US]
+            == [0x2842015E, 0x28420064, 0x2842012C, 0x2842001F])
 chk("apply/restore cycles leave the file byte-identical", file_bytes() == pristine)
 
 with P.Iso(tmp, writable=True) as g:
@@ -226,6 +260,29 @@ with P.Iso(tmp, writable=True) as g:
     chk("the refused sig-skill apply wrote nothing",
         g.rd(0, len(pristine)) == before)
     g.wu(0x3E7DD8, 4, 0x28610017)   # back to stock
+
+    # A gear gate word corrupted to a non-slti word: the toggle reads
+    # foreign and refuses before writing anything.
+    g.wu(0x337F44, 4, 0xDEADBEEF)
+    chk("a corrupted gear gate word reads as foreign",
+        T.toggle_status(g, "gear-requirements-off")["state"] == "foreign")
+    before = g.rd(0, len(pristine))
+    try:
+        T.set_toggle(g, "gear-requirements-off", True)
+        chk("apply over a foreign gear gate word refuses", False, "no error")
+    except ValueError:
+        chk("apply over a foreign gear gate word refuses", True)
+    chk("the refused gear apply wrote nothing",
+        g.rd(0, len(pristine)) == before)
+    g.wu(0x337F44, 4, 0x2842001F)   # back to stock
+
+    # A gate word holding a custom threshold (a Gear view field edit)
+    # is neither the stock nor the toggle's patched form: foreign by
+    # the same rule, so the toggle never overwrites a user's threshold.
+    g.wu(0x337ECC, 4, 0x284200C8)   # Shell HP threshold 200
+    chk("a custom gear threshold reads as foreign to the toggle",
+        T.toggle_status(g, "gear-requirements-off")["state"] == "foreign")
+    g.wu(0x337ECC, 4, 0x2842015E)   # back to stock
 chk("foreign-byte experiments leave the file byte-identical",
     file_bytes() == pristine)
 
@@ -279,6 +336,24 @@ if pal_iso:
             T.set_toggle(g, "sig-skills-normal", False)
             chk("PAL sig-skills-normal reads off after restore",
                 T.toggle_status(g, "sig-skills-normal")["state"] == "off")
+            # Gear requirements toggle: the PAL gate words sit at the
+            # PAL offsets with identical stock words.
+            GEAR_PAL = (0x338C9C, 0x338CB8, 0x338CF4, 0x338D14)
+            st = T.toggle_status(g, "gear-requirements-off")
+            chk("PAL gear-requirements-off is off, four sites at the PAL offsets",
+                st["state"] == "off" and len(st["sites"]) == 4
+                and [s["spans"][0]["off"] for s in st["sites"]] == list(GEAR_PAL),
+                st["state"])
+            r = T.set_toggle(g, "gear-requirements-off", True)
+            chk("PAL gear-requirements-off apply changes the four gate words",
+                r["changed"] == 4
+                and [g.ru(o, 4) for o in GEAR_PAL]
+                    == [0x28420000, 0x28420000, 0x28420000, 0x28427FFF])
+            chk("PAL gear-requirements-off reads on after apply",
+                T.toggle_status(g, "gear-requirements-off")["state"] == "on")
+            T.set_toggle(g, "gear-requirements-off", False)
+            chk("PAL gear-requirements-off reads off after restore",
+                T.toggle_status(g, "gear-requirements-off")["state"] == "off")
         with open(tmp2, "rb") as f:
             chk("PAL apply/restore cycle leaves the file byte-identical",
                 f.read() == pristine2)

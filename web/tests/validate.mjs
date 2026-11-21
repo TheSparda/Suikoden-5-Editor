@@ -243,6 +243,26 @@ ok("Dawn and Twilight are no longer synthetic",
    /RUNE_GRANT_NAMES = \[\s*\n\s*"Dawn Rune", "Twilight Rune",/.test(fieldsSrc)
    && !/\{"name": "Dawn Rune"/.test(fieldsSrc));
 
+// 3e) Gear equip requirements (issue #49): the Gear view's four threshold
+// fields and the Code patches toggle share one site table in s5patch.
+// These guard the wiring and the pinned gate words without a disc
+// (gear_req.py and toggles.py cover the real-disc behaviour).
+const patchSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8");
+const togSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5toggles.py"), "utf8");
+ok("iso.js offers the gear requirement fields", isoSrc.includes('view === "gearreq"')
+   && isoSrc.includes("renderGearReqs"));
+ok("gear panel carries the Cloak maximum-kills note",
+   isoSrc.includes("Saint's Cloak maximum kills"));
+ok("glue exposes the gear requirement adapters",
+   appSrc.includes("def iso_gearreqs") && appSrc.includes("def iso_setgearreq")
+   && appSrc.includes('gearreqs:g("iso_gearreqs")'));
+ok("engine pins the gear gate shape and site offsets",
+   /GEAR_REQ_TOP\s*=\s*0x2842/.test(patchSrc)
+   && patchSrc.includes("0x337ECC") && patchSrc.includes("0x338D14"));
+ok("toggle registry carries gear-requirements-off",
+   togSrc.includes('"gear-requirements-off"')
+   && togSrc.includes("Remove armor equip requirements"));
+
 // 3d) Field-models tab: registered in both editors, and the two ELF tables it patches sit
 // back-to-back on the disc (the pointer array starts exactly where the name table ends) —
 // the invariant that pins the bases, since the real-disc check needs a disc CI hasn't got.
