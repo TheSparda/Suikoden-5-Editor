@@ -1178,7 +1178,7 @@ function renderRune(rid) {
   const r = JSON.parse(window.PYISO.rune(rid));
   if (r.error) { $("isoRbody").innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
   let h = `<div class="subhd">${esc(r.name)}</div>`;
-  h += `<div class="note" style="margin:0 14px">Edit every spell this rune teaches — element, damage/heal power,
+  h += `<div class="note" style="margin:0 14px">Edit every spell this rune teaches: element, damage/heal power,
     target (single / all / row / column / cluster) and status.${
       r.synthetic
         ? " This rune's spell list is fixed (no grant record), but each spell below is fully editable."
@@ -1197,7 +1197,7 @@ function renderRune(rid) {
 
   // Spell-set builder (real grant records only): which contiguous spells the rune grants.
   if (!r.synthetic && r.grant.length) {
-    h += `<div class="subhd">Spell set — which spells this rune teaches</div>`;
+    h += `<div class="subhd">Spell set: which spells this rune teaches</div>`;
     h += `<div class="grid" style="padding-top:8px">` + r.grant.map((f) => {
       const disp = f.label === "Start spell" ? "First spell (Lv1)" : f.label === "Spell count" ? "Levels" : f.label;
       return renderField({ ...f, field: f.label, label: disp },
@@ -1413,11 +1413,11 @@ function renderDropRates() {
   const num = (id, v) => `<input type="number" id="${id}" value="${v}" min="0" max="99" step="1" style="width:64px">`;
   host.innerHTML = `<div class="subhd">Drop rates (global)</div>
     <p class="note">Drop rates are constants in the battle code, not per-enemy data, so this panel is
-      <b>GLOBAL</b>: one set of rates applies to every enemy. Slots 1 to 5 are the drop slots by position;
-      the Treasure Discovery support skill adds its rank bonus on top of them. The game caps every roll at
-      99 percent. The dish rate registers each enemy's Food dish (Cook) slot; a dish is only awarded when the
-      party's Cook support skill is rank 6 or 7, and those two chances are set here as well. The dish's stock
-      rate is 100, which the cap makes identical to 99 in play.</p>
+      <b>global</b>: one set of rates applies to every enemy. Slots 1 to 5 are the drop slots by position.
+      The Treasure Discovery support skill adds its rank bonus on top. The game caps every roll at
+      99 percent. The dish rate is for each enemy's Food dish (Cook) slot: a dish is awarded only when
+      the party's Cook skill is rank 6 or 7, and those two chances are set here too. The dish's stock
+      rate is 100, which the cap makes the same as 99 in play.</p>
     <div class="row">
       <label>Slot 1 % ${num("drS1", r.slots[0])}</label>
       <label>Slot 2 % ${num("drS2", r.slots[1])}</label>
@@ -1522,14 +1522,14 @@ VIEW_RENDER.skillfx = async (body) => {
   const r = JSON.parse(window.PYISO.skillfx());
   let h = `<div style="padding:10px 14px 0">
     <p class="note" style="margin:0 0 10px">Each row is <b>one sub-effect</b>, and a skill usually owns several:
-      <i>Defense</i> is rows 2-5 (Defense +, % Block, % Parry, % Weapon Defense). So a <b>0 at E/D</b> means that
-      sub-effect doesn't unlock until C — the skill is still live at E through its other rows, which is why
+      <i>Defense</i> is rows 2-5 (Defense +, % Block, % Parry, % Weapon Defense). A <b>0 at E/D</b> means that
+      sub-effect does not unlock until C. The skill is still live at E through its other rows, which is why
       Defense + pays 3 there. Editing a 0 is a real change, not a no-op.
       <b>Read each row's scale off its own values</b>, not its name: rows in the 1xx range are 100-based
       (110 = 10%, so fill an empty E/D with 101-109), rows that climb from 0/2/5 are direct amounts
       (<i>Thief (% chance of success)</i> runs 0-50), and a few are literal counts
       (<i>Mow Down (number target)</i> is 1-4, and 65535 means every enemy).
-      This table is <b>global</b> — it applies to every unit with that skill, not one character.</p>
+      This table is <b>global</b>: it applies to every unit with that skill, not one character.</p>
     <input class="pick-q" id="fxQ" type="search" placeholder="filter skill…" style="max-width:260px"></div>
     <div class="tablewrap"><table><thead><tr><th>#</th><th>Skill</th>${r.ranks.map(rk=>`<th>${rk}</th>`).join("")}</tr></thead><tbody id="fxBody">`;
   h += r.skills.map(s => `<tr data-name="${esc((s.name||"").toLowerCase())}"><td class="note">${s.id}</td><td>${esc(s.name)}</td>` +
@@ -1546,8 +1546,8 @@ VIEW_RENDER.balance = async (body) => {
   body.innerHTML = `<div style="padding:14px">
     <div class="note">${esc((isoMAPS.help||{}).stats||"")}</div>
     <div class="subhd" style="margin:12px 0 4px">Characters</div>
-    <p class="note">Scale every character's <b>starting stats</b> by a factor (baseline is remembered, so
-      re-applying doesn't compound). Great for a quick Hard Mode. Applies to a new game.</p>
+    <p class="note">Scale every character's <b>starting stats</b> by a factor. The baseline is
+      remembered, so applying again does not compound. Applies to a new game.</p>
     <div class="row">
       <label>Factor <input type="number" id="hmFactor" value="1.5" min="0.1" max="10" step="0.1" style="width:90px"></label>
       <button id="hmApply">Apply multiplier</button>
@@ -1557,8 +1557,8 @@ VIEW_RENDER.balance = async (body) => {
 
     <div class="subhd" style="margin:22px 0 4px">Character growth</div>
     <p class="note">Scale every character's <b>per-level growth</b> (what each stat gains on a level-up) by a
-      factor. The multiplier above only changes starting stats; this one only changes growth (issue #13).
-      The baseline is remembered, so re-applying doesn't compound. Applies to a new game.</p>
+      factor. The multiplier above changes only starting stats; this one changes only growth.
+      The baseline is remembered, so applying again does not compound. Applies to a new game.</p>
     <div class="row">
       <label>Factor <input type="number" id="gsFactor" value="1.5" min="0.1" max="10" step="0.1" style="width:90px"></label>
       <button id="gsApply">Apply multiplier</button>
@@ -1567,10 +1567,10 @@ VIEW_RENDER.balance = async (body) => {
     <div id="gsMsg" class="note"></div>
 
     <div class="subhd" style="margin:22px 0 4px">Enemies</div>
-    <p class="note">Scale every enemy's <b>combat stats</b> — HP, Attack, Technique, Accuracy, Magic, Evasion,
+    <p class="note">Scale every enemy's <b>combat stats</b>: HP, Attack, Technique, Accuracy, Magic, Evasion,
       PDF, MDF, Speed, Luck. Potch, skill-point rewards, elemental affinities and item drops are left untouched.
-      HP takes its own multiplier, so you can run tankier enemies without making them hit harder. The baseline is
-      remembered, so re-applying never compounds; each stat holds 0-65535 and anything past that is capped.</p>
+      HP takes its own multiplier, so you can make enemies tankier without making them hit harder. The baseline is
+      remembered, so applying again never compounds. Each stat holds 0 to 65535; anything past that is capped.</p>
     <div class="row">
       <label>Stats × <input type="number" id="esFactor" value="2" min="0.1" max="20" step="0.1" style="width:90px"></label>
       <label>HP × <input type="number" id="esHp" value="3" min="0.1" max="20" step="0.1" style="width:90px"></label>
@@ -1651,7 +1651,7 @@ VIEW_RENDER.csv = async (body) => {
   body.innerHTML = `<div style="padding:14px">
     <p class="note">Export a table as CSV, bulk-edit it in Excel / Sheets / LibreOffice, then import it back.
       Only the cells you <b>changed</b> are written; blank and non-numeric cells are skipped. Keep the
-      <code>id</code> column and the header row intact — the <code>name</code> column is there to read by,
+      <code>id</code> column and the header row intact. The <code>name</code> column is there to read by
       and is ignored on import.</p>
     <p class="note">Every field is a fixed-width number, so a value that doesn't fit is capped at that field's
       maximum and listed in the report (enemy stats hold 0-65535, so tripling a 30,000 HP boss lands on 65535
@@ -1709,7 +1709,7 @@ VIEW_RENDER.csv = async (body) => {
         if (x.errorCount) msg += `\n\n${x.errorCount} error(s):\n  ` + listed(x.errors, x.errorCount);
         $("csvMsg").textContent = msg;
         if (x.changed) {
-          isoEdits["csv:" + ds] = { label: `CSV import — ${label} (${x.changed} value(s))`,
+          isoEdits["csv:" + ds] = { label: `CSV import: ${label} (${x.changed} value(s))`,
                                     group: "Excel / CSV", to: "imported" };
           updateIsoToolbar(); captureUndoStep();
         }
@@ -1724,10 +1724,10 @@ VIEW_RENDER.csv = async (body) => {
 VIEW_RENDER.name = async (body) => {
   const r = JSON.parse(window.PYISO.names(0));
   if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  let h = `<div class="warnbox" style="margin:10px 16px">⚠ <b>Roster / menu short names only</b> (7-char ASCII table).
-      This changes the name shown in menus, party and status for a <b>new game</b> — it does <b>not</b> rewrite
-      dialogue, cutscene or battle text (those are separate), so a rename can read inconsistently in story scenes.
-      Names longer than 7 characters can't be stored here. The hero's name is chosen by the player at game start.</div>
+  let h = `<div class="warnbox" style="margin:10px 16px">⚠ <b>Roster and menu short names only</b> (7-character ASCII table).
+      This changes the name shown in menus, party and status for a <b>new game</b>. It does <b>not</b> rewrite
+      dialogue, cutscene or battle text, so a rename can read inconsistently in story scenes.
+      Names longer than 7 characters cannot be stored here. The hero's name is chosen by the player at game start.</div>
     <div class="grid" style="padding:0 16px 14px">`;
   h += (r.names || []).map(n => `<div class="fld"><label>#${n.index}</label><div class="in">
       <input maxlength="7" value="${esc(n.name)}" data-key="name:${n.index}" data-view="name"
@@ -1741,7 +1741,7 @@ VIEW_RENDER.model = async (body) => {
   if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
   const rows = (r.models || []).filter(m => !m.placeholder), targets = r.targets || [];
   const groups = [...new Set(targets.map(t => t.group))];
-  const label = t => `${t.file}${t.char ? " — " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
+  const label = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
   // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
   const opts = m => (targets.some(t => t.slot === m.slot) ? ""
       : `<option value="${m.slot}" selected>${esc(m.file)}</option>`)
@@ -1755,14 +1755,14 @@ VIEW_RENDER.model = async (body) => {
   const heroRows = hero ? rows.filter(m => m.char === hero) : [];
   const otherRows = hero ? rows.filter(m => m.char !== hero) : rows;
   const grid = (rs) => modelGrid(rs, opts);
-  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field/town model the engine can load, and
-      which file each one reads. Pick a different file and that character walks around as that model — a single
-      4-byte pointer, nothing in <code>DATA.PAK</code> is touched. Model ids are <b>character id + 2</b>
-      (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx/3xx/4xx are extra looks for the
-      <b>same person</b> that the game's own scripts switch to for particular scenes — the Prince and Georg have
-      two extra each, and Lyon, Kyle, Zegai, Cathari, Gunde and Miakis one. Because the scripts reach for those
-      by themselves, a character's looks move together by default. Cutscenes carry their own baked copies of the
-      cast, so a swap shows while you walk around rather than in pre-rendered story scenes.</div>
+  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field and town model the engine can load, and
+      which file each one reads. Pick a different file and that character walks around as that model.
+      Only a 4-byte pointer changes; nothing in <code>DATA.PAK</code> is touched. Model ids are
+      <b>character id + 2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx, 3xx and
+      4xx are extra looks for the <b>same person</b> that the game's scripts switch to for particular
+      scenes: the Prince and Georg have two extra each, and Lyon, Kyle, Zegai, Cathari, Gunde and
+      Miakis one. A character's looks move together by default. Cutscenes use their own copies of the
+      cast, so a swap shows while you walk around, not in pre-rendered story scenes.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
       onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`
     + `<div class="subhd">${esc(hero || "Hero")} — all ${heroRows.length} looks</div>`
