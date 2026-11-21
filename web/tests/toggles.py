@@ -53,11 +53,12 @@ def file_bytes():
 
 with P.Iso(tmp, writable=True) as g:
     sts = {s["id"]: s for s in T.list_toggles(g)}
-    chk("registry holds the eleven toggles",
+    chk("registry holds the twelve toggles",
         set(sts) == {"dawn-unlock", "fortune-always", "prosperity-always",
-                     "godspeed-always", "training-sp-free", "training-sp-gain",
-                     "train-ss-rank", "forge-once-max", "smith-forge-max",
-                     "sig-skills-normal", "gear-requirements-off"},
+                     "godspeed-always", "godspeed-dash", "training-sp-free",
+                     "training-sp-gain", "train-ss-rank", "forge-once-max",
+                     "smith-forge-max", "sig-skills-normal",
+                     "gear-requirements-off"},
         ", ".join(sorted(sts)))
     chk("dawn is the proven toggle; the perks are labelled not-working",
         sts["dawn-unlock"]["effect"] == "proven"
@@ -200,6 +201,32 @@ with P.Iso(tmp, writable=True) as g:
     chk("gear-requirements-off restore returns the four stock words",
         [g.ru(o, 4) for o in GEAR_US]
             == [0x2842015E, 0x28420064, 0x2842012C, 0x2842001F])
+
+    # Godspeed dash: one site, the field motor's carry-byte skip branch.
+    st = sts["godspeed-dash"]
+    chk("godspeed-dash is the code-verified Dash tuning toggle",
+        st["effect"] == "code-verified" and st["group"] == "Dash tuning"
+        and st["state"] == "off" and len(st["sites"]) == 1
+        and st["sites"][0]["spans"][0]["off"] == 0x1F5288,
+        "%s %s %s" % (st["effect"], st.get("group"), st["state"]))
+    before = g.rd(0, len(pristine))
+    r = T.set_toggle(g, "godspeed-dash", True)
+    chk("godspeed-dash apply NOPs the skip branch",
+        r["changed"] == 1 and g.ru(0x1F5288, 4) == 0,
+        "changed %d" % r["changed"])
+    after = g.rd(0, len(pristine))
+    diff = [i for i in range(len(pristine)) if before[i] != after[i]]
+    chk("godspeed-dash apply touches only the branch word",
+        len(diff) == 4 and all(0x1F5288 <= i < 0x1F528C for i in diff),
+        "%d bytes differ" % len(diff))
+    chk("godspeed-dash reads on after apply",
+        T.toggle_status(g, "godspeed-dash")["state"] == "on")
+    chk("godspeed-dash leaves the resolver-gate toggle off",
+        T.toggle_status(g, "godspeed-always")["state"] == "off")
+    T.set_toggle(g, "godspeed-dash", False)
+    chk("godspeed-dash restore returns the stock branch word",
+        g.ru(0x1F5288, 4) == 0x1040FF2F
+        and T.toggle_status(g, "godspeed-dash")["state"] == "off")
 chk("apply/restore cycles leave the file byte-identical", file_bytes() == pristine)
 
 with P.Iso(tmp, writable=True) as g:
@@ -283,6 +310,27 @@ with P.Iso(tmp, writable=True) as g:
     chk("a custom gear threshold reads as foreign to the toggle",
         T.toggle_status(g, "gear-requirements-off")["state"] == "foreign")
     g.wu(0x337ECC, 4, 0x2842015E)   # back to stock
+
+    # The dash gate word corrupted to neither stock nor NOP: foreign,
+    # and apply refuses before writing anything.
+    g.wu(0x1F5288, 4, 0xDEADBEEF)
+    chk("a corrupted dash gate word reads as foreign",
+        T.toggle_status(g, "godspeed-dash")["state"] == "foreign")
+    before = g.rd(0, len(pristine))
+    try:
+        T.set_toggle(g, "godspeed-dash", True)
+        chk("apply over a foreign dash gate word refuses", False, "no error")
+    except ValueError:
+        chk("apply over a foreign dash gate word refuses", True)
+    chk("the refused dash apply wrote nothing", g.rd(0, len(pristine)) == before)
+    g.wu(0x1F5288, 4, 0x1040FF2F)   # back to stock
+
+    # The getter anchor above the branch corrupted: the finder locates
+    # no site at all, so the toggle reads not-found rather than foreign.
+    g.wu(0x1F527C, 4, 0xDEADBEEF)
+    chk("a corrupted dash getter anchor reads as not-found",
+        T.toggle_status(g, "godspeed-dash")["state"] == "not-found")
+    g.wu(0x1F527C, 4, 0x0C0DB4F8)   # back to stock
 chk("foreign-byte experiments leave the file byte-identical",
     file_bytes() == pristine)
 
@@ -354,6 +402,21 @@ if pal_iso:
             T.set_toggle(g, "gear-requirements-off", False)
             chk("PAL gear-requirements-off reads off after restore",
                 T.toggle_status(g, "gear-requirements-off")["state"] == "off")
+            # Godspeed dash: the PAL skip branch sits at its PAL offset
+            # with the identical stock word.
+            st = T.toggle_status(g, "godspeed-dash")
+            chk("PAL godspeed-dash is off, one site at 0x1F57E8",
+                st["state"] == "off" and len(st["sites"]) == 1
+                and st["sites"][0]["spans"][0]["off"] == 0x1F57E8,
+                st["state"])
+            r = T.set_toggle(g, "godspeed-dash", True)
+            chk("PAL godspeed-dash apply NOPs its branch word",
+                r["changed"] == 1 and g.ru(0x1F57E8, 4) == 0
+                and T.toggle_status(g, "godspeed-dash")["state"] == "on")
+            T.set_toggle(g, "godspeed-dash", False)
+            chk("PAL godspeed-dash restore returns the stock word",
+                g.ru(0x1F57E8, 4) == 0x1040FF2F
+                and T.toggle_status(g, "godspeed-dash")["state"] == "off")
         with open(tmp2, "rb") as f:
             chk("PAL apply/restore cycle leaves the file byte-identical",
                 f.read() == pristine2)

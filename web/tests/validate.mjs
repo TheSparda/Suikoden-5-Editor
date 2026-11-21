@@ -181,12 +181,16 @@ ok("s5patch defines the loadout engine (#28)",
    fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def read_loadout")
    && fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def write_loadout_skill"));
 
-// Cleared-game marker (#2/#19): the byte at 0x12 is a display marker, not an
-// NG+ or fast-forward switch (PCSX2-verified). The old claims must not return.
+// New Game Plus control (#2/#19, corrected by the dash investigation):
+// the byte at 0x12 is only a save-time display copy; the control binds to
+// the real carry byte at 0x120E8. The old false claims must not return.
 const saveSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8");
-ok("app.js labels it Cleared-game marker (#2)", appSrc.includes("Cleared-game marker")
+ok("app.js labels the control New Game Plus (#2)", appSrc.includes('data-lbl="New Game Plus"')
+   && appSrc.includes("real NG+ carry byte")
    && !appSrc.includes("enables the fast-forward option"));
 ok("s5save.py comments carry the correction (#2)", saveSrc.includes("cleared-game marker")
+   && saveSrc.includes("save-time COPY")
+   && saveSrc.includes('"newGamePlus": (0x120E8, 1, "num")')
    && !saveSrc.includes("enables fast-forward"));
 
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
@@ -262,6 +266,24 @@ ok("engine pins the gear gate shape and site offsets",
 ok("toggle registry carries gear-requirements-off",
    togSrc.includes('"gear-requirements-off"')
    && togSrc.includes("Remove armor equip requirements"));
+
+// 3g) Dash tuning (issue #18): the godspeed-dash toggle plus the two
+// multiplier fields in the Code patches view, and the save editor's NG+
+// control bound to the real carry byte. These guard the wiring and the
+// pinned sites without a disc (dash_tuning.py, toggles.py and
+// save_fields.py cover the real behaviour).
+ok("iso.js offers the dash multiplier selects", isoSrc.includes('view === "dashmul"')
+   && isoSrc.includes("dashtuning"));
+ok("glue exposes the dash tuning adapters",
+   appSrc.includes("def iso_dashtuning") && appSrc.includes("def iso_setdashmul")
+   && appSrc.includes('dashtuning:g("iso_dashtuning")'));
+ok("engine pins the dash sites for both regions",
+   patchSrc.includes("0x1F4F34") && patchSrc.includes("0x1F5494")
+   && patchSrc.includes("0x1F5080") && patchSrc.includes("0x1F55E0")
+   && patchSrc.includes("0x1F5288") && patchSrc.includes("0x1F57E8"));
+ok("toggle registry carries godspeed-dash in its own group",
+   togSrc.includes('"godspeed-dash"') && togSrc.includes("Godspeed dash always on")
+   && togSrc.includes('"Dash tuning"'));
 
 // 3d) Field-models tab: registered in both editors, and the two ELF tables it patches sit
 // back-to-back on the disc (the pointer array starts exactly where the name table ends) —
