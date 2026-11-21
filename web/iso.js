@@ -443,8 +443,8 @@ function afterIsoWrite(view, ident, el) {
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
   if (view === "runealways") {
     const lbl = el && el.nextElementSibling;   // the specific row's caption, not the first one
-    if (lbl) lbl.innerHTML = el.checked ? "<b>On</b> — always active, no rune needed"
-                                        : "Off — vanilla: only works while equipped";
+    if (lbl) lbl.innerHTML = el.checked ? "<b>On</b>: always active, no rune needed"
+                                        : "Off: only works while equipped";
   }
   if (view === "toggle") {
     const lbl = el && el.nextElementSibling;
@@ -586,20 +586,20 @@ function renderLoadoutSection(cid, name) {
   if (lo.gated)
     return `<div class="subhd">starting loadout (new game)</div>
       <div class="note" style="margin:0 14px">Starting loadouts are mapped for
-      NTSC-U only. The PAL offsets of the rune and skill-rank tables are not
-      verified, so nothing is shown here rather than wrong data.</div>`;
+      NTSC-U only. The PAL table offsets are not verified, so this section is
+      hidden on PAL rather than showing wrong data.</div>`;
   LO_CUR = lo;
   LO_CID = cid;
   LO_ORIG = JSON.parse(JSON.stringify(lo));
   const armorNames = (slot, v) => nameFor(slot, v);
   let h = `<div class="subhd">starting loadout (new game)</div>
-    <div class="note" style="margin:0 14px">New-game-facing: the game builds a
-    character's record from these tables when a game starts. Existing saves
-    carry their own record copies and are not affected by edits here.
+    <div class="note" style="margin:0 14px">These tables are read when a new
+    game starts. Existing saves hold their own copies and are not affected
+    by edits here.
     Starts at level ${lo.level} with armor Head ${esc(armorNames("armorhead", lo.armor[0]))} /
     Body ${esc(armorNames("armorbody", lo.armor[1]))} / Arm ${esc(armorNames("armorarm", lo.armor[2]))} /
-    Feet ${esc(armorNames("armorfoot", lo.armor[3]))}: level and armor are edited under
-    starting equipment above (the same record bytes).</div>`;
+    Feet ${esc(armorNames("armorfoot", lo.armor[3]))}. Level and armor are edited under
+    Starting equipment above (the same record).</div>`;
   h += `<div class="grid" style="padding-top:8px">` + lo.runes.map((r, s) => {
     const lbl = { head: "Head", right: "Right hand", left: "Left hand" }[r.slot];
     return `<div class="fld"><label>Starting rune: ${lbl}</label><div class="in">
@@ -611,7 +611,7 @@ function renderLoadoutSection(cid, name) {
   }).join("") + `</div>`;
   const eqNames = (lo.equippedSlots || []).map(id => esc(lo.skills[id - 1].name)).join(", ");
   h += `<div class="note" style="margin:0 14px" id="loEquipped">Equipped at start: ${eqNames || "none"}
-    (derived: the two lowest-index skills with a starting rank; not stored separately).</div>`;
+    (the two lowest-index skills with a starting rank; worked out from the ranks, not stored separately).</div>`;
   const RK = isoMAPS.ranks || [];
   h += `<div class="grid" style="padding-top:8px">` + lo.skills.map(sk => {
     let opts = "";
@@ -722,7 +722,7 @@ function loSetSkill(cid, idx, sel) {
       const eq = LO_CUR.skills.filter(s => s.start > 0).slice(0, 2).map(s => s.name).join(", ");
       const eqEl = $("loEquipped");
       if (eqEl) eqEl.innerHTML = `Equipped at start: ${esc(eq) || "none"}
-        (derived: the two lowest-index skills with a starting rank; not stored separately).`;
+        (the two lowest-index skills with a starting rank; worked out from the ranks, not stored separately).`;
     }
     const cname = (JSON.parse(window.PYISO.chars()).chars.find(c => c.id === cid) || {}).name || ("Char " + cid);
     const nm = sk ? sk.name : ("Skill " + idx);
@@ -788,18 +788,18 @@ function renderGearReqs() {
   const r = JSON.parse(window.PYISO.gearreqs());
   if (r.error) { host.innerHTML = `<div class="subhd">Equip requirements</div><p class="bad">${esc(r.error)}</p>`; return; }
   host.innerHTML = `<div class="subhd">Equip requirements: Corruption Shell and Saint's Cloak</div>
-    <p class="note">These two body armors carry equip requirements in the game code, not in their
-      item data. The Shell needs a character's max HP and personal kill count at or above its
-      minimums; the Cloak needs max HP at or above its minimum and a kill count at or below its
-      maximum. The four values below are the code constants themselves, so editing one changes
-      the requirement for every character. Set a minimum to 0 to remove that check. The Code
-      patches tab also has a single switch that removes all four requirements at once.</p>
+    <p class="note">These two body armors carry their equip requirements in the game code, not
+      in their item data. The Shell needs max HP and kills at or above its minimums. The Cloak
+      needs max HP at or above its minimum and kills at or below its maximum. The four values
+      below are the code constants, so editing one changes the requirement for every character.
+      Set a minimum to 0 to remove that check. The Code patches tab has one switch that removes
+      all four at once.</p>
     <div class="grid" style="padding-top:6px">` + r.fields.map(f =>
       renderField(f, { view: "gearreq", ident: JSON.stringify({ field: f.field }), key: `gearreq:${f.field}`,
         group: "Gear" })).join("") + `</div>
     <div class="fnote" style="margin:2px 16px">Saint's Cloak maximum kills: a character with more
-      kills than this cannot equip the Saint's Cloak. Set it to 32766 to effectively remove the
-      limit. Stock values: Shell 350 max HP and 100 kills, Cloak 300 max HP and 30 kills.</div>`;
+      kills than this cannot equip it. Set it to 32766 to all but remove the limit.
+      Stock: Shell 350 max HP and 100 kills; Cloak 300 max HP and 30 kills.</div>`;
 }
 const gearCur = {}, GEAR_LIST = {};
 function openGearPicker(){
@@ -866,8 +866,8 @@ VIEW_RENDER.sets = async (body) => {
       <select id="isoSetSel">${d.sets.map(s=>`<option value="${s.index}">${esc(s.name)}</option>`).join("")}</select>
       <span class="note">${d.sets.length} sets</span></div>
     <div class="fnote" style="margin:6px 16px">Wearing every listed piece on one character grants the
-      set bonus. <b>Members</b>, <b>bonus magnitudes</b> and the <b>effect</b> itself are all editable —
-      so you can build custom sets. Bonus values were verified against the Suikosource armor-set guide.</div>
+      set bonus. The pieces, the bonus values and the effect itself are all editable, so you can
+      build custom sets. Bonus values match the Suikosource armor-set guide.</div>
     <div id="isoSetBody"></div>`;
   $("isoSetSel").onchange = () => renderSet(+$("isoSetSel").value);
   // keep the user on the set they were editing across re-renders (effect / restriction
@@ -889,7 +889,7 @@ function renderSet(idx){
   if (curSetIdx !== idx) customRows = [];       // builder rows belong to one set
   curSetIdx = idx;
   const eff = s.effects || [];
-  let h = `<div class="subhd">${esc(s.name)} <span class="note">— set #${s.index}</span></div>`;
+  let h = `<div class="subhd">${esc(s.name)} <span class="note">set #${s.index}</span></div>`;
   if (s.docBonus) h += `<div class="fnote" style="margin:0 16px 2px">Documented bonus: <b>${esc(s.docBonus)}</b></div>`;
 
   h += `<div class="subhd">Required pieces</div><div class="grid" style="padding-top:6px">`;
@@ -907,26 +907,26 @@ function renderSet(idx){
           data-statid="${m.statId}" data-orig="${esc(m.desc||"")}" data-raw="${esc(m.descRaw||"")}"
           data-kind="str" data-lbl="${esc(m.name||("#"+m.id))} · description" data-grp="Sets"
           onchange="onIsoField(this)" ${m.descRaw?"":"disabled"}>${m.descRaw?REVERT_BTN:""}</div>
-      <div class="fnote">description — edit in English
+      <div class="fnote">description: edit in English
         · <span class="capnote">${(m.desc||"").length}/${m.descCap||0}</span></div></div>`).join("");
   h += `</div>`;
 
   h += `<div class="subhd">Set bonus</div>`;
   if (!eff.length) {
     h += `<div class="fnote" style="margin:0 16px 6px">${s.noop
-      ? "This set has no stat effect here — the game applies it on another code path (e.g. Prosperity's potch doubling, Pale Moon's per-turn heal), so there's no magnitude to edit. You can still give it a different effect below."
+      ? "This set has no stat effect here. The game applies it elsewhere (for example Prosperity's potch doubling, Pale Moon's per-turn heal), so there is no value to edit. You can still give it a different effect below."
       : "No editable magnitudes decoded."}</div>`;
   } else {
     h += `<div class="grid" style="padding-top:6px">` + eff.map((e,i) => {
       if (e.kind === "float") return `<div class="fld"><label>effect ${i+1}</label>
         <div class="in"><input value="floating-point (read-only)" disabled></div>
-        <div class="fnote">this set uses float math — not a simple magnitude</div></div>`;
+        <div class="fnote">this set uses float math, not a simple value</div></div>`;
       const lbl = e.field || ("char+" + e.charOff);
       if (e.kind === "cap") return `<div class="fld"><label>${esc(lbl)} <span class="pill">cap</span></label>
         <div class="in"><input type="number" value="${e.value}" disabled></div>
-        <div class="fnote">the game caps this field at ${e.value} — that clamp is built into
-          the set's code (it is not a bonus and does not replace the field's own value),
-          so it is shown for reference and isn't editable</div></div>`;
+        <div class="fnote">the game caps this field at ${e.value} in the set's own code. The cap
+          is not a bonus and does not replace the field's own value. Shown for
+          reference; not editable</div></div>`;
       if (e.grade) {
         const grades = (EFFTARGETS && EFFTARGETS.grades) || (isoMAPS && isoMAPS.grades) || [];
         const out = (+e.value < 0 || +e.value >= grades.length)
@@ -957,7 +957,7 @@ function renderSet(idx){
           data-word="${gword}" data-kind="num" data-orig="${on?1:0}"
           data-lbl="${esc(s.name)} · restriction" data-grp="Sets" onchange="onIsoField(this)">
           <span class="note">${on ? "restricted" : "any character"}</span></label>${REVERT_BTN}</div>
-        <div class="fnote">unchecking removes the check (a 4-byte NOP) so the bonus applies to
+        <div class="fnote">unchecking removes the check, so the bonus applies to
           whoever wears the full set</div></div>
       <div class="fld"><label>Restricted to</label><div class="in">
         <button type="button" class="pickbtn" id="setGateChar" ${on?"":"disabled"}
@@ -966,27 +966,27 @@ function renderSet(idx){
           onclick="pickSetGateChar(${s.index})">
           <span class="pickbtn-name">${esc(charName(s.gate.charId))}</span>
           <span class="pickbtn-id note">#${s.gate.charId==null?0:s.gate.charId}</span></button>${REVERT_BTN}</div>
-        <div class="fnote">which character gets the bonus${s.gate.kind==="retargeted"?" (re-pointed)":""}
-          · the compared field is inferred to be the character id</div></div></div>`;
+        <div class="fnote">which character gets the bonus${s.gate.kind==="retargeted"?" (re-pointed)":""};
+          the field it is compared against is inferred to be the character id</div></div></div>`;
   }
 
   // effect assignment — the jump table is plain data, so this is a safe way to give any
   // set any other set's bonus (custom sets)
   const opts = (SETS.handlers || []).map(hd =>
-    `<option value="${hd.handler}" ${hd.handler===s.handler?"selected":""}>${esc(hd.from)} — ${esc(hd.summary||"(no effect)")}</option>`).join("");
-  h += `<div class="subhd">Effect used <span class="note">— assign any set's bonus to this set</span></div>
+    `<option value="${hd.handler}" ${hd.handler===s.handler?"selected":""}>${esc(hd.from)}: ${esc(hd.summary||"(no effect)")}</option>`).join("");
+  h += `<div class="subhd">Effect used <span class="note">assign any set's bonus to this set</span></div>
     <div class="grid" style="padding-top:6px"><div class="fld"><label>bonus effect</label><div class="in">
       <select data-key="sethandler:${s.index}" data-view="sethandler" data-setidx="${s.index}"
         data-kind="num" data-orig="${s.handler}" data-lbl="${esc(s.name)} · effect"
         data-grp="Sets" onchange="onIsoField(this)">${opts}</select>${REVERT_BTN}</div>
-      <div class="fnote">changes which bonus this set grants (jump-table entry — a data edit)</div></div></div>`;
+      <div class="fnote">changes which bonus this set grants</div></div></div>`;
 
   // ---- custom bonus builder: assemble brand-new effects into free code space ----
   if (EFFTARGETS && EFFTARGETS.targets) {
     const cap = EFFTARGETS.capacity || { maxAdd: 6, maxSet: 9, words: 20 };
     const isCustom = s.handler === EFFTARGETS.customHandler;
     h += `<div class="subhd">Build a custom bonus
-        <span class="note">— add effects this set doesn't normally have</span></div>
+        <span class="note">add effects this set doesn't normally have</span></div>
       <div class="fnote" style="margin:0 16px 4px">Assembled into free space on the disc, so this
         <b>adds</b> effects rather than only retuning existing ones. Room for up to
         <b>${cap.maxAdd}</b> "+" effects (or ${cap.maxSet} "=" effects). Targets marked
@@ -995,7 +995,7 @@ function renderSet(idx){
         character's current value or <b>force to =</b> a flat one. Element affinities are
         <b>ranks</b>, so those rows lock to "force to" and you pick the tier by name.
         ${isCustom ? "<b>This set is currently using a custom bonus.</b> " : ""}Only one set can hold
-        a custom bonus at a time — they share the same code space.</div>
+        a custom bonus at a time. They share the same code space.</div>
       <div id="cbRows" style="padding:0 16px"></div>
       <div class="row" style="padding:0 16px 12px">
         <button class="chip mini" onclick="cbAddRow()">+ Add effect</button>
@@ -1096,7 +1096,7 @@ function cbRender(){
       ${opCell}${valCell}
       <span class="fnote" style="min-width:104px">${hint}</span>
       <button class="chip mini" onclick="cbDelRow(${i})" title="Remove">✕</button></div>`;
-  }).join("") || `<div class="fnote">No effects yet — add one to build a bonus.</div>`;
+  }).join("") || `<div class="fnote">No effects yet. Add one to build a bonus.</div>`;
   const cnt = $("cbCount");
   if (cnt){
     const used = cbCost(), room = cap.words || 20;
@@ -1129,7 +1129,7 @@ function cbApply(setIdx){
 function pickSetMember(setIdx, slot){
   const el = q(`.pickbtn[data-key="setmem:${setIdx}:${slot}"]`); if(!el) return;
   const cur = el.dataset.cur != null ? el.dataset.cur : el.dataset.orig;
-  openPicker(`Set piece — ${slot}`, armorSlotList(slot), cur, (id) => {
+  openPicker(`Set piece: ${slot}`, armorSlotList(slot), cur, (id) => {
     const list = armorSlotList(slot);
     const nm = (list.find(x => String(x.id) === String(id)) || {}).name || ("#"+id);
     q(".pickbtn-name", el).textContent = nm; q(".pickbtn-id", el).textContent = "#"+id;
@@ -1270,25 +1270,25 @@ VIEW_RENDER.passive = async (body) => {
    * "Bull's Eye status: Become target of foes" — a battle effect, not an encounter one. */
   const GROUPS = [
     { title: "Random encounters",
-      note: `The game's only two encounter-rate runes. Champion's thins out weak enemies;
-             Great Firefly brings more of them, which is what you want for grinding.`,
-      runes: { 79: "fewer encounters — suppresses weak enemies",
-               80: "more encounters — increases enemy appearances" } },
+      note: `The game's only two encounter-rate runes. Champion's brings fewer, weaker enemies.
+             Great Firefly brings more, which is what you want for grinding.`,
+      runes: { 79: "fewer encounters: suppresses weak enemies",
+               80: "more encounters" } },
     /* Reported broken in-game (issues #18, #20), and the disc agrees. Each of these has one
      * canonical gate, in the resolver, and its active path only stores a code into
      * 16348($gp), which the script VM reads. The actual bonuses are applied elsewhere:
      * Fortune has a second, non-canonical hasRune check at 0x436548, and Prosperity and
      * Godspeed have no other hasRune caller at all. Kept (not removed) so a disc that was
      * already patched can still be switched back off. */
-    { title: "Party perks — not working",
-      note: `<b>These don't work yet.</b> The toggle does bypass the rune's check, but only
-             the check that feeds the game's event scripts. The actual bonuses (battle EXP,
-             Potch, movement speed, escape) are applied somewhere else, which hasn't been
-             found yet. Players have confirmed no effect in-game. If you already turned one
-             on, turn it off to restore the disc.`,
-      runes: { 77: "NOT working — meant to give 2x experience; no effect in battle",
-               78: "NOT working — meant to double Potch after battle; no effect",
-               82: "NOT working — meant to give 2x field speed and 100% escape; no effect" } },
+    { title: "Party perks (not working)",
+      note: `<b>These do not work.</b> The toggle bypasses the rune's check, but only the
+             check the game's event scripts read. The bonuses themselves (battle EXP,
+             Potch, movement speed, escape) are applied somewhere else. Players have
+             confirmed no effect in game. If you turned one on, turn it off to restore
+             the disc.`,
+      runes: { 77: "NOT working: meant to give 2x experience; no effect in battle",
+               78: "NOT working: meant to double Potch after battle; no effect",
+               82: "NOT working: meant to give 2x field speed and 100% escape; no effect" } },
   ];
   // The disc's name field is 16 bytes, so rune 80 stores the truncated "Great Firefly Rn".
   const FULL_NAME = { 80: "Great Firefly Rune" };
@@ -1311,15 +1311,14 @@ VIEW_RENDER.passive = async (body) => {
           data-kind="num" data-orig="${x.allForced ? 1 : 0}"
           data-lbl="${esc(FULL_NAME[id] || x.name)} · always on" data-grp="Passives"
           onchange="onIsoField(this)">
-          <span class="note">${x.allForced ? "<b>On</b> — always active, no rune needed"
-                                           : "Off — vanilla: only works while equipped"}</span></label>${REVERT_BTN}</div>
+          <span class="note">${x.allForced ? "<b>On</b>: always active, no rune needed"
+                                           : "Off: only works while equipped"}</span></label>${REVERT_BTN}</div>
         <div class="fnote">${g.runes[id]} · rune #${id}</div></div>`;
     }).join("") + `</div>`).join("")
-    + `<div class="fnote" style="margin:10px 14px 0">Each toggle replaces the rune's equip check
-      with two NOPs (8 bytes per call site) and is fully reversible — switch it back off and the
-      disc is byte-identical. <b>Verified:</b> the equip check really is bypassed and nothing else
-      on the disc moves. <b>Not verified in-game:</b> the encounter runes' effect. The party
-      perks above are confirmed <b>not</b> to work.</div>`;
+    + `<div class="fnote" style="margin:10px 14px 0">Each toggle removes the rune's equip check
+      and is fully reversible: switch it back off and the disc is byte-identical. The check is
+      bypassed and nothing else on the disc changes. The encounter runes' effects have not been
+      tested in game. The party perks above do not work.</div>`;
 };
 
 /* ---- Code patches: the s5toggles registry, one checkbox per toggle ----------
@@ -1340,8 +1339,8 @@ VIEW_RENDER.patches = async (body) => {
   }
   const EFFECT_NOTE = {
     "proven": "Proven in game.",
-    "code-verified": "Patch site and effect verified by disassembly against the pristine disc; an in-game A/B run is still pending.",
-    "not-working": "Registered so an already-patched disc can be verified and restored; the patch itself is proven not to work in game.",
+    "code-verified": "The patch site and what it does were checked against the game code. Not yet tested in game.",
+    "not-working": "Listed so a disc already patched with it can be checked and restored. The patch itself does not work in game.",
   };
   const stateNote = (t) => t.state === "on" ? "<b>On</b>"
     : t.state === "off" ? "Off"
