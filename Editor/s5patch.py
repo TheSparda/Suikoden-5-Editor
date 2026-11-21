@@ -2207,14 +2207,17 @@ def _model_owner(file, chars):
     1 + 400, i.e. the Prince's 4th model — which is how the cast changes appearance as
     the story moves. variant is 1 for the everyday model, 2/3/4 for an alternate.
 
-    The +200/+300/+400 reading is confirmed by the game itself. The ELF carries a table
-    (NTSC 0x211250..0x211330) that folds a character's alternate ids back onto one entry —
-    it groups {2, 119, 128} (the Prince's three), {10, 120} (Lyon), {14, 121} (Kyle) and
-    {22, 122} (Georg). The four it doesn't list are confirmed by palette instead: each
-    alternate's 256-colour CLUT is a near-exact match for its base model's (pc320c/pc020c
-    Cathari, pc321c/pc221c Georg, pc346c/pc046c Gunde, pc373c/pc073c Miakis, all within
-    0.6/768 mean RGB). Only pc314c (Zegai) rests on the numbering alone — it ships no
-    palette to compare and the ELF table doesn't mention it."""
+    The +200/+300/+400 reading is confirmed by the game itself. A compare chain inside
+    func_002111A0 (it starts at vaddr 0x2111FC, ISO offset 0x1BEAFC) folds a character's
+    alternate ids onto one handler. It groups {2, 119, 128} (the Prince's three),
+    {10, 120} (Lyon), {14, 121} (Kyle) and {22, 122} (Georg). The four it doesn't list
+    are confirmed by palette instead: the Cathari, Gunde and Miakis alternates carry a
+    1024-byte CLUT byte-identical to their base model's, and Georg's alternates share
+    dozens of verbatim palette blocks (pc320c/pc020c Cathari, pc321c/pc221c Georg,
+    pc346c/pc046c Gunde, pc373c/pc073c Miakis). Only pc314c (Zegai) has neither a
+    matching palette nor a place in the chain. Its geometry sizes track Zegai's base
+    model the way confirmed pairs do, so numbering plus that fingerprint is strong
+    circumstantial evidence, not proof."""
     m = _MODEL_RE.match(file or "")
     if not m: return "", 0
     n = int(m.group(1))
@@ -2224,9 +2227,10 @@ def _model_owner(file, chars):
     return chars.get(base - 1, ""), variant
 
 def read_models(iso):
-    """The 129-entry field-model table. One row per model id the engine can be asked to
-    load; `slot` is the resource slot it currently points at, `default_slot` the factory
-    one (model k ships pointing at name slot k-1)."""
+    """The field-model pointer table: 129 rows, of which row 0 is a placeholder with
+    no model and the other 128 are the model files. One row per model id the engine
+    can be asked to load; `slot` is the resource slot it currently points at,
+    `default_slot` the factory one (model k ships pointing at name slot k-1)."""
     names = read_resource_names(iso)
     chars = {c["id"]: c["name"] for c in F.load_characters()}
     out = []
@@ -2308,10 +2312,12 @@ def reset_model(iso, model_id):
     set_model(iso, model_id, model_id - 1)
 
 def model_info(iso_path, file):
-    """Structure summary of a field model in DATA.PAK — bone count, geometry sizes and
-    animation count, read straight out of its RenderWare clump. Two models with the same
-    bone count and matching geometry sizes are almost always the same character redressed,
-    which is how you tell a story alternate (pc401c) from an unrelated model."""
+    """Structure summary of a field model in DATA.PAK: bone count, geometry sizes and
+    animation count, read straight out of its RenderWare clump. Geometry sizes are the
+    tell for spotting a story alternate (pc401c): matching geometry sizes are how two
+    models show they are the same character redressed. Bone count only describes the
+    model; a base model and its alternate differ on it for most of the cast, so it
+    says nothing about who a model belongs to."""
     name = file.split(":")[-1].upper()
     if not name.endswith(".ROM"): name += ".ROM"
     _, data, codec = _datapak_read(iso_path, name)

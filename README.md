@@ -320,11 +320,12 @@ inconsistently in story scenes. The hero's name is chosen by the player at game 
 
 ### Field models
 
-Swap the 3D model a character walks around as. The disc keeps 129 field models in
+Swap the 3D model a character walks around as. The disc keeps 128 field models in
 `DATA.PAK` (`PCnnnC.ROM`, RenderWare clumps holding a skeleton, meshes and animations) and
 the boot ELF picks one through a table of pointers into its resource-path list, so changing
 a model is a **single 4-byte pointer**. Nothing inside `DATA.PAK` is touched and **Reset**
-puts it back byte for byte.
+puts it back byte for byte. Proven in game: the swapped model is what the character walks
+around as, even when it is another character's model, and Reset brings the stock look back.
 
 Model ids are **character id + 2** (the Prince is #2, so `pc001c.rom`). Files numbered
 2xx / 3xx / 4xx are **extra looks for the same person** (`pc401c` is 1+400, the Prince's
@@ -339,16 +340,24 @@ together by default**: pick a file on the Prince's row and all three of his rows
 he stays re-skinned through the scenes that ask for an alternate. Untick *keep a character's
 looks together* to set a single row on its own. Reset is grouped the same way.
 
-Who owns which alternate comes from the disc itself: an identity table in the ELF
-(NTSC `0x211250` to `0x211330`) folds a character's model ids onto one entry, grouping
-`{2, 119, 128}` as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle and `{22, 122}` Georg.
-The four it omits match their base model's palette almost exactly (Cathari, Georg, Gunde,
-Miakis). Only `pc314c` (Zegai) rests on the numbering alone.
+Who owns which alternate comes from the disc itself: a compare chain inside the ELF's
+func_002111A0 folds a character's alternate ids onto one handler, grouping `{2, 119, 128}`
+as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle and `{22, 122}` Georg. The four it omits
+are confirmed by palette: the Cathari, Gunde and Miakis alternates carry a palette
+byte-identical to their base model's, and Georg's alternates share dozens of verbatim
+palette blocks. `pc314c` (Zegai) has neither, but its geometry sizes track Zegai's base
+model the way confirmed pairs do, so it rests on numbering plus that fingerprint: strong
+circumstantial evidence, not proof.
+
+Two files in `DATA.PAK`, `ec012c.rom` and `ec015c.rom`, have no slot in the resource-path
+list, so they cannot be picked or loaded. A model's companion animation files are keyed
+by the original file number and do not follow a swap.
 
 **i** reads a model's skeleton straight off the disc (bone count, mesh sizes, animation
-count). The same bone count plus matching mesh sizes means the same character redressed.
-Cutscenes ship their own baked copies of the cast, so a swap shows while you walk around
-rather than in pre-rendered story scenes.
+count). Matching mesh sizes are the tell that two models are the same character redressed;
+bone count only describes a model, and a base model and its alternate differ on it for
+most of the cast. Cutscenes ship their own baked copies of the cast, so a swap shows
+while you walk around rather than in pre-rendered story scenes.
 
 ### Assets
 

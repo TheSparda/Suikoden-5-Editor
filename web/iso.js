@@ -1761,7 +1761,10 @@ VIEW_RENDER.model = async (body) => {
       <b>character id + 2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx, 3xx and
       4xx are extra looks for the <b>same person</b> that the game's scripts switch to for particular
       scenes: the Prince and Georg have two extra each, and Lyon, Kyle, Zegai, Cathari, Gunde and
-      Miakis one. A character's looks move together by default. Cutscenes use their own copies of the
+      Miakis one. A character's looks move together by default. Swaps are proven in game. Two files
+      in <code>DATA.PAK</code>, <code>ec012c.rom</code> and <code>ec015c.rom</code>, have no name-table
+      slot, so they cannot be picked, and a model's extra animation files stay with the original
+      file instead of following a swap. Cutscenes use their own copies of the
       cast, so a swap shows while you walk around, not in pre-rendered story scenes.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
       onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`

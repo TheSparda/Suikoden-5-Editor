@@ -290,9 +290,10 @@ NAME_MAX_CHARS  = 7
 # picks one through two tables:
 #   * RESOURCE_NAME_BASE: a flat 0x20-stride table of resource paths ("VOL_COM:pc001c.rom"),
 #     761 slots covering every model/texture file the engine can ask for by id.
-#   * MODEL_PTR_BASE: 129 pointers into that table. Slot 0 is a "hogehoge" placeholder;
-#     slot k (k>=1) points at RESOURCE_NAME_BASE + (k-1)*0x20, so modelId = characterId + 2
-#     (Prince id 0 -> pc001c, Lyon id 8 -> pc009c).
+#   * MODEL_PTR_BASE: 129 pointers into that table, one per model id. Slot 0 is a
+#     "hogehoge" placeholder, not a usable model; the other 128 slots are the model
+#     files. Slot k (k>=1) points at RESOURCE_NAME_BASE + (k-1)*0x20, so
+#     modelId = characterId + 2 (Prince id 0 -> pc001c, Lyon id 8 -> pc009c).
 # The loader is literally `name = *(char**)(MODEL_PTR + id*4)` (8 call sites), and the id
 # comes from a runtime actor struct — event scripts pass it, which is how a character's
 # look changes between scenes. So repointing one pointer redirects every load of that id.

@@ -702,6 +702,9 @@ xdelta commands cover the whole disc.
 - **Field models**: which model file a character id loads in towns and on the field. The
   loader is a single pointer read, so swapping a model is a pointer repoint, and Reset restores
   it byte-for-byte. Characters with several looks are grouped so all of them move together.
+  Swaps are proven in game. Two files in DATA.PAK, ec012c.rom and ec015c.rom, have no
+  name-table slot, so they cannot be picked or loaded, and a model's companion animation
+  files are keyed by the original file number, so they do not follow a swap.
 - **Assets**: a read-only browser for the ~7,700 files packed into `DATA.PAK`. It reads from
   your file on demand and never writes.
 - **Reference**: the name lists (characters, spells, skills, runes, enemies, items) the
