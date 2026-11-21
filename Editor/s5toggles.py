@@ -513,12 +513,16 @@ def _span_state(span):
 
 
 def toggle_status(iso, toggle_id):
-    """{id, label, effect, state, sites} where state is one of
-    off / on / mixed / foreign / not-found, decided span by span."""
+    """{id, label, group, blurb, effect, state, sites} where state is one
+    of off / on / mixed / foreign / not-found, decided span by span. The
+    group and blurb ride along because the web Code patches view groups
+    and annotates by them; without them every toggle rendered under the
+    default group with no blurb."""
     t = _BY_ID[toggle_id]
     sites = t["find"](iso)
     if not sites:
-        return {"id": toggle_id, "label": t["label"], "effect": t["effect"],
+        return {"id": toggle_id, "label": t["label"], "group": t["group"],
+                "blurb": t["blurb"], "effect": t["effect"],
                 "state": "not-found", "sites": []}
     out_sites, states = [], []
     for s in sites:
@@ -537,7 +541,8 @@ def toggle_status(iso, toggle_id):
         state = "foreign"
     else:
         state = "mixed"
-    return {"id": toggle_id, "label": t["label"], "effect": t["effect"],
+    return {"id": toggle_id, "label": t["label"], "group": t["group"],
+            "blurb": t["blurb"], "effect": t["effect"],
             "state": state, "sites": out_sites}
 
 
