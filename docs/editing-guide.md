@@ -413,6 +413,21 @@ Five tables sharing one record layout: Head (32), Body (71), Arm (37), Foot (30)
 | Short / Mid / Long-range ATK, Short / Mid / Long-range ACC | u8 | Range-specific bonuses (bangles, bracers, power gloves) |
 | 14 × element ATK, 14 × element DEF | s8 each | Same element order as everywhere else |
 
+### Equip requirements: Corruption Shell and Saint's Cloak
+
+Two body armors carry equip requirements that live in code, not in their records: the
+Corruption Shell (equip id 70) and the Saint's Cloak (equip id 71) are the only Type 6
+pieces, and Type 6 takes a special path in the game's can-equip check. The Shell equips
+only on a character with max HP 350 or more and 100 or more kills; the Cloak needs max
+HP 300 or more and no more than 30 kills. (The Cloak's description says "under 30
+kills"; the code allows exactly 30.) HP means max HP, and the kill count is a
+per-character counter the game keeps in each character record.
+
+The Gear tab edits the four thresholds directly: a minimum max HP and a minimum kills
+for the Shell, a minimum max HP and a maximum kills for the Cloak. Setting a minimum to
+0 removes that check. The Code patches tab also carries a single switch, **Remove armor
+equip requirements**, that clears all four at once and restores them exactly.
+
 ### Name and description
 
 A piece's **name** and its **description** (the in-game "what it does" line) are both real
@@ -518,7 +533,8 @@ call at `0x436548`; Prosperity and Godspeed are checked some other way that hasn
 One-word code patches, listed with their live state on the open disc. Every site is located
 by a signature search of the executable (never a hard-coded address), must match exactly
 once, and is refused untouched if the bytes there are neither the stock nor the patched
-form. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
+form. The one exception is the armor-requirements patch below: its four sites sit at the
+traced offsets for the disc's region and are verified against their stock words instead. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
 toggles above are in this list too; the five below come from the community cheat table,
 with their sites found by disassembly and verified on both the NTSC-U and PAL discs.
 Their effect is labelled **code-verified**: the patched instruction does what the label
@@ -543,6 +559,15 @@ and `0x3E9598`). Its sites are located by the predicate's own constant chain, it
 restores exactly like the others, and its effect is labelled **proven**: the
 refusal and its removal were both exercised in game. The HQ service skills use a
 separate whitelist in the same function and are unaffected.
+
+**Remove armor equip requirements** (issue #49) patches four words: the requirement
+thresholds of the Corruption Shell and the Saint's Cloak inside the can-equip check
+(NTSC-U `0x337ECC`, `0x337EE8`, `0x337F24`, `0x337F44`; PAL `0x338C9C`, `0x338CB8`,
+`0x338CF4`, `0x338D14`). The same four thresholds are editable one by one in the Gear
+tab (see Equip requirements under Gear). Its effect is labelled **proven**: the stock
+refusals and passes were exercised in game at the exact boundaries, and a test disc
+carrying exactly the patched values equipped both pieces on a character the stock
+game refuses.
 
 ---
 
