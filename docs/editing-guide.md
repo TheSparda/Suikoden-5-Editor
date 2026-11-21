@@ -722,7 +722,7 @@ Verified and editable:
 | Potch | Capped at 99,999,999 |
 | Party SP | Shared party skill points, capped at 999,999 |
 | Level | Lead character, 1-99 |
-| New Game Plus | Writes the real NG+ carry byte: on load the game treats the save as a New Game Plus run and runs its carry-over build, and the faster dash tier is part of that state. (The cleared-game byte behind the green hero name in the load list is a display copy of this byte, refreshed by the game on every save.) |
+| New Game Plus | Writes the real NG+ carry byte: on load the game treats the save as a New Game Plus run, and its carry-over build resets the party and character levels to the New Game Plus opening state. Potch and your position carry over unchanged, and the faster dash tier is part of that state. (The cleared-game byte behind the green hero name in the load list is a display copy of this byte, refreshed by the game on every save.) |
 | Active party | 10 slots (6 battle + 4 entourage), written to the game's real party arrays; the hero can sit in any slot |
 | Per character | Equipped armor (4 slots + accessory), equipped runes (head / right / left), skill ranks |
 | Per character: EXP, SP | The character's own EXP and skill points (u16 each). Not the shared party SP pool above |

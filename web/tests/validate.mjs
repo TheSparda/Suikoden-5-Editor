@@ -192,6 +192,14 @@ ok("s5save.py comments carry the correction (#2)", saveSrc.includes("cleared-gam
    && saveSrc.includes("save-time COPY")
    && saveSrc.includes('"newGamePlus": (0x120E8, 1, "num")')
    && !saveSrc.includes("enables fast-forward"));
+// In-game verification (2026-11-21) showed the carry-over build resets the
+// party and character levels to the NG+ opening state, so every user-facing
+// description of the control must carry that warning.
+const ngWarn = "resets the party and character levels to the New Game Plus opening state";
+ok("NG+ descriptions warn about the carry-over reset (#18)",
+   appSrc.includes(ngWarn) && appSrc.includes("Potch and your position carry over unchanged")
+   && fs.readFileSync(path.join(web, "..", "README.md"), "utf8").includes(ngWarn)
+   && fs.readFileSync(path.join(web, "..", "docs", "editing-guide.md"), "utf8").includes(ngWarn));
 
 // 3b) Passives tab: exposes the verified passive runes, correctly labelled
 ok("iso.js registers the Passives tab",

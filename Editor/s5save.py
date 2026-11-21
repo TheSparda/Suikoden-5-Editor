@@ -83,8 +83,12 @@ PAYLOAD_IS_FOLDER_NAME = True   # payload filename == folder name (not "gamedata
 # Plus carry byte lives in the mirrored state struct at payload 0x120E8 (live
 # EE 0xA46320): genuine NG+ opening saves hold 1, first-run saves hold 0, and
 # on a CONTINUE load the game runs its NG+ carry-over build only when the
-# byte is 1, then advances it to 2, where it rests. The same byte is the
-# field motor's dash-tier admission input, alongside Cathari in the party.
+# byte is 1, then advances it to 2, where it rests. VERIFIED IN GAME
+# 2026-11-21: on a mid-game save that build resets the party and all
+# character records to the NG+ opening state (a Lv 39 hero and a Lv 53
+# hero both loaded as Lv 3); potch and world position carry over
+# unchanged. The same byte is the field motor's dash-tier admission
+# input, alongside Cathari in the party.
 # The newGamePlus control below binds to the real byte: reads may return 2
 # on a save written after an NG+ load (nonzero means on); writes store 1/0.
 NG_PLUS_OFF = 0x120E8
@@ -97,7 +101,7 @@ CLEARED_MARKER_OFF = 0x12   # display copy of the carry byte; refreshed by the g
 S5_FIELDS = {
     "heroName":    (0x00, 16, "str"),
     "castleName":  (0x14, 16, "str"),
-    "newGamePlus": (0x120E8, 1, "num"),   # the real NG+ carry byte (see the note above NG_PLUS_OFF): nonzero = the game treats the save as a New Game Plus run on load, carry-over build included; the byte at 0x12 is only its display copy
+    "newGamePlus": (0x120E8, 1, "num"),   # the real NG+ carry byte (see the note above NG_PLUS_OFF): nonzero = the game treats the save as a New Game Plus run on load and the carry-over build resets the party and character levels to the opening state; potch and position carry over; the byte at 0x12 is only its display copy
     "level":       (0x28, 1,  "num"),   # lead character level (1..99), matches icon.sys title
     # ---- Global game-state struct, serialized at save+0xD8 (VERIFIED 2026-08-23 by ELF RE:
     # live struct 0xA31C10 [potch u32][partySP u32][hero 17B][army 17B][castle 17B] mirrors
