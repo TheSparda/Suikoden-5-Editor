@@ -3153,8 +3153,8 @@ def gear_requirement_sites(iso):
 # sites via dash_gate_sites below). All three patches touch distinct words
 # and compose in any combination.
 DASH_LUI_TOP = 0x3C02            # lui $v0, imm (top halfword)
-DASH_SPEED_PRESETS = [1.5, 2.0, 2.5, 3.0]
-DASH_ANIM_PRESETS = [1.0, 1.5, 2.0, 2.5, 3.0]
+DASH_SPEED_PRESETS = [1.5, 2.0, 2.5, 3.0, 4.0]
+DASH_ANIM_PRESETS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]
 # (field, label, presets, {region: stock float}, {region: ISO offset},
 #  anchors: ((relative offset, expected word), ...))
 DASH_FIELDS = [

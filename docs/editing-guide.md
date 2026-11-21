@@ -575,12 +575,16 @@ fast dash tier only with Cathari in the party or on a New Game Plus run, and the
 carries three independent controls over that tier. **Godspeed dash always on** NOPs the
 motor's carry-byte skip branch (NTSC-U `0x1F5288`, PAL `0x1F57E8`), so the tier is
 admitted for any party in any run. **Dash speed multiplier** rewrites the tier's speed
-constant (NTSC-U `0x1F4F34`, stock 2.0; PAL `0x1F5494`, stock 1.75) to 1.5x, 2x, 2.5x
-or 3x. **Dash animation multiplier** rewrites the run animation rate used while the
-tier is active (NTSC-U `0x1F5080`, PAL `0x1F55E0`, stock 2.0) to 1x, 1.5x, 2x, 2.5x or
-3x, independently of the speed. The tier itself was measured in game at about double
-the dash distance on the world map; the toggle and the multipliers are labelled
-**code-verified** until an in-game A/B run exercises the exact patches.
+constant (NTSC-U `0x1F4F34`, stock 2.0; PAL `0x1F5494`, stock 1.75) to 1.5x, 2x, 2.5x,
+3x or 4x. **Dash animation multiplier** rewrites the run animation rate used while the
+tier is active (NTSC-U `0x1F5080`, PAL `0x1F55E0`, stock 2.0) to 1x, 1.5x, 2x, 2.5x, 3x
+or 4x, independently of the speed. The tier itself was measured in game at about double
+the dash distance on the world map. The toggle and the speed multiplier are labelled
+**proven**: an in-game A/B run of the exact patches dashed at the gated tier with no
+Cathari in the party on a first run (108.14 units against the stock disc's 54.47 over
+the same course), and the 3x speed setting measured 1.52x the 2x tier's distance. The
+animation multiplier's patched constant was verified live in memory, but its rate has
+not been observed independently, so it keeps the **code-verified** label.
 
 ---
 

@@ -428,18 +428,20 @@ TOGGLES = [
               "for exact verification and restore of already-patched discs.",
      "find": _gate_sites(82), "self_restoring": False},
     {"id": "godspeed-dash", "label": "Godspeed dash always on",
-     "group": "Dash tuning", "effect": "code-verified",
+     "group": "Dash tuning", "effect": "proven",
      "blurb": "The fast dash tier is normally admitted only with Cathari "
               "in the party or on a New Game Plus run. This NOPs the "
               "field motor's carry-byte skip branch, so holding L2 or "
               "Triangle dashes at the fast tier for any party in any "
               "run. The tier is the one measured in game with Cathari "
               "present: about double the dash distance on the world "
-              "map, less on field maps, and walking is never affected. "
-              "Site verified by disassembly in both regions; an "
-              "in-game A/B run of this exact patch is still pending. "
-              "Pair it with the dash multipliers below for a custom "
-              "tier strength.",
+              "map, in towns and indoors, and walking is never "
+              "affected (in the dungeon the tier adds almost nothing). "
+              "Proven in game with this exact patch: on a first run "
+              "with no Cathari in the party, the patched disc dashed "
+              "108.14 units over the world map course where the stock "
+              "disc dashed 54.47. Pair it with the dash multipliers "
+              "below for a custom tier strength.",
      "find": _godspeed_dash_sites, "self_restoring": True},
     {"id": "training-sp-free", "label": "Training does not use SP",
      "group": "Code patches", "effect": "code-verified",

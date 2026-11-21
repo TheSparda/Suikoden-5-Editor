@@ -292,6 +292,11 @@ ok("engine pins the dash sites for both regions",
 ok("toggle registry carries godspeed-dash in its own group",
    togSrc.includes('"godspeed-dash"') && togSrc.includes("Godspeed dash always on")
    && togSrc.includes('"Dash tuning"'));
+ok("dash presets include the 4.0 tier in the engine",
+   patchSrc.includes("DASH_SPEED_PRESETS = [1.5, 2.0, 2.5, 3.0, 4.0]")
+   && patchSrc.includes("DASH_ANIM_PRESETS = [1.0, 1.5, 2.0, 2.5, 3.0, 4.0]"));
+ok("godspeed-dash is labelled proven after the in-game A/B run",
+   /"godspeed-dash"[\s\S]{0,200}"effect": "proven"/.test(togSrc));
 
 // 3d) Field-models tab: registered in both editors, and the two ELF tables it patches sit
 // back-to-back on the disc (the pointer array starts exactly where the name table ends) —

@@ -35,7 +35,7 @@ SITES = {  # region: (speed off, speed stock word, anim off, gate off)
     "pal":    (0x1F5494, 0x3C023FE0, 0x1F55E0, 0x1F57E8),
 }
 LUI = {1.0: 0x3C023F80, 1.5: 0x3C023FC0, 1.75: 0x3C023FE0,
-       2.0: 0x3C024000, 2.5: 0x3C024020, 3.0: 0x3C024040}
+       2.0: 0x3C024000, 2.5: 0x3C024020, 3.0: 0x3C024040, 4.0: 0x3C024080}
 
 isos = {}
 for cand in sorted(glob.glob(os.path.join(ROOT, "ISO", "*.iso"))):
@@ -75,15 +75,15 @@ for region, path in sorted(isos.items()):
         chk("%s stocks read back (speed %s, anim 2.0)" % (region, flds["dash_speed"]["stock"]),
             flds["dash_speed"]["value"] == flds["dash_speed"]["stock"]
             and flds["dash_anim"]["value"] == 2.0
-            and flds["dash_speed"]["presets"] == [1.5, 2.0, 2.5, 3.0]
-            and flds["dash_anim"]["presets"] == [1.0, 1.5, 2.0, 2.5, 3.0])
+            and flds["dash_speed"]["presets"] == [1.5, 2.0, 2.5, 3.0, 4.0]
+            and flds["dash_anim"]["presets"] == [1.0, 1.5, 2.0, 2.5, 3.0, 4.0])
         chk("%s pristine words at the traced offsets" % region,
             g.ru(sp_off, 4) == sp_word and g.ru(an_off, 4) == 0x3C024000
             and g.ru(gate_off, 4) == 0x1040FF2F)
 
         # every preset lands in exactly its own word
         ok = True
-        for v in (1.5, 2.5, 3.0):
+        for v in (1.5, 2.5, 3.0, 4.0):
             before = g.rd(0, len(pristine))
             P.write_dash_multiplier(g, "dash_speed", v)
             after = g.rd(0, len(pristine))
@@ -92,7 +92,7 @@ for region, path in sorted(isos.items()):
                 and all(sp_off <= i < sp_off + 4 for i in diff) and diff
         chk("%s speed presets land in the speed word only" % region, ok)
         ok = True
-        for v in (1.0, 1.5, 3.0):
+        for v in (1.0, 1.5, 3.0, 4.0):
             before = g.rd(0, len(pristine))
             P.write_dash_multiplier(g, "dash_anim", v)
             after = g.rd(0, len(pristine))
@@ -101,13 +101,15 @@ for region, path in sorted(isos.items()):
                 and all(an_off <= i < an_off + 4 for i in diff) and diff
         chk("%s anim presets land in the anim word only" % region, ok)
         chk("%s the two multipliers are independent" % region,
-            P.read_dash_multipliers(g)["fields"][0]["value"] == 3.0
-            and P.read_dash_multipliers(g)["fields"][1]["value"] == 3.0)
+            P.read_dash_multipliers(g)["fields"][0]["value"] == 4.0
+            and P.read_dash_multipliers(g)["fields"][1]["value"] == 4.0)
+        chk("%s the 4.0 tier writes and reads back on both fields" % region,
+            g.ru(sp_off, 4) == LUI[4.0] and g.ru(an_off, 4) == LUI[4.0])
 
         # validation: non-presets and unknown fields refuse, writing nothing
         before = g.rd(0, len(pristine))
         refused = 0
-        for field, v in (("dash_speed", 1.25), ("dash_speed", 4.0),
+        for field, v in (("dash_speed", 1.25), ("dash_speed", 5.0),
                          ("dash_anim", 0.5), ("dash_nope", 2.0)):
             try:
                 P.write_dash_multiplier(g, field, v)
@@ -174,6 +176,9 @@ for region, path in sorted(isos.items()):
         out = json.loads(ns["iso_dashtuning"]())
         chk("%s glue read reports both fields" % region,
             "error" not in out and len(out.get("fields", [])) == 2, str(out)[:120])
+        chk("%s glue presets offer the 4.0 tier the web select renders" % region,
+            "error" not in out and len(out.get("fields", [])) == 2
+            and all(4.0 in f["presets"] for f in out["fields"]), str(out)[:120])
         res = json.loads(ns["iso_setdashmul"]("dash_anim", 2.5))
         chk("%s glue write lands" % region,
             res.get("value") == 2.5 and "error" not in res, str(res)[:120])

@@ -204,8 +204,8 @@ with P.Iso(tmp, writable=True) as g:
 
     # Godspeed dash: one site, the field motor's carry-byte skip branch.
     st = sts["godspeed-dash"]
-    chk("godspeed-dash is the code-verified Dash tuning toggle",
-        st["effect"] == "code-verified" and st["group"] == "Dash tuning"
+    chk("godspeed-dash is the proven Dash tuning toggle",
+        st["effect"] == "proven" and st["group"] == "Dash tuning"
         and st["state"] == "off" and len(st["sites"]) == 1
         and st["sites"][0]["spans"][0]["off"] == 0x1F5288,
         "%s %s %s" % (st["effect"], st.get("group"), st["state"]))
