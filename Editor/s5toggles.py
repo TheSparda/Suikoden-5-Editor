@@ -49,6 +49,14 @@ the stock refusals and passes in game at the exact boundaries, and a
 disable ISO carrying exactly the toggle's patched immediates equipped
 both pieces on a character the stock game refuses
 (ps2-re games/suikoden5/GEAR_REQUIREMENTS.md).
+
+The Godspeed dash toggle (issue #18) is separate from the not-working
+godspeed-always entry above: it patches the field motor's dash-tier
+gate, the mechanism the lab actually traced and measured
+(ps2-re games/suikoden5/DASH_GATE_CODE.md), and carries effect
+"code-verified" until an in-game A/B run exercises the exact patch.
+Its two companion multiplier fields live in s5patch (dash_speed and
+dash_anim) and render beside it in the Dash tuning group.
 """
 import struct
 
@@ -370,6 +378,31 @@ def _gear_req_sites(iso):
     return P.gear_requirement_sites(iso)
 
 
+# ---------------------------------------------------------------------------
+# Godspeed dash toggle (issue #18): the field motor func_00247360 admits
+# its fast dash tier when Cathari is in the live party OR the NG+ carry
+# byte is nonzero; on the not-found path a byte of 0 branches at the site
+# below to skip the tier. NOPing that branch admits the tier for any
+# party in any run: the fall-through joins the same tier block the
+# admitted paths use, tier flag included, so the speed doubling and the
+# run animation rate agree (ps2-re DASH_GATE_CODE.md). Sites are defined
+# in s5patch (dash_gate_sites), anchor-checked on the getter call.
+# This is a NEW toggle id, not a rebind of "godspeed-always": that entry
+# patches the event-script resolver gates and stays registered so discs
+# carrying it still verify and restore exactly. Rebinding its id to the
+# motor site would read such discs as off (the new sites are stock
+# there) and a journal restore carrying the old originals would write
+# nothing at the resolver offsets, silently leaving the old NOPs in
+# place. Self-restoring: the stock branch word is a constant in both
+# regions. The tier it admits is the one measured in game with Cathari
+# or NG+ (about double dash distance on the world map); this exact patch
+# has not had an in-game A/B run yet, so it carries "code-verified".
+# ---------------------------------------------------------------------------
+
+def _godspeed_dash_sites(iso):
+    return P.dash_gate_sites(iso)
+
+
 TOGGLES = [
     {"id": "dawn-unlock", "label": "Dawn Rune: unlock all four spells",
      "group": "Code patches", "effect": "proven",
@@ -394,6 +427,20 @@ TOGGLES = [
               "movement or escape code (PASSIVES_CATHARI.md); registered "
               "for exact verification and restore of already-patched discs.",
      "find": _gate_sites(82), "self_restoring": False},
+    {"id": "godspeed-dash", "label": "Godspeed dash always on",
+     "group": "Dash tuning", "effect": "code-verified",
+     "blurb": "The fast dash tier is normally admitted only with Cathari "
+              "in the party or on a New Game Plus run. This NOPs the "
+              "field motor's carry-byte skip branch, so holding L2 or "
+              "Triangle dashes at the fast tier for any party in any "
+              "run. The tier is the one measured in game with Cathari "
+              "present: about double the dash distance on the world "
+              "map, less on field maps, and walking is never affected. "
+              "Site verified by disassembly in both regions; an "
+              "in-game A/B run of this exact patch is still pending. "
+              "Pair it with the dash multipliers below for a custom "
+              "tier strength.",
+     "find": _godspeed_dash_sites, "self_restoring": True},
     {"id": "training-sp-free", "label": "Training does not use SP",
      "group": "Code patches", "effect": "code-verified",
      "blurb": "NOPs the pool store in spendSP, the function training "
