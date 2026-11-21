@@ -37,6 +37,18 @@ the community cheat table's code patches with their sites located by
 signature and their semantics verified by disassembly on both regions;
 they carry effect "code-verified" because no in-game A/B run has
 exercised them yet (ps2-re games/suikoden5/CT_FEATURES_BUILD.md).
+
+The gear-requirements-off toggle (issue #49) removes the equip gates
+of the only two Type 6 body armors, the Corruption Shell and the
+Saint's Cloak: four slti immediates in the shared can-equip predicate.
+Its sites sit at the traced offsets for the disc's region and are
+verified against their stock words (s5patch.gear_requirement_sites,
+shared with the Gear view's threshold fields, which edit the same
+immediates one by one). It carries effect "proven": the lab exercised
+the stock refusals and passes in game at the exact boundaries, and a
+disable ISO carrying exactly the toggle's patched immediates equipped
+both pieces on a character the stock game refuses
+(ps2-re games/suikoden5/GEAR_REQUIREMENTS.md).
 """
 import struct
 
@@ -338,6 +350,26 @@ def _sigskill_sites(iso):
     return out
 
 
+# ---------------------------------------------------------------------------
+# Gear equip requirements toggle (issue #49): the Corruption Shell and
+# the Saint's Cloak are the only Type 6 body armors, and Type 6 takes a
+# special path in the shared can-equip predicate func_0038A4B0, gated on
+# four slti immediates (Shell: max HP >= 350 and kills >= 100; Cloak:
+# max HP >= 300 and kills < 31). The sites are defined once in
+# s5patch (GEAR_REQ_FIELDS / gear_requirement_sites) and shared with
+# the Gear view's threshold fields: the traced offsets for the disc's
+# region, with every word verified against its stock or patched form
+# before any write, so a custom threshold set in the Gear view reads
+# foreign here and the toggle refuses rather than overwrite it.
+# Self-restoring: all four stock words are constants. The patched
+# immediates (0 / 0 / 0 / 0x7FFF) are exactly the disable ISO the lab
+# proved in game.
+# ---------------------------------------------------------------------------
+
+def _gear_req_sites(iso):
+    return P.gear_requirement_sites(iso)
+
+
 TOGGLES = [
     {"id": "dawn-unlock", "label": "Dawn Rune: unlock all four spells",
      "group": "Code patches", "effect": "proven",
@@ -413,6 +445,13 @@ TOGGLES = [
               "or ISO starting ranks with a matching cap) before it "
               "can be equipped. HQ service skills are unaffected.",
      "find": _sigskill_sites, "self_restoring": True},
+    {"id": "gear-requirements-off", "label": "Remove armor equip requirements",
+     "group": "Code patches", "effect": "proven",
+     "blurb": "Corruption Shell normally needs 350+ max HP and 100+ "
+              "kills. Saint's Cloak needs 300+ max HP and no more than 30 "
+              "kills. This patch removes both gates so any character can equip "
+              "them.",
+     "find": _gear_req_sites, "self_restoring": True},
 ]
 _BY_ID = {t["id"]: t for t in TOGGLES}
 
