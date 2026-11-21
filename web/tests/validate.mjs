@@ -215,11 +215,11 @@ ok("Great Firefly 80 = more encounters", /80:\s*"more encounters/.test(gsrc));
 // no in-game effect (#18, #20). They must stay labelled as not working until that changes.
 for (const [id, nm] of [[77, "Fortune"], [78, "Prosperity"], [82, "Godspeed"]])
   ok(`${nm} ${id} is labelled as not working`, new RegExp(`${id}:\\s*"NOT working`).test(gsrc));
-ok("party-perk group says it doesn't work", /Party perks — not working/.test(gsrc));
+ok("party-perk group says it doesn't work", /Party perks \(not working\)/.test(gsrc));
 ok("Firefly 62 is not offered (it is Bull's Eye, not an encounter rune)", !/\b62\s*:/.test(gsrc));
 ok("Raven 83 is not offered (it has no forceable gate)", !/\b83\s*:/.test(gsrc));
 ok("checkbox caption states the mode, not a requirement",
-   isoSrc.includes("Off — vanilla: only works while equipped") && isoSrc.includes("always active, no rune needed"));
+   isoSrc.includes("Off: only works while equipped") && isoSrc.includes("always active, no rune needed"));
 ok("tab bails out rather than half-render", isoSrc.includes("missing.length"));
 ok("glue exposes the always-on adapters",
    appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));

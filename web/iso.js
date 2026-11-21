@@ -1765,10 +1765,10 @@ VIEW_RENDER.model = async (body) => {
       cast, so a swap shows while you walk around, not in pre-rendered story scenes.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
       onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`
-    + `<div class="subhd">${esc(hero || "Hero")} — all ${heroRows.length} looks</div>`
-    + `<div class="fnote" style="margin:0 16px 4px">He's the one you actually watch walk around, and the game
-       switches between these three by itself as the story moves — so they're kept together here rather than
-       scattered down the list by model id.</div>`
+    + `<div class="subhd">${esc(hero || "Hero")}: all ${heroRows.length} looks</div>`
+    + `<div class="fnote" style="margin:0 16px 4px">The game switches between these three looks by itself
+       as the story moves, so they are kept together here instead of scattered down the list by
+       model id.</div>`
     + grid(heroRows)
     + `<div class="subhd">Everyone else</div>` + grid(otherRows)
     + `<div class="fnote" id="modelInfoOut" style="margin:0 16px 14px"></div>`;
@@ -1891,9 +1891,9 @@ function b64bytes(b64) {
 let PAK_FILTER = "";
 VIEW_RENDER.assets = async (body) => {
   body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every asset packed into
-      <code>DATA.PAK</code> — the disc's 2.3 GB CRI ROFS volume, ~7,700 files. It sits far past the
-      part of the disc the editor holds in memory, so it's read straight off your file on demand;
-      nothing is uploaded and nothing here writes to the disc.</div>
+      <code>DATA.PAK</code>, the disc's 2.3 GB volume of about 7,700 files. It sits past the
+      part of the disc the editor holds in memory, so files are read from your disc on demand.
+      Nothing is uploaded, and nothing here writes to the disc.</div>
     <div class="row" style="padding:0 16px 6px">
       <button id="pakGo">Browse DATA.PAK</button>
       <input class="pick-q" id="pakQ" type="search" placeholder="filter path… (try FACE)" style="max-width:240px">
@@ -1915,7 +1915,7 @@ VIEW_RENDER.assets = async (body) => {
           ${face ? `<button class="ghost mini" onclick="pakPortraits(${idx})">Portraits</button>`
                  : `<button class="ghost mini" onclick="pakTextures(${idx})">Textures</button>`}</td></tr>`;
       }).join("") + `</tbody></table></div>` +
-      (rows.length > 400 ? `<p class="note">showing the first 400 — filter to narrow</p>` : "");
+      (rows.length > 400 ? `<p class="note">showing the first 400; filter to narrow it down</p>` : "");
   };
   $("pakQ").value = PAK_FILTER;
   $("pakQ").oninput = (ev) => { PAK_FILTER = ev.target.value; if (PAK.index) draw(); };
@@ -2138,7 +2138,7 @@ function saveISO() {
   const d = recomputeIsoDirty();
   if (!d.runs) { toast("No changes to save.", "ok"); return; }
   if (!isoHandle) {   // opened via file input (mobile / no FS Access) → recipe is the way out
-    toast("This browser can't write the ISO in place — exporting a recipe instead.", "ok");
+    toast("This browser cannot write the ISO in place, so a recipe is exported instead.", "ok");
     exportRecipe(); return;
   }
   const groups = isoReviewGroups(`Writes ${d.bytes} byte(s) in ${d.runs} run(s) into the ISO in place.`);
@@ -2260,7 +2260,7 @@ function importRecipe() {
       isoEdits["imported"] = { label: `Imported recipe (${r.patchCount} run(s)${r.mismatchedRuns?`, ${r.mismatchedRuns} mismatch`:""})`, group: "Imported", to: "staged" };
       if (curView) selectView(curView);      // re-render so inputs reflect imported bytes
       updateIsoToolbar(); captureUndoStep();
-      toast(`Applied recipe: ${r.appliedBytes} byte(s)${r.mismatchedRuns?` — ${r.mismatchedRuns} mismatch(es), check region`:""}.`, r.mismatchedRuns ? "bad" : "ok");
+      toast(`Applied recipe: ${r.appliedBytes} byte(s)${r.mismatchedRuns?`: ${r.mismatchedRuns} mismatch(es), check the region`:""}.`, r.mismatchedRuns ? "bad" : "ok");
     } catch (e) { toast("Could not read recipe: " + (e.message || e), "bad"); }
   };
   attachPickerInput(inp);
