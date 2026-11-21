@@ -125,7 +125,7 @@ function openPicker(title, list, current, onPick, opts) {
         ${meta ? `<span class="pick-desc note">${meta}</span>` : ""}</button>`;
     }).join("") || `<div class="note" style="padding:14px">No matches.</div>`;
     hintEl.textContent = rows.length > shown.length
-      ? `Showing ${shown.length} of ${rows.length} — keep typing to narrow.` : "";
+      ? `Showing ${shown.length} of ${rows.length}. Keep typing to narrow it down.` : "";
   }
   listEl.addEventListener("click", (e) => {
     const b = e.target.closest(".pick-row"); if (b) choose(b.dataset.id);
