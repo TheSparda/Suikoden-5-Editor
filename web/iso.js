@@ -362,7 +362,8 @@ function renderField(f, attrs) {
       <span class="pickbtn-name">${esc(nm)}</span><span class="pickbtn-id note">#${esc(f.value)}</span></button>`;
   } else {
     const max = f.width === 1 ? 255 : f.width === 2 ? 65535 : f.width === 3 ? 16777215 : 4294967295;
-    const min = f.signed ? -(max>>1)-1 : 0, hi = f.signed ? (max>>1) : max;
+    const min = f.min != null ? f.min : (f.signed ? -(max>>1)-1 : 0);
+    const hi = f.max != null ? f.max : (f.signed ? (max>>1) : max);
     inner = `<input type="number" ${dataset} value="${f.value}" min="${min}" max="${hi}" onchange="onIsoField(this)">`;
   }
   const extra = (attrs.view === "spell" && f.label === "Power / heal (u16)")
@@ -467,6 +468,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "spell") res = window.PYISO.setspell(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "rune") res = window.PYISO.setrune(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "gear") res = window.PYISO.setgear(JSON.stringify({ slot: ident.slot, id: ident.id }), JSON.stringify([{ field, value: +value }]));
+    else if (view === "gearreq") res = window.PYISO.setgearreq(ident.field, +value);
     else if (view === "enemy") res = window.PYISO.setenemy(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "runeprice") res = window.PYISO.setruneprice(ident.index, field, +value);
     else if (view === "healprice") res = window.PYISO.sethealprice(ident.index, field, +value);
@@ -749,7 +751,8 @@ function charSkillPreset(cid, value) {
 
 VIEW_RENDER.gear = async (body) => {
   const slots = ["head","body","arm","foot","accessory"];
-  body.innerHTML = `<div class="row" style="padding:10px 16px 0">
+  body.innerHTML = `<div id="isoGearReqPanel" style="padding:12px 14px 0"></div>
+    <div class="row" style="padding:10px 16px 0">
       <span class="note">Slot</span>
       <select id="isoGslot">${slots.map(s=>`<option value="${s}">${s}</option>`).join("")}</select></div>
     <div class="grid" style="padding-top:6px"><div class="fld"><label>Item</label><div class="in">
@@ -771,7 +774,32 @@ VIEW_RENDER.gear = async (body) => {
   };
   $("isoGslot").onchange = loadSlot;
   loadSlot();
+  renderGearReqs();
 };
+/* Equip requirements (issue #49): the Corruption Shell and Saint's Cloak
+ * gates are constants in the can-equip code, not item data, so like the
+ * drop rates they get one global panel in the Gear view. Each threshold
+ * is a normal ISO field: write-through, per-field revert, changes
+ * journal. The sites sit inside the front slice, so no staging is
+ * needed. */
+function renderGearReqs() {
+  const host = $("isoGearReqPanel"); if (!host) return;
+  const r = JSON.parse(window.PYISO.gearreqs());
+  if (r.error) { host.innerHTML = `<div class="subhd">Equip requirements</div><p class="bad">${esc(r.error)}</p>`; return; }
+  host.innerHTML = `<div class="subhd">Equip requirements: Corruption Shell and Saint's Cloak</div>
+    <p class="note">These two body armors carry equip requirements in the game code, not in their
+      item data. The Shell needs a character's max HP and personal kill count at or above its
+      minimums; the Cloak needs max HP at or above its minimum and a kill count at or below its
+      maximum. The four values below are the code constants themselves, so editing one changes
+      the requirement for every character. Set a minimum to 0 to remove that check. The Code
+      patches tab also has a single switch that removes all four requirements at once.</p>
+    <div class="grid" style="padding-top:6px">` + r.fields.map(f =>
+      renderField(f, { view: "gearreq", ident: JSON.stringify({ field: f.field }), key: `gearreq:${f.field}`,
+        group: "Gear" })).join("") + `</div>
+    <div class="fnote" style="margin:2px 16px">Saint's Cloak maximum kills: a character with more
+      kills than this cannot equip the Saint's Cloak. Set it to 32766 to effectively remove the
+      limit. Stock values: Shell 350 max HP and 100 kills, Cloak 300 max HP and 30 kills.</div>`;
+}
 const gearCur = {}, GEAR_LIST = {};
 function openGearPicker(){
   const slot = $("isoGslot").value;
