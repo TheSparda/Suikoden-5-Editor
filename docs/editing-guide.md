@@ -539,7 +539,7 @@ stock and anchor words instead. All of them restore exactly. The Dawn Rune unloc
 toggles above are in this list too; the five below come from the community cheat table,
 with their sites found by disassembly and verified on both the NTSC-U and PAL discs.
 Their effect is labelled **code-verified**: the patched instruction does what the label
-says by construction, but no in-game A/B run has exercised them yet.
+says by construction, but they have not been tested in game yet.
 
 | Toggle | What it patches |
 |---|---|
@@ -580,7 +580,7 @@ constant (NTSC-U `0x1F4F34`, stock 2.0; PAL `0x1F5494`, stock 1.75) to 1.5x, 2x,
 tier is active (NTSC-U `0x1F5080`, PAL `0x1F55E0`, stock 2.0) to 1x, 1.5x, 2x, 2.5x, 3x
 or 4x, independently of the speed. The tier itself was measured in game at about double
 the dash distance on the world map. The toggle and the speed multiplier are labelled
-**proven**: an in-game A/B run of the exact patches dashed at the gated tier with no
+**proven**: an in-game run of the exact patches dashed at the gated tier with no
 Cathari in the party on a first run (108.14 units against the stock disc's 54.47 over
 the same course), and the 3x speed setting measured 1.52x the 2x tier's distance. The
 animation multiplier's patched constant was verified live in memory, but its rate has
@@ -753,8 +753,8 @@ list is deliberately absent rather than forgotten.
 
 Honest list of the gaps, so you know where the map ends:
 
-- **Armor element resist / attribute flavor** isn't stored as a clean byte — records that
-  differ only by that effect are otherwise identical — so it stays read-only.
+- **Armor element resist / attribute flavor** isn't stored as a clean byte. Records that
+  differ only by that effect are otherwise identical, so it stays read-only.
 - **Gear names and descriptions** are editable, but capped to the bytes the existing string
   occupies plus its padding; there's nowhere to grow a string that's already at its limit.
 - **Unite member counts** can't change without shifting every later record.
@@ -762,7 +762,7 @@ Honest list of the gaps, so you know where the map ends:
 - **Two bytes per spell record** vary meaningfully but aren't understood, so they're hidden.
 - **22 bytes of each skill-effect record** are unmapped; only the seven rank values are used.
 - **Six bytes of each enemy drop slot** are unmapped beyond the category and item bytes.
-- **A per-character `+0x54` value** was once shown as "Starting Potch". That was wrong — it's
+- **A per-character `+0x54` value** was once shown as "Starting Potch". That was wrong: it's
   one of six unlabeled growth-tier values shared across bands of unrelated units, characters
   and enemies alike. Its meaning is unverified, so it's omitted.
 - **Skill-effect rows 129-130** belong to the unused skill slot and have no confirmed meaning.
@@ -843,11 +843,11 @@ move (and the rune-price stride).
 | Healing-item prices | 0x4CCFD0 | 0x4D2980 | 0x58 | 41 |
 | MP growth | 0x4986C0 | 0x49D8B0 | 0x14 | 4 groups |
 | Unites | 0x4D3420 | 0x4D8DD0 | packed | 49 |
-| Gear — head | 0x495D88 | 0x49AF70 | 0x94 | 32 |
-| Gear — body | 0x48C9A8 | 0x491B90 | 0x94 | 71 |
-| Gear — arm | 0x4942A8 | 0x499490 | 0x94 | 37 |
-| Gear — foot | 0x4974C8 | 0x49C6B0 | 0x94 | 30 |
-| Gear — accessory | 0x4AC6D8 | 0x4B2070 | 0x94 | 49 |
+| Gear: head | 0x495D88 | 0x49AF70 | 0x94 | 32 |
+| Gear: body | 0x48C9A8 | 0x491B90 | 0x94 | 71 |
+| Gear: arm | 0x4942A8 | 0x499490 | 0x94 | 37 |
+| Gear: foot | 0x4974C8 | 0x49C6B0 | 0x94 | 30 |
+| Gear: accessory | 0x4AC6D8 | 0x4B2070 | 0x94 | 49 |
 
 The disc serial at 0x828BD identifies the region: `SLUS_212.91` for NTSC-U, `SLES_540.87` for
 PAL.
