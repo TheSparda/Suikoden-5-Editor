@@ -105,7 +105,7 @@ async function boot(){
   }catch(e){
     setBoot("Failed to load: " + (e && e.message ? e.message : e), 100);
     if($("bootfill")) $("bootfill").style.background = "var(--bad)";
-    toast("Could not start the editor — check your connection and reload.", "bad");
+    toast("Could not start the editor. Check your connection and reload.", "bad");
     console.error(e);
   }
 }
@@ -853,7 +853,7 @@ function renderSaves(){
          <button class="ghost" onclick="openRecruit(${i})">Recruitment…</button>
          <button class="ghost" onclick="openInv(${i})">Inventory…</button>
          <button class="ghost" onclick="openHealth(${i})">Health check…</button>
-         <span class="note">Change fields freely — nothing is written to your file until you press Save.</span>`;
+         <span class="note">Change fields freely. Nothing is written to your file until you press Save.</span>`;
     return `<div class="sec">
       <div class="card-hd">${esc(sv.folder)} ${badge}
         <span class="note">· ${esc(sv.card)} · ${esc((sv.meta&&sv.meta.title)||"")}</span></div>
@@ -877,7 +877,7 @@ function renderSaves(){
           <label class="chk"><input type="checkbox" id="sv${i}_ngp" ${fl.newGamePlus?"checked":""} ${ro?"disabled":""}
             data-sk="sv${i}:newGamePlus" data-orig="${fl.newGamePlus?1:0}" data-lbl="New Game Plus" data-grp="${esc(sv.folder)}">
             <span class="note">NG+ run</span></label>${ro?"":REVERT_BTN_SAVE}</div>
-          <div class="fnote">On: the game treats this save as a New Game Plus run the next time it is loaded, and its carry-over build resets the party and character levels to the New Game Plus opening state. Potch and your position carry over unchanged, and the faster dash tier is part of that state. This writes the real NG+ carry byte; the old control wrote a display copy the load path never reads.</div></div>
+          <div class="fnote">On: the game treats this save as a New Game Plus run the next time it is loaded, and its carry-over build resets the party and character levels to the New Game Plus opening state. Potch and your position carry over unchanged, and the faster dash tier is part of that state. This writes the real NG+ carry byte.</div></div>
       </div>
       ${ro?"":`<div class="subhd">Active party
         <span class="note">: tap a slot to choose; recruited characters are listed first</span></div>
@@ -952,7 +952,7 @@ function renderInv(i){
     if(entries.length < INV_CAPS[list])
       h += `<div style="padding:2px 0 8px"><button type="button" class="ghost" onclick="pickInvItem(${i},'${list}',${entries.length})">+ Add item…</button></div>`;
   }
-  h += `<div class="fnote" style="padding-bottom:8px">Removing an entry compacts the list, the packed shape the game itself keeps. Trade goods and antiques carry a per-item value set by the game (price paid, appraised value): it is kept when only the quantity changes and reset when the item is replaced.</div>`;
+  h += `<div class="fnote" style="padding-bottom:8px">Removing an entry closes the gap, the way the game keeps the list. Trade goods and antiques carry a value set by the game (price paid, appraised value): kept when only the quantity changes, reset when the item is replaced.</div>`;
   box.innerHTML = h;
 }
 function invRow(i, list, e){
@@ -1070,7 +1070,7 @@ async function openHealth(i){
     + findings.map((f) => `<div style="padding:4px 0;border-bottom:1px solid var(--line)">
         ${sevTag(f.sev)} <b>${esc(f.title)}</b>
         <div class="note" style="padding-top:2px">${esc(f.detail)}</div></div>`).join("")
-    + `<div class="fnote" style="padding:6px 0 8px">The audit only reports states the game itself never writes (proven against the game's code and real saves). It changes nothing.</div>`;
+    + `<div class="fnote" style="padding:6px 0 8px">Reports only states the game itself never writes. It changes nothing.</div>`;
 }
 
 /* ---------- active party ---------- */
@@ -1260,19 +1260,19 @@ function renderChar(i){
     + numFld("sp", "SP", c.sp || 0, 0, 65535)
     + recruitToggleHTML(i, c)
     + `</div>`
-    + `<div class="fnote" style="margin:2px 16px 0">The Recruited toggle writes the game's own status record (issue #39): checking it recruits the character, unchecking returns them to not recruited. A character joins with the level, gear and skills already in their record; nothing else in the record is created or changed.</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Checking this recruits the character; unchecking makes them not recruited. A character joins with the level, gear and skills already in their record. Nothing else in the record changes.</div>`
     + guideHTML(idx)
     + sub("Equipment")
     + `<div class="grid" style="grid-template-columns:150px;padding-top:8px">`
     + numFld("wlv", "Weapon level", c.weaponLevel || 1, 1, 16)
     + `</div>`
-    + `<div class="fnote" style="margin:2px 16px 0">Sharpen level of the character's own weapon (1 to 16). Which weapon it is comes from the ISO starting-loadout editor; this is the level the blacksmith raises.</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">The sharpen level of the character's weapon, 1 to 16. The blacksmith raises this level.</div>`
     + g(aBtn("helm","Helm",c.armor.helm)+aBtn("body","Armor",c.armor.body)+aBtn("glove","Gloves",c.armor.glove)+aBtn("foot","Boots",c.armor.foot))
     + `<div class="fnote" style="margin:2px 16px 0">Accessory is the 5th equipment slot: needed to complete a 5-piece set.</div>`
     + g(aBtn("accessory","Accessory",c.armor.accessory==null?0:c.armor.accessory))
     + sub("Held items")
     + `<div style="padding-top:8px">${(c.held || []).map((e, k) => heldRow(i, k, e)).join("")}</div>`
-    + `<div class="fnote" style="margin:2px 16px 0">Items the character carries personally (starting items, rune orbs, accessories). Slot 1 shares its item byte with the Accessory field above: when slot 1 holds an accessory, that accessory is the equipped one, and clearing slot 1 clears it.</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">Items the character carries (starting items, rune orbs, accessories). Slot 1 shares its byte with the Accessory field above: when slot 1 holds an accessory, that accessory is the equipped one, and clearing slot 1 clears it.</div>`
     + sub("Runes")
     + g(rBtn("rhead","Head",c.runes.rhead)+rBtn("rright","Right hand",c.runes.rright)+rBtn("rleft","Left hand",c.runes.rleft))
     + runeStatesHTML(c)
@@ -1288,7 +1288,7 @@ function renderChar(i){
     + g((c.skills||[]).map((v,s)=> s===26 ? "" :
         `<div class="fld"><label>${esc(SKILL_NAMES[s]||("Skill "+s))}</label><div class="in">${
           selHTML(`ce${i}_sk${s}`, RK, v, `writeCharField(${i},'sk${s}',this.value,this)`, `data-cf="${i}:sk${s}" data-orig="${v}"`)}${REVERT_BTN_SAVE}</div></div>`).join(""))
-    + `<div style="padding:8px 14px 12px"><span class="note">Reverse-engineered &amp; cross-verified. Rune 0 = empty slot.${
+    + `<div style="padding:8px 14px 12px"><span class="note">Rune 0 = empty slot.${
         c.recruited||!c.recruitable ? "" : " · <b>Not yet recruited in this save.</b>"}</span></div>`;
 }
 /* Rune slot availability line (issue #6, display only): the game computes
@@ -1353,7 +1353,7 @@ async function writeCharField(i, field, value, el, idxOverride){
     if(["rhead","rright","rleft"].includes(field) && +value === 0 && c0 && c0.runes && c0.runes[field]){
       const st = (c0.slotStates || []).find(s => s.slot === field);
       if(st && typeof st.threshold === "number" && c0.level < st.threshold)
-        toast(`Warning: the ${charFieldLabel(field)} slot will be stranded empty until Lv ${st.threshold} (community-derived threshold). The rune is removed, but the empty slot stays locked in game until that level.`, "bad");
+        toast(`Warning: removing this rune leaves the ${charFieldLabel(field)} slot empty and locked until Lv ${st.threshold}. That threshold comes from community data.`, "bad");
     }
     // keep the cache fresh so re-opening the character shows current values
     const rr = await fetchChars(sv); if(!rr.error) CHARDATA[i] = rr;
@@ -1524,12 +1524,12 @@ async function openRecruit(i){
   const r = await fetchChars(sv); box._loading = false;
   if(r.error){ box.innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
   box._open = true; CHARDATA[i] = r;
-  box.innerHTML = `<div class="sec"><h3>Recruitment — <span id="reccount${i}"></span></h3>
+  box.innerHTML = `<div class="sec"><h3>Recruitment: <span id="reccount${i}"></span></h3>
     <div class="row" style="padding:10px 14px 0">
       <input id="recfilter${i}" size="18" placeholder="search name…" oninput="recruitFilter(${i})">
       <span class="note">greyed = not recruitable</span>
     </div>
-    <div class="fnote" style="margin:8px 16px 0">Read from the game's status records (issue #39). To recruit or unrecruit someone, use the toggle on their row. Tap a name here for its recruitment guide entry.</div>
+    <div class="fnote" style="margin:8px 16px 0">To recruit or unrecruit someone, use the toggle on their row. Tap a name for its recruitment guide entry.</div>
     <div id="pairwarn${i}"></div>
     <div id="guidenote${i}" style="padding:4px 16px 0"></div>
     <div id="recgrid${i}" class="recgrid"></div></div>`;
@@ -1639,7 +1639,7 @@ async function outputSave(){
   downloadBlob(bytes, outName);
   sEdits = {}; document.querySelectorAll(".dirty").forEach(e=>e.classList.remove("dirty"));
   updateSaveToolbar();
-  toast("Downloaded — keep your original until it loads in-game.", "ok");
+  toast("Downloaded. Keep your original until you have loaded it in game.", "ok");
 }
 
 /* unsaved-changes guard for both editors */
