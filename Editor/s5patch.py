@@ -2368,16 +2368,16 @@ def backup(path):
 # writers the UI uses, so imports get range checks, .bak and recipe journaling for
 # free. Import writes only cells that differ; blank/non-numeric cells are skipped.
 CSV_DATASETS = {
-    "char-stats":       "Characters — stats & growths",
-    "char-affinities":  "Characters — elemental affinities (0=None..6=S)",
-    "char-skillcaps":   "Characters — equipable-skill caps (0=None..7=SS)",
+    "char-stats":       "Characters: stats and growths",
+    "char-affinities":  "Characters: elemental affinities (0=None..6=S)",
+    "char-skillcaps":   "Characters: equipable-skill caps (0=None..7=SS)",
     "char-weapon":      "Weapon records: growth by weapon id (sharpen Lv1-16 attack)",
-    "char-equipment":   "Characters — starting equipment (armor ids)",
-    "enemies":          "Enemies — stats/rewards/affinities/drops",
-    "spells":           "Spells — element / power / target / status",
-    "runes":            "Runes — which spells each rune teaches",
-    "skillfx":          "Skill effects — magnitude per rank (E..SS)",
-    "mp":               "MP growth — thresholds per magic level",
+    "char-equipment":   "Characters: starting equipment (armor ids)",
+    "enemies":          "Enemies: stats, rewards, affinities, drops",
+    "spells":           "Spells: element, power, target, status",
+    "runes":            "Runes: which spells each rune teaches",
+    "skillfx":          "Skill effects: magnitude per rank (E..SS)",
+    "mp":               "MP growth: thresholds per magic level",
     "gear-head":        "Gear - Head pieces",
     "gear-body":        "Gear - Body pieces",
     "gear-arm":         "Gear - Arm pieces",
@@ -2418,7 +2418,7 @@ def csv_legends():
             f"The id column is the spell id used by the Runes sheet (0-{F.SPELL_COUNT - 1}).",
         ],
         "runes": [
-            "Start spell is a spell id from the Spells sheet — export that table too to "
+            "Start spell is a spell id from the Spells sheet: export that table too to "
             "see which id is which.",
             "A rune teaches the CONTIGUOUS run Start spell … Start spell + Spell count - 1, "
             "one spell per rune level, so Spell count is also how many levels it has.",
@@ -2577,7 +2577,7 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
         return {"error": "first column must be 'id' (export a CSV first to see the format)"}
     colmap = {i: h for i, h in enumerate(header) if h in labels}
     if not colmap:
-        return {"error": "no known field columns found — headers must match the exported CSV"}
+        return {"error": "no known field columns found: headers must match the exported CSV"}
     # Tables share stat names (HP/Attack/Speed/…), so a sheet exported from one table
     # imports "successfully" into another and quietly writes nonsense — enemy HP into a
     # character's u8 HP, say. Whichever table the columns match best wins; ties go to the
