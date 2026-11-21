@@ -121,6 +121,7 @@ function isoGlueHandles(){
     gear:g("iso_gear"), gearitem:g("iso_gearitem"), setgear:g("iso_setgear"),
     setgearname:g("iso_setgearname"),
     gearreqs:g("iso_gearreqs"), setgearreq:g("iso_setgearreq"),
+    dashtuning:g("iso_dashtuning"), setdashmul:g("iso_setdashmul"),
     enemies:g("iso_enemies"), enemy:g("iso_enemy"), setenemy:g("iso_setenemy"),
     droprates:g("iso_droprates"), setdroprates:g("iso_setdroprates"), dropratesrestore:g("iso_dropratesrestore"),
     runeprices:g("iso_runeprices"), setruneprice:g("iso_setruneprice"),
@@ -623,6 +624,14 @@ def iso_gearreqs():
 def iso_setgearreq(field, value):
     try:
         with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_gear_requirement(g, str(field), int(value)))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_dashtuning():
+    try:
+        with P.Iso(ISO) as g: return json.dumps(P.read_dash_multipliers(g))
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setdashmul(field, value):
+    try:
+        with P.Iso(ISO, writable=True) as g: return json.dumps(P.write_dash_multiplier(g, str(field), float(value)))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_toggles():
     try:

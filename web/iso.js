@@ -469,6 +469,7 @@ async function applyIsoWrite(el, value) {
     else if (view === "rune") res = window.PYISO.setrune(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "gear") res = window.PYISO.setgear(JSON.stringify({ slot: ident.slot, id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "gearreq") res = window.PYISO.setgearreq(ident.field, +value);
+    else if (view === "dashmul") res = window.PYISO.setdashmul(ident.field, +value);
     else if (view === "enemy") res = window.PYISO.setenemy(JSON.stringify({ id: ident.id }), JSON.stringify([{ field, value: +value }]));
     else if (view === "runeprice") res = window.PYISO.setruneprice(ident.index, field, +value);
     else if (view === "healprice") res = window.PYISO.sethealprice(ident.index, field, +value);
@@ -1348,6 +1349,30 @@ VIEW_RENDER.patches = async (body) => {
     : t.state === "not-found" ? "<b>Not found</b>: no patch site on this disc"
     : `<b>${esc(t.state)}</b>: partly applied; restore it from the CLI to be safe`;
   const groups = [...new Set(toggles.map(t => t.group || "Code patches"))];
+  // The Dash tuning group also carries the two dash multiplier selects
+  // (engine fields, not toggles): each reads its current value from the
+  // disc, region stock included, and reverts through the same journal
+  // mechanics as every other ISO field. Speed and animation are separate
+  // constants and are set independently.
+  let dashFlds = "";
+  if (groups.includes("Dash tuning")) {
+    const dt = JSON.parse(window.PYISO.dashtuning());
+    if (!dt.error) dashFlds = (dt.fields || []).map(f => {
+      const vals = [...new Set([...(f.presets || []), f.stock, f.value])].sort((a, b) => a - b);
+      const opts = vals.map(v => `<option value="${v}" ${v === f.value ? "selected" : ""}>${v}x`
+        + `${v === f.stock ? " (stock)" : ""}`
+        + `${v === f.value && !(f.presets || []).includes(v) && v !== f.stock ? " (current)" : ""}</option>`).join("");
+      const note = f.field === "dash_speed"
+        ? "Applies whenever the fast tier is admitted: with Cathari in the party, on a New Game Plus run, or always with the toggle above switched on."
+        : "The run animation rate while the fast tier is active. Independent of the speed multiplier; the ordinary run animation stays stock.";
+      return `<div class="fld"><label>${esc(f.label)}</label><div class="in">
+        <select data-key="dashmul:${esc(f.field)}" data-view="dashmul" data-ident='${JSON.stringify({ field: f.field })}'
+          data-field="${esc(f.field)}" data-kind="num" data-orig="${f.value}"
+          data-lbl="${esc(f.label)}" data-grp="Dash tuning"
+          onchange="onIsoField(this)">${opts}</select>${REVERT_BTN}</div>
+        <div class="fnote">${note}</div></div>`;
+    }).join("");
+  }
   body.innerHTML = groups.map(gname => `<div class="subhd">${esc(gname)}</div>
     <div class="grid" style="padding-top:0">` + toggles.filter(t => (t.group || "Code patches") === gname).map(t => {
       const dis = (t.state === "on" || t.state === "off") ? "" : "disabled";
@@ -1355,11 +1380,11 @@ VIEW_RENDER.patches = async (body) => {
         <label class="chk"><input type="checkbox" ${t.state === "on" ? "checked" : ""} ${dis}
           data-key="toggle:${esc(t.id)}" data-view="toggle" data-tid="${esc(t.id)}"
           data-kind="num" data-orig="${t.state === "on" ? 1 : 0}"
-          data-lbl="${esc(t.label)}" data-grp="Code patches"
+          data-lbl="${esc(t.label)}" data-grp="${esc(t.group || "Code patches")}"
           onchange="onIsoField(this)">
           <span class="note">${stateNote(t)}</span></label>${REVERT_BTN}</div>
         <div class="fnote">${esc(t.blurb || "")} ${esc(EFFECT_NOTE[t.effect] || "")}</div></div>`;
-    }).join("") + `</div>`).join("")
+    }).join("") + (gname === "Dash tuning" ? dashFlds : "") + `</div>`).join("")
     + `<div class="fnote" style="margin:10px 14px 0">Every patch is one or two words, located by
       signature on this disc (NTSC-U and PAL alike), and fully reversible: switch it back off and
       the disc is byte-identical.</div>`;
