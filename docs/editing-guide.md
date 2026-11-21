@@ -533,8 +533,9 @@ call at `0x436548`; Prosperity and Godspeed are checked some other way that hasn
 One-word code patches, listed with their live state on the open disc. Every site is located
 by a signature search of the executable (never a hard-coded address), must match exactly
 once, and is refused untouched if the bytes there are neither the stock nor the patched
-form. The one exception is the armor-requirements patch below: its four sites sit at the
-traced offsets for the disc's region and are verified against their stock words instead. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
+form. The exceptions are the armor-requirements patch below and the Dash tuning patches:
+their sites sit at the traced offsets for the disc's region and are verified against their
+stock and anchor words instead. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
 toggles above are in this list too; the five below come from the community cheat table,
 with their sites found by disassembly and verified on both the NTSC-U and PAL discs.
 Their effect is labelled **code-verified**: the patched instruction does what the label
@@ -568,6 +569,18 @@ tab (see Equip requirements under Gear). Its effect is labelled **proven**: the 
 refusals and passes were exercised in game at the exact boundaries, and a test disc
 carrying exactly the patched values equipped both pieces on a character the stock
 game refuses.
+
+**Dash tuning** (issue #18) is its own group in this tab. The field motor admits its
+fast dash tier only with Cathari in the party or on a New Game Plus run, and the group
+carries three independent controls over that tier. **Godspeed dash always on** NOPs the
+motor's carry-byte skip branch (NTSC-U `0x1F5288`, PAL `0x1F57E8`), so the tier is
+admitted for any party in any run. **Dash speed multiplier** rewrites the tier's speed
+constant (NTSC-U `0x1F4F34`, stock 2.0; PAL `0x1F5494`, stock 1.75) to 1.5x, 2x, 2.5x
+or 3x. **Dash animation multiplier** rewrites the run animation rate used while the
+tier is active (NTSC-U `0x1F5080`, PAL `0x1F55E0`, stock 2.0) to 1x, 1.5x, 2x, 2.5x or
+3x, independently of the speed. The tier itself was measured in game at about double
+the dash distance on the world map; the toggle and the multipliers are labelled
+**code-verified** until an in-game A/B run exercises the exact patches.
 
 ---
 
@@ -709,7 +722,7 @@ Verified and editable:
 | Potch | Capped at 99,999,999 |
 | Party SP | Shared party skill points, capped at 999,999 |
 | Level | Lead character, 1-99 |
-| Cleared-game marker | 1 = set by the game on its endgame clear save; on a mid-game save it only turns the hero name green in the load list (it does not enable New Game Plus) |
+| New Game Plus | Writes the real NG+ carry byte: on load the game treats the save as a New Game Plus run and runs its carry-over build, and the faster dash tier is part of that state. (The cleared-game byte behind the green hero name in the load list is a display copy of this byte, refreshed by the game on every save.) |
 | Active party | 10 slots (6 battle + 4 entourage), written to the game's real party arrays; the hero can sit in any slot |
 | Per character | Equipped armor (4 slots + accessory), equipped runes (head / right / left), skill ranks |
 | Per character: EXP, SP | The character's own EXP and skill points (u16 each). Not the shared party SP pool above |

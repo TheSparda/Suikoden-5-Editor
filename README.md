@@ -72,7 +72,9 @@ checksum** (the game validates three fixed header values only), so field edits a
   only one makes the game disagree with itself about your own name.
 - **Resources**: **Potch** (up to 99,999,999) and **Party SP** (up to 999,999), each with a
   one-tap **Max**.
-- **New Game Plus**: the cleared-game flag that enables fast-forward.
+- **New Game Plus**: marks the save as a New Game Plus run. The game runs its
+  carry-over build the next time the save is loaded, and the faster dash tier
+  is part of that state.
 - **Active party**: the 6 battle slots and 4 entourage slots, picked from that save's own
   recruited roster (unrecruited characters are listed last and labelled unavailable). The
   hero's own slot is locked because he always stays in the party. Putting one character
