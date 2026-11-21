@@ -163,7 +163,7 @@ ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.j
 // the record's fixed-rune flags, and warns when a removal strands a slot.
 ok("app.js renders rune slot states (#6)",
    appSrc.includes("runeStatesHTML") && appSrc.includes("community-derived"));
-ok("app.js warns on stranded rune slots (#6)", appSrc.includes("stranded empty until Lv"));
+ok("app.js warns on stranded rune slots (#6)", appSrc.includes("empty and locked until Lv"));
 ok("s5save carries the community threshold table (#6)",
    fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("RUNE_SLOT_THRESHOLDS")
    && fs.readFileSync(path.join(web, "..", "Editor", "s5save.py"), "utf8").includes("rune_slot_states"));
