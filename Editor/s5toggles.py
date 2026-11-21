@@ -418,89 +418,79 @@ TOGGLES = [
      "find": _gate_sites(77), "self_restoring": False},
     {"id": "prosperity-always", "label": "Prosperity always-on (not working in game)",
      "group": "Code patches", "effect": "not-working",
-     "blurb": "NOPs Prosperity's script-resolver gates. Proven not to "
-              "reach battle rewards (PASSIVES_CATHARI.md); registered for "
-              "exact verification and restore of already-patched discs.",
+     "blurb": "Does not work: the gates this removes feed a script "
+              "check that battle rewards never use. Listed so a disc "
+              "already patched with it can be checked and restored "
+              "exactly.",
      "find": _gate_sites(78), "self_restoring": False},
     {"id": "godspeed-always", "label": "Godspeed always-on (not working in game)",
      "group": "Code patches", "effect": "not-working",
-     "blurb": "NOPs Godspeed's script-resolver gates. Proven not to reach "
-              "movement or escape code (PASSIVES_CATHARI.md); registered "
-              "for exact verification and restore of already-patched discs.",
+     "blurb": "Does not work: the gates this removes feed a script "
+              "check that movement and escape code never use. Listed "
+              "so a disc already patched with it can be checked and "
+              "restored exactly.",
      "find": _gate_sites(82), "self_restoring": False},
     {"id": "godspeed-dash", "label": "Godspeed dash always on",
      "group": "Dash tuning", "effect": "proven",
-     "blurb": "The fast dash tier is normally admitted only with Cathari "
-              "in the party or on a New Game Plus run. This NOPs the "
-              "field motor's carry-byte skip branch, so holding L2 or "
-              "Triangle dashes at the fast tier for any party in any "
-              "run. The tier is the one measured in game with Cathari "
-              "present: about double the dash distance on the world "
-              "map, in towns and indoors, and walking is never "
-              "affected (in the dungeon the tier adds almost nothing). "
-              "Proven in game with this exact patch: on a first run "
-              "with no Cathari in the party, the patched disc dashed "
-              "108.14 units over the world map course where the stock "
-              "disc dashed 54.47. Pair it with the dash multipliers "
-              "below for a custom tier strength.",
+     "blurb": "Normally the fast dash tier needs Cathari in the "
+              "party or a New Game Plus run. This removes that check, "
+              "so holding L2 or Triangle dashes at the fast tier for "
+              "any party in any run. About double the dash distance on "
+              "the world map, in towns and indoors; walking is never "
+              "affected, and in dungeons the tier adds almost nothing. "
+              "Proven in game: on a first run with no Cathari, the "
+              "patched disc dashed 108.14 units over the world map "
+              "course where the stock disc dashed 54.47. Pair with "
+              "the dash multipliers below to change the tier strength.",
      "find": _godspeed_dash_sites, "self_restoring": True},
     {"id": "training-sp-free", "label": "Training does not use SP",
      "group": "Code patches", "effect": "code-verified",
-     "blurb": "NOPs the pool store in spendSP, the function training "
-              "pays party SP with, so training a skill costs no party "
-              "SP. Site located by the spendSP body signature, unique "
-              "in both regions; semantics verified by disassembly, "
-              "in-game A/B pending.",
+     "blurb": "Training a skill costs no party SP. Checked against "
+              "the game code in both regions; not yet tested in game.",
      "find": _training_sp_free_sites, "self_restoring": True},
     {"id": "training-sp-gain", "label": "Training increases SP",
      "group": "Code patches", "effect": "code-verified",
-     "blurb": "Turns spendSP's pool subtraction into an addition, so "
-              "training a skill adds party SP instead of spending it. "
-              "Same signature-located function as Training does not "
-              "use SP; semantics verified by disassembly, in-game "
-              "A/B pending.",
+     "blurb": "Training a skill adds party SP instead of spending "
+              "it. Checked against the game code in both regions; "
+              "not yet tested in game.",
      "find": _training_sp_gain_sites, "self_restoring": True},
     {"id": "train-ss-rank", "label": "Train skill once for SS rank",
      "group": "Code patches", "effect": "code-verified",
-     "blurb": "The training routine adds 1 to a skill's rank after "
-              "paying its SP cost; this makes one paid session set "
-              "the rank straight to 7 (SS). Site verified in the "
-              "training routine in both regions; in-game A/B pending.",
+     "blurb": "One paid training session sets a skill's rank "
+              "straight to SS. Checked against the game code in both "
+              "regions; not yet tested in game.",
      "find": _train_ss_sites, "self_restoring": True},
     {"id": "forge-once-max", "label": "Forge once sets weapon level to max",
      "group": "Code patches", "effect": "code-verified",
-     "blurb": "The forge helper adds 1 to the weapon level byte; "
-              "this makes a single forge set it to 15, sharpen "
-              "level 16. Site verified in both regions; in-game "
-              "A/B pending.",
+     "blurb": "A single forge sets a weapon straight to level 16, "
+              "the max, instead of raising it by 1. Checked against "
+              "the game code in both regions; not yet tested in game.",
      "find": _forge_once_sites, "self_restoring": True},
     {"id": "smith-forge-max", "label": "Blacksmiths can forge to max level",
      "group": "Code patches", "effect": "code-verified",
-     "blurb": "The forge menu tests each weapon's level against a "
-              "cap passed in by the caller (the blacksmith's limit); "
-              "this fixes the cap at 16 for every blacksmith. Site "
-              "verified in both regions; in-game A/B pending.",
+     "blurb": "Every blacksmith can forge weapons up to level 16, "
+              "the max, instead of stopping at their own limit. "
+              "Checked against the game code in both regions; not "
+              "yet tested in game.",
      "find": _smith_cap_sites, "self_restoring": True},
     {"id": "sig-skills-normal", "label": "Signature skills are normal skills",
      "group": "Code patches", "effect": "proven",
      "blurb": "The skill menu refuses every skill from Thief upward "
-              "(Analyze, Freeze, Barrage and the rest of the signature "
+              "(Analyze, Freeze, Barrage and the other signature "
               "skills) with the message \"Can't remove unique skills.\" "
-              "The refusal is a hardcoded range check in the menu code: "
-              "only the first 22 skills count as normal. This widens "
-              "the check so every skill can be equipped, removed and "
-              "moved like a normal skill, including owners removing "
-              "their own signature skill. It grants no ranks: a "
-              "character still needs a rank in the skill (save editor, "
-              "or ISO starting ranks with a matching cap) before it "
-              "can be equipped. HQ service skills are unaffected.",
+              "This widens the check behind that refusal, so every "
+              "skill can be equipped, removed and moved like a normal "
+              "skill, including a character removing their own "
+              "signature skill. It grants no ranks: a character still "
+              "needs a rank in the skill before it can be equipped. "
+              "HQ service skills are unaffected.",
      "find": _sigskill_sites, "self_restoring": True},
     {"id": "gear-requirements-off", "label": "Remove armor equip requirements",
      "group": "Code patches", "effect": "proven",
      "blurb": "Corruption Shell normally needs 350+ max HP and 100+ "
-              "kills. Saint's Cloak needs 300+ max HP and no more than 30 "
-              "kills. This patch removes both gates so any character can equip "
-              "them.",
+              "kills. Saint's Cloak needs 300+ max HP and no more than "
+              "30 kills. This removes both gates, so any character can "
+              "equip them.",
      "find": _gear_req_sites, "self_restoring": True},
 ]
 _BY_ID = {t["id"]: t for t in TOGGLES}
