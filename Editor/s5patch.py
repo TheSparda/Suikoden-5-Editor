@@ -2585,9 +2585,9 @@ def csv_import(iso_path, dataset, csv_text, make_backup=True):
     owner = max(CSV_DATASETS, key=lambda ds: (len(set(header) & set(_csv_field_widths(ds))),
                                               ds == dataset))
     if owner != dataset:
-        return {"error": f"these columns are the “{CSV_DATASETS[owner]}” table, not "
-                         f"“{CSV_DATASETS[dataset]}” — nothing was written. "
-                         f"Pick “{CSV_DATASETS[owner]}” in the Table list and import again."}
+        return {"error": f"these columns are the '{CSV_DATASETS[owner]}' table, not "
+                         f"'{CSV_DATASETS[dataset]}'. Nothing was written. "
+                         f"Pick '{CSV_DATASETS[owner]}' in the Table list and import again."}
     codecols = _csv_code_columns(dataset)
     ranges = _csv_field_ranges(dataset)
     # A code the disc itself uses is legitimate even where the legend doesn't name it, and
