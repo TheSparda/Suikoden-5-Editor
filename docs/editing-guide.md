@@ -1,4 +1,4 @@
-# Suikoden V Editor — field reference
+# Suikoden V Editor: field reference
 
 What every editable value in the ISO editor actually means: its scale, its limits, and the
 traps that make a perfectly normal number look like a bug. Written for people modding the
@@ -61,7 +61,7 @@ the [appendix](#appendix-table-addresses).
 **Verified vs inferred.** Most of what follows was pinned by matching the bytes against a
 known in-game value or a community guide, and the source comments say which. Where a field's
 meaning is genuinely unconfirmed, this document says so rather than guessing. Where something
-is marked unverified, the write is still bounded to that field — it can't damage a neighbour —
+is marked unverified, the write is still bounded to that field, so it can't damage a neighbour,
 but the in-game effect isn't proven.
 
 ---
@@ -81,7 +81,7 @@ So a `5` is **A** on either character scale but **S** on an enemy, and a `6` is 
 character while an enemy has no such value at all. The editor shows the right letters per
 table; a hex editor won't.
 
-Separately, the **skill effect** table has rank *columns* E / D / C / B / A / S / SS — seven
+Separately, the **skill effect** table has rank *columns* E / D / C / B / A / S / SS: seven
 values per row, no "none" column. See below.
 
 ---
@@ -173,7 +173,7 @@ editing a cap updates that character's starting-rank choices straight away
 (issue #50), and lowering a cap below a starting rank already chosen clamps
 that rank to the new cap.
 
-Slot 26 in this list is an unused skill (`??? (unused)`) — see the skill-effects section, where
+Slot 26 in this list is an unused skill (`??? (unused)`): see the skill-effects section, where
 its two rows also read as unknown.
 
 The 49th byte of each record is padding and isn't exposed.
@@ -206,7 +206,7 @@ Both live in the same record (base 0x493110, stride 0x18).
   Ground truth, byte-checked against game-written starting records: Richard starts with
   Nothing / Byakko Chain Mail / Gloves / Boots; the Prince with Bandana / Refined Clothes /
   Bracelet / Boots.
-- **Starting items** — four held-item slots, stored as pointers into the game's item-name
+- **Starting items**: four held-item slots, stored as pointers into the game's item-name
   pool rather than as ids. Because a wrong pointer would be a real corruption, the editor only
   lets you choose from the closed set of pointers the game already uses for held items.
   Ground truth: the Prince starts with a Lightning Amulet; Richard with a Sun Badge and a
@@ -224,7 +224,7 @@ There are 165 rows and only 48 skills. A skill owns a **run of consecutive rows*
 sub-effect it grants. *Defense* is four rows: `Defense +`, `% Block`, `% Parry`,
 `% Weapon Defense`.
 
-The row order is exactly the skill order from the equipable-skill caps list — 48 skills, 48
+The row order is exactly the skill order from the equipable-skill caps list: 48 skills, 48
 groups, one-to-one:
 
 | Skill | Rows | Sub-effects |
@@ -294,7 +294,7 @@ Seven values per row: the magnitude at rank **E, D, C, B, A, S, SS**. Each is a 
 
 Plenty of rows read `0, 0, 110, 115, 118, 120, 130`. That does **not** mean the skill is
 inactive at E and D. It means *that sub-effect* doesn't unlock until C. The skill itself is
-live at E through its other rows — `Defense +` pays out 3 at rank E while `% Block` is still 0.
+live at E through its other rows. `Defense +` pays out 3 at rank E while `% Block` is still 0.
 
 So editing one of those zeros is a real change, not a write into dead data. If you want Block
 at rank E, put a value there.
@@ -322,7 +322,7 @@ every unit that has the skill.
 ## Enemies
 
 219 records (ids 0-218). Id 0 is a dummy; 1-218 are the named roster, ending at Bahram.
-Anything past 218 is not an enemy — the editor used to scan further and list rows of unrelated
+Anything past 218 is not an enemy. The editor used to scan further and list rows of unrelated
 executable data as `Enemy 221`, `Enemy 222` and so on, which is where those impossible
 five-digit stats and level-143 rows came from. Fixed in v1.17.1.
 
@@ -408,7 +408,7 @@ Five tables sharing one record layout: Head (32), Body (71), Arm (37), Foot (30)
 | DEF | u8, unsigned | |
 | Type | u8 | Weight class: 1 = Light, 2 = Medium, 3 = Heavy. Accessories use a different set (1 = Cape … 6 = Ring) |
 | SPD penalty | u8, unsigned | The speed cost of wearing it; scales with weight class |
-| HP, Attack, Technique, Magic, Evasion, MDEF, Speed, Luck | **s8, signed** | Signed on purpose — armor can carry a penalty |
+| HP, Attack, Technique, Magic, Evasion, MDEF, Speed, Luck | **s8, signed** | Signed on purpose: armor can carry a penalty |
 | Auto-heal %, HP drain %, Critical %, Status resist %, Potch %, Counter % | u8 | Writing a non-zero value **adds** that effect to the piece |
 | Short / Mid / Long-range ATK, Short / Mid / Long-range ACC | u8 | Range-specific bonuses (bangles, bracers, power gloves) |
 | 14 × element ATK, 14 × element DEF | s8 each | Same element order as everywhere else |
@@ -453,7 +453,7 @@ written as a value.
 ## Sets
 
 Wearing a full set grants a bonus. Unlike everything else in this document, set bonuses aren't
-table data — they're inline code — but every value that matters is an immediate, so all of it
+table data. They're inline code, but every value that matters is an immediate, so all of it
 is editable: which pieces the set requires, the magnitude of the bonus, and which bonus a set
 uses at all (a jump-table repoint). You can also assemble a **custom** bonus into verified
 free space, which adds effects rather than only retuning existing ones.
@@ -463,7 +463,7 @@ bonus applies to whoever wears the full set.
 
 Effect targets marked *inferred* sit inside a block that was verified as a whole, but weren't
 individually proven. The verified ones: HP, Attack, Magic Defense, Speed, Critical %, Double
-critical %, and Water affinity — the last pinned by the Fish set, whose handler writes 6
+critical %, and Water affinity. The last is pinned by the Fish set, whose handler writes 6
 (= rank S) and whose documented bonus is "Water affinity is S".
 
 ---
@@ -592,17 +592,17 @@ not been observed independently, so it keeps the **code-verified** label.
 
 The game stores prices in separate tables, not one master list:
 
-- **Rune prices** — 70 orb records. Buy and sell are 3-byte little-endian values.
+- **Rune prices**: 70 orb records. Buy and sell are 3-byte little-endian values.
   **PAL uses a different stride here** (80 rather than 76); the editor handles it.
-- **Heal prices** — 41 healing-item records, same 3-byte layout.
-- **Gear prices** — buy and sell (u32) at the start of each record in the per-slot
+- **Heal prices**: 41 healing-item records, same 3-byte layout.
+- **Gear prices**: buy and sell (u32) at the start of each record in the per-slot
   Gear tables.
 
 There is no standalone item price table. A "Prices" table shipped until v1.17.5
 at 0x49433C; it was the Gear (arm) table read one record late, so its rows were
 glove prices wearing item names. Removed in v1.17.6 (issue #30).
 
-Sell is conventionally half of buy, but the two are independent fields — set them however you
+Sell is conventionally half of buy, but the two are independent fields: set them however you
 like. Event-only orbs ship with a buy price of 0.
 
 ---
@@ -613,7 +613,7 @@ All 49 unite attacks, verified against the Unites guide. The records are **packe
 variable-length**: a name, a description, a participant count, then that many character ids,
 then straight into the next record.
 
-That means the **member count is not editable** — changing it would shift every record after
+That means the **member count is not editable**: changing it would shift every record after
 it. The participant ids are editable in place, so you can swap who takes part. Damage and
 target are engine-driven and shown for reference only.
 
@@ -623,7 +623,7 @@ The DoReMi quintuplets use character ids 129-133, which are outside the normal r
 
 ## MP growth
 
-Four groups — magic Level 1 through 4 — each holding nine u16 MP thresholds: the MP cost as a
+Four groups, magic Level 1 through 4, each holding nine u16 MP thresholds: the MP cost as a
 caster gains more casts of that level. Verified content, e.g. Lv1 is
 `0, 20, 40, 75, 100, 130, 165, 225, 290`.
 
@@ -637,8 +637,8 @@ lives elsewhere.
 Two bulk operations. Both store the original values in a sidecar file next to the ISO on first
 apply, so re-applying scales the *originals* rather than compounding, and **Restore** is exact.
 
-- **Characters** — multiply every character's starting stats by a factor. A quick hard mode.
-- **Enemies** — multiply every enemy's combat stats (HP, Attack, Technique, Accuracy, Magic,
+- **Characters**: multiply every character's starting stats by a factor. A quick hard mode.
+- **Enemies**: multiply every enemy's combat stats (HP, Attack, Technique, Accuracy, Magic,
   Evasion, PDF, MDF, Speed, Luck), with a separate multiplier for HP so you can make enemies
   tankier without making them hit harder. Potch, skill-point rewards, affinities and drops are
   deliberately left alone: those change the economy, not the difficulty.
@@ -670,9 +670,9 @@ How the import behaves:
 - An id outside the table is **rejected** rather than written.
 - A UTF-8 BOM, which is what Excel writes, is accepted.
 
-Each export carries a legend for columns that hold a code rather than a plain number — the
-element/target/status maps, the drop categories — generated from the same data the pickers
-use, so it can't drift.
+Each export carries a legend for columns that hold a code rather than a plain number (the
+element, target and status maps, the drop categories), generated from the same data the
+pickers use, so it can't drift.
 
 ---
 
@@ -695,16 +695,16 @@ xdelta commands cover the whole disc.
 
 ## Char names, Field models, Assets, Reference
 
-- **Char names** — the 7-character roster/menu name table. This changes the name in menus,
+- **Char names**: the 7-character roster/menu name table. This changes the name in menus,
   party and status screens on a new game. It does **not** rewrite dialogue, cutscene or battle
   text, which live elsewhere, so a rename can read inconsistently in story scenes. The hero's
   name is chosen by the player at game start.
-- **Field models** — which model file a character id loads in towns and on the field. The
+- **Field models**: which model file a character id loads in towns and on the field. The
   loader is a single pointer read, so swapping a model is a pointer repoint, and Reset restores
   it byte-for-byte. Characters with several looks are grouped so all of them move together.
-- **Assets** — a read-only browser for the ~7,700 files packed into `DATA.PAK`. It reads from
+- **Assets**: a read-only browser for the ~7,700 files packed into `DATA.PAK`. It reads from
   your file on demand and never writes.
-- **Reference** — the name lists (characters, spells, skills, runes, enemies, items) the
+- **Reference**: the name lists (characters, spells, skills, runes, enemies, items) the
   editor uses for its dropdowns, browsable.
 
 ---
@@ -713,7 +713,7 @@ xdelta commands cover the whole disc.
 
 For an in-progress playthrough. Reads PS2 memory-card images and `.psu` exports.
 
-There is **no software checksum** over the save body — that was established by reversing the
+There is **no software checksum** over the save body: that was established by reversing the
 game's save I/O and its save-select validator, which only checks three fixed header constants.
 Integrity comes from the card's hardware ECC, which the editor recomputes on every write. So
 editing a verified field is safe without recomputing anything.
@@ -734,7 +734,7 @@ Verified and editable:
 | Per character: Rune uses left | Current spell uses per spell level (Lv1-Lv4). The game loads these counts from the save and does not refill them on load, so a character saved mid-dungeon keeps their spent uses; the per-level maxima are derived by the game and shown read-only |
 | Per character: Held items | Four fixed item slots per character (starting items, rune orbs, accessories), same item and stack rules as the inventory lists. Slot 1 shares its item byte with the accessory field: when slot 1 holds an accessory, that accessory is the equipped one |
 
-Playtime is shown read-only — it's a display cache.
+Playtime is shown read-only: it's a display cache.
 
 **Rune names in the Save editor** follow the save's own id order, which is the game's
 rune definition table order. It differs from the equip/code list used on the ISO side:

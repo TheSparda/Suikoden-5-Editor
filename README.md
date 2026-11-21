@@ -17,9 +17,9 @@ copy.
 > frozen build lives at the `v1.20.7` tag. The web editor is the only version now. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.18.0**.
+Current release: **v1.22.0**.
 
-> 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md) — what every
+> 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md): what every
 > editable value means, its scale and its limits, table by table, plus the ISO offsets if
 > you'd rather work in a hex editor.
 
@@ -95,12 +95,12 @@ checksum** (the game validates three fixed header values only), so field edits a
 
 **Recruitment panel**: the 108 Stars as a searchable roster, with a live recruited
 counter and a name filter. Each character's status is read from the game's own status
-record (in party / recruited / not recruited). The field an earlier version wrote turned
-out not to be the recruitment record at all (issue #39); the real record is the status
-word, and writing it was proven on a roster screen in both directions, so every row of
-the panel carries the same per-character Recruited toggle as the Characters panel and
-writes it (0x0302 recruits, 0x0100 unrecruits; a character in the party cannot be
-unrecruited, and a character with no record in the save yet cannot be recruited).
+record (in party / recruited / not recruited). The real record is the status word (an
+earlier version wrote a different field that turned out not to be it). Writing it was
+proven on a roster screen in both directions. Every row of the panel carries the same
+per-character Recruited toggle as the Characters panel (0x0302 recruits, 0x0100
+unrecruits; a character in the party cannot be unrecruited, and a character with no
+record in the save yet cannot be recruited).
 Clicking a character in the panel still opens their recruitment guide entry.
 
 Verified by an automated suite: full write, read-back round-trips of every field on every
@@ -161,7 +161,7 @@ not in a data table, so this panel edits the game's own handlers:
   one set can hold a custom bonus at a time since they share the code space).
 - **Bonus description text**: rewrite what the game says the set does.
 - **Per-character restriction**: the Sun set's "Prince only" check can be **removed**
-  entirely (a 4-byte NOP, so anyone wearing the full set benefits) or **retargeted** to
+  entirely, so anyone wearing the full set benefits, or **retargeted** to
   another character.
 
 Every set's members and documented bonus are cross-checked against the Suikosource Armor
@@ -185,10 +185,10 @@ and status effect, with the readable description built from those fields.
   the fixed spell sets they used to be shown as.
 - **Dawn Rune, fourth spell**: unlock **Crimson Sky** from the start instead of near the
   endgame. It is the one rune whose spell count the game reads from a runtime counter that
-  the story lowers, so the toggle rewrites a single instruction to hold that counter at 4,
-  reaching the same end state as the community `.pnach` cheat without an emulator. Untick it
+  the story lowers, so the toggle rewrites a single instruction to hold that counter at 4:
+  the same end state as the community `.pnach` cheat, without an emulator. Untick it
   and the disc is byte-identical again. The Prince still needs the magic level to cast it.
-  The patch site is located by signature, so the toggle simply does not appear on a disc
+  The patch site is found by signature, so the toggle does not appear on a disc
   that does not carry it.
 
 ### Passives
@@ -204,7 +204,7 @@ rune and the slot stays free:
 | Prosperity Rune | **not working**: meant to double Potch after battle |
 | Godspeed Rune | **not working**: meant to give 2x field speed and a 100% escape rate |
 
-**Fortune, Prosperity and Godspeed don't work yet.** Players confirmed no effect in-game
+**Fortune, Prosperity and Godspeed do not work.** Players confirmed no effect in-game
 ([#18](https://github.com/TheSparda/Suikoden-5-Editor/issues/18),
 [#20](https://github.com/TheSparda/Suikoden-5-Editor/issues/20)), and the disc explains why.
 The gate the toggle removes is in the rune resolver, whose active path only hands a code to
@@ -219,8 +219,8 @@ is 8 bytes per call site, and switching a toggle back off restores the disc byte
 The effect wording is read from the disc's own description pool and cross-checked against
 its separate rune-name pool.
 
-**Verified:** the equip check really is bypassed and nothing else on the disc moves.
-**Not verified in-game:** the encounter runes' effect. The resolver only selects an
+**Verified:** the equip check is bypassed and nothing else on the disc moves.
+**Not tested in game:** the encounter runes' effect. The resolver only selects an
 effect id, so this is an on/off switch, not a rate slider (the encounter-rate *value* lives
 in map script data, not in the executable). The Raven Rune's dungeon evasion would be a fine
 addition but has no forceable gate, so it is deliberately excluded.
@@ -243,13 +243,10 @@ at it rather than refusing the write. For across-the-board changes use **Balance
 **Excel / CSV**.
 
 The table is **219 records (ids 0 to 218)**, ending at Bahram. Builds before v1.17.1 scanned
-584 records and so listed roughly 210 extra rows named `Enemy 221`, `Enemy 222`, … with
-impossible Levels and five-digit stats. Those were never enemies: past the end of the table
-the scan was reading unrelated data from the game's executable through the enemy record
-layout (`Enemy 223` decodes to the ASCII text `lease select MEMORY CARD sl`, and the far end
-of the scan sat on top of the skill-effect table). They are gone from the list, the sheet and
-the scaler. If you scaled enemies with an older build, applying the scaler again puts those
-slots back the way the disc had them and reports how many it repaired.
+past the end of the table and listed about 210 extra rows that were never enemies, just
+unrelated data read through the enemy record layout. They are gone from the list, the sheet
+and the scaler. If you scaled enemies with an older build, applying the scaler again puts
+those slots back the way the disc had them and reports how many it repaired.
 
 ### Unites
 
@@ -265,7 +262,7 @@ damage and target are engine-driven, so those are shown for reference.
 
   A row is one **sub-effect**, not one skill: *Defense* owns rows 2-5 (Defense +, % Block,
   % Parry, % Weapon Defense). A **0 at E/D** therefore means that sub-effect doesn't unlock
-  until C, while the skill is still live at E through its other rows — editing that 0 is a
+  until C, while the skill is still live at E through its other rows. Editing that 0 is a
   real change. Each row carries its own scale, which you read off its values rather than its
   name: rows in the 1xx range are 100-based (110 = 10%), rows climbing from 0/2/5 are direct
   amounts, and a few are literal counts (*Mow Down (number target)* is 1-4, and 65535 means
@@ -287,8 +284,8 @@ is exact, and anything past a field's ceiling is capped rather than failing.
 Export any of **ten data tables** as CSV, bulk-edit it in Excel, Sheets or LibreOffice,
 and import it back:
 
-`Characters — stats & growths`, `— elemental affinities`, `— equipable-skill caps`,
-`— weapon growth`, `— starting equipment`, `Enemies`, `Spells`, `Runes`,
+`Characters: stats and growths`, `Characters: elemental affinities`, `Characters: equipable-skill caps`,
+`Characters: weapon growth`, `Characters: starting equipment`, `Enemies`, `Spells`, `Runes`,
 `Skill effects`, `MP growth`.
 
 `Spells` is all 106 spell records (element, power / heal, target, status). `Runes` is the
@@ -342,11 +339,11 @@ together by default**: pick a file on the Prince's row and all three of his rows
 he stays re-skinned through the scenes that ask for an alternate. Untick *keep a character's
 looks together* to set a single row on its own. Reset is grouped the same way.
 
-Who owns which alternate is the disc's own answer, not a guess. The ELF carries an identity
-table (NTSC `0x211250` to `0x211330`) that folds a character's model ids onto one entry,
-grouping `{2, 119, 128}` as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle and `{22, 122}`
-Georg, and the four it omits match their base model's 256-colour palette almost exactly
-(Cathari, Georg, Gunde, Miakis). Only `pc314c` (Zegai) rests on the numbering alone.
+Who owns which alternate comes from the disc itself: an identity table in the ELF
+(NTSC `0x211250` to `0x211330`) folds a character's model ids onto one entry, grouping
+`{2, 119, 128}` as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle and `{22, 122}` Georg.
+The four it omits match their base model's palette almost exactly (Cathari, Georg, Gunde,
+Miakis). Only `pc314c` (Zegai) rests on the numbering alone.
 
 **i** reads a model's skeleton straight off the disc (bone count, mesh sizes, animation
 count). The same bone count plus matching mesh sizes means the same character redressed.
