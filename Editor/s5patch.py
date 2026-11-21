@@ -2273,7 +2273,10 @@ def model_group(iso, model_id):
 def model_targets(iso):
     """Resource slots that are safe swap targets: the /COMMON character models. VOL_USR
     entries are per-field files that aren't resident during normal play, so they're left
-    out of the picker (set_model still accepts any slot for scripted use)."""
+    out of the picker, and set_model accepts only these slots. Two files in DATA.PAK,
+    ec012c.rom and ec015c.rom, have no name-table slot at all, so they cannot be picked
+    or loaded. A model's companion animation files are keyed by the original file
+    number, so they do not follow a swap."""
     chars = {c["id"]: c["name"] for c in F.load_characters()}
     out = []
     for n in read_resource_names(iso):
@@ -2289,11 +2292,14 @@ def model_targets(iso):
     return out
 
 def set_model(iso, model_id, slot):
-    """Point one model id at another resource slot. 4-byte write; reset_model undoes it."""
-    if not 0 <= model_id < F.MODEL_PTR_COUNT:
-        raise ValueError(f"model id must be 0..{F.MODEL_PTR_COUNT - 1}")
-    if not 0 <= slot < F.RESOURCE_NAME_COUNT:
-        raise ValueError(f"resource slot must be 0..{F.RESOURCE_NAME_COUNT - 1}")
+    """Point one model id at another resource slot. 4-byte write; reset_model undoes it.
+    The id must be a real model: id 0 is a placeholder with no model, the same refusal
+    reset_model makes. The slot must be one of the model_targets slots, so no caller
+    can point a row at a file the picker does not offer and a reset cannot undo."""
+    if not 1 <= model_id < F.MODEL_PTR_COUNT:
+        raise ValueError(f"model id must be 1..{F.MODEL_PTR_COUNT - 1}")
+    if slot not in {t["slot"] for t in model_targets(iso)}:
+        raise ValueError(f"slot {slot} is not a field model file (see model_targets)")
     iso.wu(F.MODEL_PTR_BASE + model_id * 4, 4, _resource_off(slot) + F.MODEL_VADDR_DELTA)
 
 def reset_model(iso, model_id):
@@ -3310,7 +3316,7 @@ def _models(a):
     with Iso(a.iso) as g:
         for m in read_models(g):
             if m["placeholder"]: continue
-            who = m["char"] + (f" (look {m['variant']})" if m["alternate"] else "")
+            who = m["char"] + (f" (look {m['look']} of {m['looks']})" if m["looks"] > 1 else "")
             mark = "  <- " + m["file"] if m["changed"] else ""
             print(f"  #{m['id']:>3} {m['default_file']:<14} {who}{mark}")
     return 0
