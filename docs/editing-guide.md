@@ -490,8 +490,10 @@ script lowers as the plot advances. That's why editing the record does nothing, 
 community fix has to rewrite the value every frame.
 
 The editor patches the setter instead: one instruction in the wrapper that writes that
-counter, so it always stores the number you pick. Found by signature, so it works in both
-regions, and it's fully reversible.
+counter, so it always stores 4. Found by signature, so it works in both
+regions, and it's fully reversible. The unlock is offered in exactly one place, the
+Code patches list ("Dawn Rune: unlock all four spells"); the Dawn Rune's own panel
+only points there, so no second switch can disagree with it.
 
 ### Passives ("always-on" rune effects)
 
