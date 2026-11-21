@@ -214,18 +214,21 @@ ok("glue exposes the always-on adapters",
 ok("engine keeps the gate scan inside the resolver",
    /RUNE_GATE_LO\s*=\s*0x253C00/.test(fieldsSrc) && /RUNE_GATE_HI\s*=\s*0x255D00/.test(fieldsSrc));
 
-// 3c) Dawn Rune fourth-spell toggle. The patch site is found by signature so it works in
-// both regions; these guard the signature words and the wiring, which CI can check
-// without a disc (dawn_rune.py covers the real-disc behaviour).
-ok("iso.js offers the Dawn Rune unlock", isoSrc.includes('view === "dawnrune"')
-   && isoSrc.includes('data-view="dawnrune"'));
-ok("Dawn toggle caption states the mode, not a requirement",
-   isoSrc.includes("all four spells from the start")
-   && isoSrc.includes("the story unlocks it near the endgame"));
-ok("Dawn toggle keeps the magic-level caveat", isoSrc.includes("still needs the magic level"));
-ok("glue exposes the Dawn adapters",
-   appSrc.includes("def iso_dawnrune") && appSrc.includes("def iso_setdawnrune"));
-ok("rune panel carries the Dawn state", appSrc.includes("P.read_dawn_unlock"));
+// 3c) Dawn Rune fourth-spell unlock. The patch site is found by signature so it works in
+// both regions. Issue #47: the unlock lives only in Code patches (the s5toggles
+// registry); the rune panel used to carry a duplicate checkbox wired to the same patch
+// word. These guard the removal, the pointer that replaced the checkbox, and the
+// signature words the surviving toggle relies on, all checkable without a disc
+// (dawn_rune.py and toggles.py cover the real-disc behaviour).
+ok("iso.js no longer offers the Dawn unlock on the rune panel", !isoSrc.includes("dawnrune"));
+ok("rune panel points at the Code patches Dawn toggle",
+   isoSrc.includes("is under Code patches") && isoSrc.includes("Dawn Rune: unlock all four spells"));
+ok("Dawn pointer keeps the magic-level caveat", isoSrc.includes("still needs the magic level"));
+ok("glue no longer exposes the duplicate Dawn adapters",
+   !appSrc.includes("def iso_dawnrune") && !appSrc.includes("def iso_setdawnrune")
+   && !appSrc.includes("setdawnrune"));
+ok("rune panel flags the Dawn Rune without reading unlock state",
+   appSrc.includes('"dawn": dawn') && !appSrc.includes("P.read_dawn_unlock"));
 ok("engine pins the Dawn signature words",
    /DAWN_ANCHOR_WORD\s*=\s*0x24030004/.test(fieldsSrc)      // addiu v1,zero,4
    && /DAWN_STOCK_WORD\s*=\s*0x306400FF/.test(fieldsSrc)    // andi a0,v1,255
