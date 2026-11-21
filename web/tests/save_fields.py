@@ -120,14 +120,27 @@ try:
     chk("Eresh+Euram rec edits refused on zero words", False)
 except ValueError:
     chk("Eresh+Euram rec edits refused on zero words", True)
-# ---- issues #2/#19: the byte at 0x12 is the cleared-game marker (a display
-# marker, not an NG+ or fast-forward switch). The relabel changes no data:
-# offset, width and cap are exactly as before, and an edit touches only 0x12.
-chk("marker offset/width unchanged", SV.S5_FIELDS["newGamePlus"] == (0x12, 1, "num")
-    and SV.NG_PLUS_OFF == 0x12 and SV.S5_FIELD_MAX["newGamePlus"] == 1)
+# ---- issues #2/#19, corrected by the dash investigation: the byte at 0x12
+# is only the cleared-game display copy (the game refreshes it from the real
+# byte on every save; the load path never reads it). The real NG+ carry byte
+# is at 0x120E8, and the control binds to it: an edit touches only 0x120E8,
+# writes store 1 or 0, and a stored 2 (a save written after an NG+ load)
+# reads back as on.
+chk("NG+ field binds to the carry byte", SV.S5_FIELDS["newGamePlus"] == (0x120E8, 1, "num")
+    and SV.NG_PLUS_OFF == 0x120E8 and SV.CLEARED_MARKER_OFF == 0x12
+    and SV.S5_FIELD_MAX["newGamePlus"] == 1)
 gd9, ch9 = SV.apply_gamedata_edits(gd, {"newGamePlus": 1})
-chk("marker edit touches only byte 0x12", ch9 == 1
-    and [i for i in range(len(gd)) if gd9[i] != gd[i]] == [0x12] and gd9[0x12] == 1)
+chk("NG+ edit touches only byte 0x120E8", ch9 == 1
+    and [i for i in range(len(gd)) if gd9[i] != gd[i]] == [0x120E8]
+    and gd9[0x120E8] == 1 and gd9[0x12] == gd[0x12])
+chk("NG+ reads back on", SV.decode_gamedata(gd9)["newGamePlus"] == 1)
+gd9b, _ = SV.apply_gamedata_edits(gd9, {"newGamePlus": 0})
+chk("NG+ edit off clears only the carry byte",
+    [i for i in range(len(gd9)) if gd9b[i] != gd9[i]] == [0x120E8]
+    and gd9b[0x120E8] == 0)
+gd9c = bytearray(gd); gd9c[0x120E8] = 2
+chk("a stored 2 reads as the raw byte (nonzero = on)",
+    SV.decode_gamedata(bytes(gd9c))["newGamePlus"] == 2)
 # regression guards on the verified constants
 chk("POTCH off", SV.S5_FIELDS["potch"][0] == 0xBC74)
 chk("PARTY off/slots", (SV.PARTY_OFF, SV.PARTY_SLOTS, SV.PARTY_EMPTY) == (0x36, 10, 0x0100))
