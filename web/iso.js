@@ -1162,8 +1162,8 @@ function renderRune(rid) {
    * (issue #47); it now lives only there, so this panel just points at it. */
   if (r.dawn) {
     h += `<div class="fnote" style="margin:0 16px 2px">The fourth-spell unlock for this rune
-      is under Code patches: "Dawn Rune: unlock all four spells". The Prince still needs
-      the magic level to cast it.</div>`;
+      is under Code patches: "Dawn Rune: unlock all four spells".
+      The Prince still needs the magic level to cast it.</div>`;
   }
 
   // Spell-set builder (real grant records only): which contiguous spells the rune grants.
