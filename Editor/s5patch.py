@@ -3132,6 +3132,144 @@ def gear_requirement_sites(iso):
     return out
 
 
+# ---------------------------------------------------------------------------
+# DASH TIER TUNING (issue #18): the field motor func_00247360 admits its fast
+# dash tier when Cathari (id 0x13) is in the live party OR the NG+ carry byte
+# (save payload 0x120E8, live EE 0xA46320) is nonzero. Two constants in that
+# motor are user-tunable here. Both are single lui words with a zero low half
+# (a clean lui + mtc1, no ori), each guarded by anchor words verified against
+# the pristine discs (ps2-re games/suikoden5/DASH_GATE_CODE.md):
+#   dash_speed  the multiplier the admitted tier applies to dash speed.
+#               Stock US 2.0, PAL 1.75 (the regions genuinely differ).
+#   dash_anim   the animation-speed argument passed to func_00216C90 while
+#               the tier flag is set. Stock 2.0 in both regions. The site is
+#               a dedicated inline lui executed only on the dash-state path
+#               (the beqz on the tier flag sits two words above it, the mtc1
+#               into $f21 one word below); it is an instruction-stream
+#               immediate, not a shared float pool entry, and the pattern
+#               occurs exactly once per disc. The non-dash 1.0 comes from a
+#               separate lui and stays stock.
+# The always-on gate itself is a code toggle (s5toggles "godspeed-dash",
+# sites via dash_gate_sites below). All three patches touch distinct words
+# and compose in any combination.
+DASH_LUI_TOP = 0x3C02            # lui $v0, imm (top halfword)
+DASH_SPEED_PRESETS = [1.5, 2.0, 2.5, 3.0]
+DASH_ANIM_PRESETS = [1.0, 1.5, 2.0, 2.5, 3.0]
+# (field, label, presets, {region: stock float}, {region: ISO offset},
+#  anchors: ((relative offset, expected word), ...))
+DASH_FIELDS = [
+    ("dash_speed", "Dash speed multiplier", DASH_SPEED_PRESETS,
+     {"ntsc-u": 2.0, "pal": 1.75},
+     {"ntsc-u": 0x1F4F34, "pal": 0x1F5494},
+     ((4, 0x24160001), (0x10, 0x4600AD42))),   # addiu $s6, $zero, 1 / mul.s $f21, $f21, $f0
+    ("dash_anim", "Dash animation multiplier", DASH_ANIM_PRESETS,
+     {"ntsc-u": 2.0, "pal": 2.0},
+     {"ntsc-u": 0x1F5080, "pal": 0x1F55E0},
+     ((-8, 0x12C00003), (4, 0x4482A800))),     # beqz $s6, ... / mtc1 $v0, $f21
+]
+# The gate toggle's skip branch (s5toggles "godspeed-dash"): on the motor's
+# not-found path the carry-byte getter is called and a byte of 0 branches
+# here to skip the tier. NOPing the branch admits the tier unconditionally:
+# the fall-through joins the same tier block the admitted paths use, tier
+# flag included, so the speed and animation effects agree. Anchors: the
+# getter jal and the andi on the byte, three and one words above the branch.
+DASH_GATE_STOCK = 0x1040FF2F     # beqz $v0, skip the tier
+DASH_GATE_OFFS = {"ntsc-u": 0x1F5288, "pal": 0x1F57E8}
+DASH_GATE_ANCHORS = {"ntsc-u": ((-0xC, 0x0C0DB4F8), (-4, 0x304200FF)),
+                     "pal":    ((-0xC, 0x0C0DB810), (-4, 0x304200FF))}
+
+
+def _dash_float_of_imm(imm):
+    return struct.unpack("<f", struct.pack("<I", (imm & 0xFFFF) << 16))[0]
+
+
+def _dash_imm_of_float(value):
+    bits = struct.unpack("<I", struct.pack("<f", float(value)))[0]
+    if bits & 0xFFFF:
+        raise ValueError("dash multiplier %r is not a bare lui constant" % (value,))
+    return bits >> 16
+
+
+def _dash_spec(field):
+    for spec in DASH_FIELDS:
+        if spec[0] == field:
+            return spec
+    raise ValueError("unknown dash field %r" % (field,))
+
+
+def _dash_word(iso, field):
+    """(offset, current word) for a dash field, anchor-checked. Refuses when
+    the region is unknown or the lui shape / anchor words do not match the
+    pristine disc, so a wrong disc or a foreign edit is never overwritten."""
+    spec = _dash_spec(field)
+    region = region_of(iso)
+    if region not in spec[4]:
+        raise ValueError("dash tuning needs a recognized US or PAL disc")
+    off = spec[4][region]
+    word = struct.unpack("<I", iso.rd(off, 4))[0]
+    if word >> 16 != DASH_LUI_TOP:
+        raise ValueError("%s site @0x%X is not the expected lui (foreign disc?)"
+                         % (field, off))
+    for rel, want in spec[5]:
+        got = struct.unpack("<I", iso.rd(off + rel, 4))[0]
+        if got != want:
+            raise ValueError("%s anchor @0x%X does not match the pristine disc"
+                             % (field, off + rel))
+    return off, word
+
+
+def read_dash_multipliers(iso):
+    region = region_of(iso)
+    out = {"region": region, "fields": []}
+    for field, label, presets, stocks, _offs, _anchors in DASH_FIELDS:
+        _off, word = _dash_word(iso, field)
+        out["fields"].append({
+            "field": field, "label": label, "kind": "dashmul",
+            "value": _dash_float_of_imm(word & 0xFFFF),
+            "stock": stocks[region], "presets": list(presets)})
+    return out
+
+
+def write_dash_multiplier(iso, field, value):
+    """Write one dash multiplier. Accepts the field's presets plus the
+    region's stock value (the PAL speed stock 1.75 is not a preset but must
+    stay restorable); anything else is refused before a byte is touched."""
+    spec = _dash_spec(field)
+    region = region_of(iso)
+    if region not in spec[4]:
+        raise ValueError("dash tuning needs a recognized US or PAL disc")
+    value = float(value)
+    allowed = set(spec[2]) | {spec[3][region]}
+    if value not in allowed:
+        raise ValueError("%s accepts only %s on this disc"
+                         % (field, sorted(allowed)))
+    off, _word = _dash_word(iso, field)
+    iso.wr(off, struct.pack("<I", (DASH_LUI_TOP << 16) | _dash_imm_of_float(value)))
+    _off2, word2 = _dash_word(iso, field)
+    if _dash_float_of_imm(word2 & 0xFFFF) != value:
+        raise ValueError("dash write did not land")
+    return {"field": field, "value": value, "region": region}
+
+
+def dash_gate_sites(iso):
+    """Toggle sites for s5toggles "godspeed-dash": the motor's carry-byte
+    skip branch, one word per disc. Returns [] when the region is unknown or
+    the getter anchors do not match, so a foreign disc reads as not found
+    rather than as a classifiable site."""
+    region = region_of(iso)
+    if region not in DASH_GATE_OFFS:
+        return []
+    off = DASH_GATE_OFFS[region]
+    for rel, want in DASH_GATE_ANCHORS[region]:
+        if struct.unpack("<I", iso.rd(off + rel, 4))[0] != want:
+            return []
+    return [{"label": "dash tier gate @0x%X" % off,
+             "spans": [{"off": off,
+                        "stock": struct.pack("<I", DASH_GATE_STOCK),
+                        "patched": b"\x00\x00\x00\x00",
+                        "cur": iso.rd(off, 4)}]}]
+
+
 # --------------------------------------------------------------------------- CLI
 def _verify(a):
     with Iso(a.iso) as g: r = region_of(g)
