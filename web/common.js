@@ -83,6 +83,55 @@ async function idbDel(key) {
   } catch (_) {}
 }
 
+/* ---------- collapsible notes ----------
+ * Long descriptive blocks (section intros, panel notes, help paragraphs)
+ * render as ONE summary sentence with the rest behind a More/Less
+ * expander, instead of a wall of text. The mechanism is a plain <details>
+ * element: collapsed by default, no JS state, and the full text stays in
+ * the DOM (tests assert on exact note wording). noteFold takes pre-split
+ * HTML parts (for blocks with markup); noteFoldText takes plain text and
+ * splits/folds it by rule, for data-driven strings (engine help, toggle
+ * blurbs). The fold rule: 3+ sentences AND over 200 characters, or 500+
+ * characters regardless. Short notes pass through untouched, so warnings
+ * and one or two sentence cautions stay fully visible. */
+function noteFold(sumHTML, restHTML) {
+  return `<details class="fold"><summary>${sumHTML}</summary>`
+    + `<div class="fold-rest">${restHTML}</div></details>`;
+}
+/* Split plain text after its first sentence: [first, rest], or null when
+ * there is no clean split. A sentence ends at ., ! or ? (plus any closing
+ * quote/bracket) followed by whitespace and a capital, digit or opening
+ * quote; decimals (1.5) never split, and neither do common abbreviations. */
+function splitNoteText(text) {
+  const ABBREV = new Set(["e.g", "i.e", "U.S", "U.S.A", "vs", "Lv", "No", "Dr", "Mr", "Mrs", "St", "approx"]);
+  const t = String(text == null ? "" : text);
+  const re = /[.!?][\x27)\]\x22]*\s+(?=[A-Z0-9\x22“(])/g;
+  let m;
+  while ((m = re.exec(t))) {
+    const before = t.slice(0, m.index);
+    const word = (before.match(/([A-Za-z][A-Za-z.]*)$/) || [])[1] || "";
+    if (ABBREV.has(word)) continue;
+    const first = t.slice(0, m.index + m[0].length).trim();
+    const rest = t.slice(m.index + m[0].length).trim();
+    if (first && rest) return [first, rest];
+    return null;
+  }
+  return null;
+}
+function noteFoldText(text) {
+  const t = String(text == null ? "" : text);
+  const trimmed = t.trim();
+  if (!trimmed) return "";
+  const ends = trimmed.match(/[.!?][\x27)\]\x22]*(?=\s|$)/g);
+  const sentences = ends ? ends.length : 0;
+  const foldable = (sentences >= 3 && trimmed.length > 200)
+    || trimmed.length >= 500;
+  if (!foldable) return esc(t);
+  const parts = splitNoteText(trimmed);
+  if (!parts) return esc(t);
+  return noteFold(esc(parts[0]), esc(parts[1]));
+}
+
 /* ---------- searchable picker modal ----------
  * openPicker(title, list, current, onPick, opts)
  *   list    : [{id, name, desc?, cat?}]

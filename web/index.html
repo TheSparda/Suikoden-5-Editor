@@ -37,10 +37,10 @@
 
   <!-- ============================ SAVE EDITOR ============================ -->
   <section class="mode-pane" data-mode="save" hidden>
-    <p class="sub">A full save editor: hero, castle and army names, potch, party SP, active party,
-      New Game Plus, and per-character level, equipment, runes, skills and recruitment status.
-      Everything runs in your browser; your save never leaves the device.
-      Works on desktop and Android. Keep a backup of your save.</p>
+    <details class="sub fold"><summary>A full save editor: hero, castle and army names, potch, party SP, active party,
+      New Game Plus, and per-character level, equipment, runes, skills and recruitment status.</summary>
+      <div class="fold-rest">Everything runs in your browser; your save never leaves the device.
+      Works on desktop and Android. Keep a backup of your save.</div></details>
 
     <div id="opencard" class="card" style="display:none">
       <h2>1 · Load save</h2>
@@ -54,10 +54,9 @@
           (<code>.ps2 .mc2 .mcd .bin</code>), <code>.psu</code>, and standalone <code>.cbs .xps .sps</code>.</div>
       </div>
       <div id="saveLast" class="recent hidden"></div>
-      <p class="muted" id="privacy" style="margin:12px 2px 0">
-        🔒 100% offline and private. This page has no server. The file is read into memory here and the
-        edited copy is saved straight back to you. Your original file is never touched.
-      </p>
+      <details class="note fold" id="privacy" style="margin:12px 2px 0"><summary>🔒 100% offline and private.</summary>
+        <div class="fold-rest">This page has no server. The file is read into memory here and the
+        edited copy is saved straight back to you. Your original file is never touched.</div></details>
     </div>
 
     <div id="saves"></div>
@@ -65,10 +64,11 @@
 
   <!-- ============================ ISO EDITOR ============================ -->
   <section class="mode-pane" data-mode="iso" hidden>
-    <p class="sub">Edit the game disc itself: characters, gear, <b>equipment sets</b>, spells, runes, prices,
-      enemies, unites, MP growth, skill effects and more. Nothing is uploaded. On <b>desktop Chromium</b>
+    <details class="sub fold"><summary>Edit the game disc itself: characters, gear, <b>equipment sets</b>, spells, runes, prices,
+      enemies, unites, MP growth, skill effects and more.</summary>
+      <div class="fold-rest">Nothing is uploaded. On <b>desktop Chromium</b>
       edits are written <b>in place</b>. On Android, Firefox and Safari you can still open, edit and export a
-      <code>.s5mod</code> recipe. Back up first, or export a recipe.</p>
+      <code>.s5mod</code> recipe. Back up first, or export a recipe.</div></details>
 
     <div id="isoOpen" class="card hidden">
       <h2>Open a Suikoden V ISO</h2>

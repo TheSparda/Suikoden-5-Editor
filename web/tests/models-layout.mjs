@@ -18,6 +18,7 @@ import { fileURLToPath } from "url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const web = path.join(here, "..");
 const isoSrc = fs.readFileSync(path.join(web, "iso.js"), "utf8");
+const commonSrc = fs.readFileSync(path.join(web, "common.js"), "utf8");
 
 let n = 0, fail = 0;
 const ok = (name, cond, extra) => {
@@ -139,8 +140,12 @@ const sandbox = {
   esc: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"),
   MODEL_LINK: true, BATTLE_LINK: true, PAIR_MODELS: true,
 };
+/* The page loads common.js before iso.js, so the layout code may use its
+ * helpers; run noteFold (the collapsible-note helper) into the sandbox
+ * the same way. */
+const foldFn = extractFn(commonSrc, "noteFold");
 vm.createContext(sandbox);
-vm.runInContext(layoutFn, sandbox);
+vm.runInContext(foldFn + "\n" + layoutFn, sandbox);
 const html = sandbox.modelLayoutHTML(fdata, bdata);
 
 /* Split into headed blocks: chunk 0 is the intro + toggles, each later
@@ -179,6 +184,11 @@ ok("the intro states the pairing default and the separation of the sets",
    && flat.includes("a field swap never shows in battle"));
 ok("the intro keeps the proven-in-game wording",
    flat.includes("proven in game"));
+ok("the intro is folded: first sentence as the summary, the rest behind the expander",
+   html.includes('<details class="fold"><summary>Every field and town model the engine can load')
+   && html.includes('<div class="fold-rest">Field and battle are separate sets'));
+ok("the intro fold is collapsed by default",
+   !html.includes('<details class="fold" open'));
 
 sandbox.PAIR_MODELS = false;
 const htmlOff = sandbox.modelLayoutHTML(fdata, bdata);

@@ -48,7 +48,7 @@ header .logo{width:24px;height:24px;border-radius:50%;flex:0 0 auto;
   box-shadow:0 0 9px rgba(232,130,58,.55)}
 h1{font-size:20px;margin:0;letter-spacing:.02em;font-family:var(--titlefont);color:var(--acc2)}
 .tag{font-size:12px;color:var(--mut);border:1px solid var(--line);padding:2px 9px;border-radius:999px;background:var(--input-bg)}
-p.sub{color:var(--mut);margin:10px 0 16px;font-size:13px}
+p.sub,details.sub{color:var(--mut);margin:10px 0 16px;font-size:13px}
 
 /* top-level mode tabs */
 .modebar{display:flex;gap:8px;margin:14px 0 4px}
@@ -119,6 +119,15 @@ input[type=file]{display:none}
 .pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--mut);
   border:1px solid var(--line);border-radius:6px;padding:0 4px;margin-left:4px;vertical-align:middle;text-transform:none}
 .note{color:var(--mut);font-size:12px}
+/* collapsible note (common.js noteFold): the summary sentence stays
+   visible, the rest opens under it. The More/Less label is CSS-only, so
+   the full text is what the DOM holds. */
+details.fold>summary{display:inline;cursor:pointer;list-style:none}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:" More ▾";color:var(--acc2);font-weight:600;white-space:nowrap}
+details.fold[open ]>summary::after{content:" Less ▴"}
+details.fold>summary:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+details.fold>.fold-rest{margin-top:2px}
 .ok{color:var(--ok)}.bad{color:var(--bad)}
 
 /* inputs — match on "not the native-widget types" rather than listing text/number/…,
@@ -261,7 +270,7 @@ footer .note{flex-basis:100%;color:var(--mut);font-size:12px}
   .wrap{max-width:100%}
   .card{padding:13px}
   h1{font-size:18px}
-  p.sub{font-size:12px;margin:8px 0 12px}
+  p.sub,details.sub{font-size:12px;margin:8px 0 12px}
   header{gap:8px}
   input:not([type=checkbox]):not([type=radio]):not([type=file]),select,.pickbtn{min-height:44px;font-size:15px}
   .toolbar button{min-height:44px}
