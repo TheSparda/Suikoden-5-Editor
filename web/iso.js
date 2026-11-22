@@ -1765,7 +1765,9 @@ VIEW_RENDER.model = async (body) => {
       in <code>DATA.PAK</code>, <code>ec012c.rom</code> and <code>ec015c.rom</code>, have no name-table
       slot, so they cannot be picked, and a model's extra animation files stay with the original
       file instead of following a swap. Cutscenes use their own copies of the
-      cast, so a swap shows while you walk around, not in pre-rendered story scenes.</div>
+      cast, so a swap shows while you walk around, not in pre-rendered story scenes.
+      Battle is separate: combat loads its own model files, edited under
+      <b>Battle models</b> below, and a swap here does not change them.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
       onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`
     + `<div class="subhd">${esc(hero || "Hero")}: all ${heroRows.length} looks</div>`
@@ -1774,7 +1776,9 @@ VIEW_RENDER.model = async (body) => {
        model id.</div>`
     + grid(heroRows)
     + `<div class="subhd">Everyone else</div>` + grid(otherRows)
+    + `<div id="battleModels"></div>`
     + `<div class="fnote" id="modelInfoOut" style="margin:0 16px 14px"></div>`;
+  await renderBattleModels();
 };
 /* One row per model id. Split out so the hero's block and the rest render identically. */
 function modelGrid(rows, opts) {
@@ -1826,6 +1830,81 @@ async function modelInfo(file) {
   finally { spin(false); }
 }
 function onModelReset(id) { return writeModels(id, -1); }
+
+/* ---------------- Battle models ----------------
+ * Combat loads its own model files (BTL_PCnnn.ROM), picked by a directory of
+ * names inside the BATLE overlay, so this section is independent of the
+ * field swap above: neither side's picks affect the other. The overlay sits
+ * past the front slice, so it is staged on demand like the drop-rate panel.
+ * A pick rewrites the overlay in place; the engine refuses if the repacked
+ * overlay ever outgrows its sector slot. */
+let BATTLE_LINK = true;
+async function renderBattleModels() {
+  const host = $("battleModels"); if (!host) return;
+  await ensureBatleStaged();
+  const r = JSON.parse(window.PYISO.battlemodels());
+  if (r.error) {
+    host.innerHTML = `<div class="subhd">Battle models</div>
+      <p class="bad" style="padding:0 16px">${esc(r.error)}</p>`;
+    return;
+  }
+  const rows = r.models || [], targets = r.targets || [];
+  const groups = [...new Set(targets.map(t => t.group))];
+  const label = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
+  const opts = m => (targets.some(t => t.name === m.name) ? ""
+      : `<option value="${esc(m.name)}" selected>${esc(m.file)}</option>`)
+    + groups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
+    .map(t => `<option value="${esc(t.name)}" ${t.name === m.name ? "selected" : ""}>${esc(label(t))}</option>`).join("")
+    + `</optgroup>`).join("");
+  const grid = (rs) => `<div class="grid" style="padding:0 16px 14px">` + rs.map(m => `<div class="fld">
+      <label>${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
+      <div class="in"><select data-bmid="${m.id}" onchange="onBattleModelPick(this)">${opts(m)}</select>
+      ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
+        onclick="onBattleModelReset(${m.id})" tabindex="-1">↺</button>` : ""}</div></div>`).join("") + `</div>`;
+  const hero = (rows.find(m => m.char_id === 0) || {}).char;
+  const heroRows = hero ? rows.filter(m => m.char === hero) : [];
+  const otherRows = hero ? rows.filter(m => m.char !== hero) : rows;
+  const linked = BATTLE_LINK ? "checked" : "";
+  host.innerHTML = `<div class="subhd">Battle models</div>
+    <div class="fnote" style="margin:0 16px 4px">Battle uses its own model files
+      (<code>BTL_PCnnn.ROM</code> in <code>DATA.PAK</code>), chosen separately from the field
+      models above: a field swap never shows in battle, and a battle swap never shows in the
+      field. Pick each character's battle model here. Only the name in the battle code's
+      directory changes; the overlay is rewritten in place and the write is refused if it
+      ever outgrows its slot. A two-way battle swap is proven in game: the Prince fought as
+      Roy while his field model stayed stock. Some story characters have no battle model
+      entry, so they are not listed.</div>
+    <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="battleModelLink" ${linked}
+      onchange="BATTLE_LINK = this.checked"> keep a character's battle looks together</label></div>`
+    + (heroRows.length ? `<div class="fnote" style="margin:0 16px 4px">${esc(hero)}: all ${heroRows.length} battle looks</div>`
+      + grid(heroRows) : "")
+    + grid(otherRows);
+}
+/* Like the field view, a battle pick commits on its own: one pick can rewrite
+ * several directory names, so it writes, mirrors every touched row into the
+ * edit list, then re-renders so the siblings show it. */
+async function writeBattleModels(id, name) {
+  spin(true);
+  try {
+    const res = JSON.parse(window.PYISO.setbattlemodel(id, name, BATTLE_LINK ? 1 : 0));
+    if (res.error) { toast("Write rejected: " + res.error, "bad"); return; }
+    const rows = (JSON.parse(window.PYISO.battlemodels()).models) || [];
+    (res.ids || []).forEach(i => {
+      const m = rows[i], key = "battlemodel:" + i;
+      if (m && m.changed) isoEdits[key] = { label: `Battle model ${m.char || "#" + i} (${m.default_file})`,
+                                            group: "Battle models", to: m.file };
+      else delete isoEdits[key];
+    });
+    updateIsoToolbar();
+    captureUndoStep();
+    await renderBattleModels();
+    const n = (res.ids || []).length, who = rows[id] && rows[id].char;
+    toast(n > 1 ? `${who}'s ${n} battle looks → ${rows[id].file}` : `Battle model → ${rows[id].file}`, "ok");
+  } catch (e) { toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
+  finally { spin(false); }
+}
+function onBattleModelPick(el) { return writeBattleModels(+el.dataset.bmid, el.value); }
+function onBattleModelReset(id) { return writeBattleModels(id, ""); }
 
 /* ---------------- DATA.PAK assets ----------------
  * The editor keeps only the disc's front slice in memory, and the asset volume sits ~2 GB

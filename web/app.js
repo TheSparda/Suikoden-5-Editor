@@ -130,6 +130,7 @@ function isoGlueHandles(){
     unites:g("iso_unites"), setunite:g("iso_setunite"),
     names:g("iso_names"), setname:g("iso_setname"),
     models:g("iso_models"), setmodel:g("iso_setmodel"),
+    battlemodels:g("iso_battlemodels"), setbattlemodel:g("iso_setbattlemodel"),
     pakvolume:g("iso_pakvolume"), pakdirents:g("iso_pakdirents"), pakcodec:g("iso_pakcodec"),
     pakdecode:g("iso_pakdecode"), paktextures:g("iso_paktextures"), pakfaces:g("iso_pakfaces"),
     paksheet:g("iso_paksheet"), pakzip:g("iso_pakzip"), pakmodelinfo:g("iso_pakmodelinfo"),
@@ -550,6 +551,25 @@ def iso_setmodel(mid, slot, group=0):
             for i in ids:
                 if slot < 0: P.reset_model(g, i)
                 else: P.set_model(g, i, slot)
+        return json.dumps({"ok": True, "ids": ids})
+    except Exception as e: return json.dumps({"error": str(e)})
+
+# ---- Battle models: the name directory in the BATLE overlay (see s5patch.write_battle_models).
+# An empty name means reset the row (or its group) to the factory model.
+def iso_battlemodels():
+    try:
+        with P.Iso(ISO) as g:
+            return json.dumps({"models": P.read_battle_models(g), "targets": P.battle_model_targets(g)})
+    except Exception as e: return json.dumps({"error": str(e)})
+def iso_setbattlemodel(mid, name, group=0):
+    try:
+        mid = int(mid)
+        with P.Iso(ISO) as g:
+            ids = P.battle_model_group(g, mid) if int(group) else [mid]
+            rows = P.read_battle_models(g)
+        changes = {i: (rows[i]["default_name"] if name == "" else name) for i in ids}
+        with P.Iso(ISO, writable=True) as g:
+            P.write_battle_models(g, changes)
         return json.dumps({"ok": True, "ids": ids})
     except Exception as e: return json.dumps({"error": str(e)})
 

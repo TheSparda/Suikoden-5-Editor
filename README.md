@@ -359,6 +359,26 @@ bone count only describes a model, and a base model and its alternate differ on 
 most of the cast. Cutscenes ship their own baked copies of the cast, so a swap shows
 while you walk around rather than in pre-rendered story scenes.
 
+### Battle models
+
+Combat does not use the field models. Battle loads its own model set, 82 files in
+`DATA.PAK/BATLE/` (`BTL_PCnnn.ROM`), and the battle overlay picks one per character from
+a directory of names inside it. The **Battle models** section at the bottom of the Field
+models tab edits that directory: pick a battle model for a character and that is the
+model they fight as. It is separate from the field swap in both directions: a field swap
+never shows in battle, and a battle swap never shows in the field.
+
+A pick rewrites one 9-byte name in the directory. The overlay is repacked and written
+back in place, and the write is refused if the repacked overlay ever outgrows its
+sector slot. **Reset** restores the factory names. Looks are grouped and move together
+by default, the same as on the field, with their own checkbox. File numbers follow the
+field pattern: a base look is character id + 1 (`btl_pc001` is the Prince) and 2xx / 4xx
+numbers are extra looks for the character they follow. A few story characters have no
+entry in the directory, so they are not listed.
+
+Proven in game with a two-way swap: the Prince's and Roy's names exchanged, the Prince
+fought as Roy, and the field models were untouched.
+
 ### Assets
 
 A browser and extractor for **`DATA.PAK`**, the disc's 2.3 GB CRI ROFS volume holding about
