@@ -368,16 +368,20 @@ models tab edits that directory: pick a battle model for a character and that is
 model they fight as. It is separate from the field swap in both directions: a field swap
 never shows in battle, and a battle swap never shows in the field.
 
-A pick rewrites one 9-byte name in the directory. The overlay is repacked and written
-back in place, and the write is refused if the repacked overlay ever outgrows its
-sector slot. **Reset** restores the factory names. Looks are grouped and move together
-by default, the same as on the field, with their own checkbox. File numbers follow the
+A pick rewrites the 9-byte name at each of the character's directory positions. The
+overlay is repacked and written back in place, and the write is refused if the repacked
+overlay ever outgrows its sector slot. **Reset** restores the factory names. Looks are
+grouped and move together by default, the same as on the field, with their own checkbox.
+A pick affects only the character picked: the character the model came from keeps
+their own model, so two fighters can share one model. File numbers follow the
 field pattern: a base look is character id + 1 (`btl_pc001` is the Prince) and 2xx / 4xx
 numbers are extra looks for the character they follow. A few story characters have no
 entry in the directory, so they are not listed.
 
-Proven in game with a two-way swap: the Prince's and Roy's names exchanged, the Prince
-fought as Roy, and the field models were untouched.
+Proven in game with a one-sided pick: only the Prince's entries were set to Roy's
+model. The Prince fought as Roy, Roy himself was unchanged, and the field models
+were untouched. Combat plays normally with another character's model, including
+attacks and rune casts.
 
 ### Assets
 

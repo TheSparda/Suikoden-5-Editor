@@ -710,9 +710,10 @@ xdelta commands cover the whole disc.
   picks them from a name directory in the battle overlay, so this is separate from the
   field swap in both directions. A pick rewrites one name in that directory; the overlay
   is repacked in place and the write is refused if it outgrows its slot. Reset restores
-  the factory names. Looks move together by default, with their own checkbox. A two-way
-  swap is proven in game. Some story characters have no directory entry and are not
-  listed.
+  the factory names. Looks move together by default, with their own checkbox. A
+  one-sided pick is proven in game: the donor keeps their own model, so two fighters
+  can share one, and combat plays normally with another character's model. Some story
+  characters have no directory entry and are not listed.
 - **Assets**: a read-only browser for the ~7,700 files packed into `DATA.PAK`. It reads from
   your file on demand and never writes.
 - **Reference**: the name lists (characters, spells, skills, runes, enemies, items) the

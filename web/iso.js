@@ -1871,8 +1871,9 @@ async function renderBattleModels() {
       models above: a field swap never shows in battle, and a battle swap never shows in the
       field. Pick each character's battle model here. Only the name in the battle code's
       directory changes; the overlay is rewritten in place and the write is refused if it
-      ever outgrows its slot. A two-way battle swap is proven in game: the Prince fought as
-      Roy while his field model stayed stock. Some story characters have no battle model
+      ever outgrows its slot. A one-sided pick is proven in game: the Prince was set to
+      Roy's battle model on its own, fought as Roy, and Roy himself was unchanged.
+      Combat plays normally with another character's model. Some story characters have no battle model
       entry, so they are not listed.</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="battleModelLink" ${linked}
       onchange="BATTLE_LINK = this.checked"> keep a character's battle looks together</label></div>`
