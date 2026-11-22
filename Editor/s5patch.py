@@ -16,6 +16,10 @@ Commands:
   set-model <iso> --id N (--slot S | --reset) [--one]
                                          point a model id at another model file; by default
                                          the character's other looks follow (--one to skip)
+  battle-models <iso>                    list the battle-model directory (row -> file, who)
+  set-battle-model <iso> --id N (--name btl_pcNNN | --reset) [--one]
+                                         point a battle-model row at another battle model;
+                                         by default the character's other looks follow
   ladder   <iso>                         dump the 0x4986C0 ladder
   peek     <iso> --off 0x.. --len N
   poke     <iso> --off 0x.. --u8/--u16/--hex ..
@@ -2311,6 +2315,182 @@ def reset_model(iso, model_id):
     if model_id < 1: raise ValueError("model 0 is a placeholder with no factory model")
     set_model(iso, model_id, model_id - 1)
 
+# ---- Battle models: the name directory inside the BATLE overlay ----
+# Battle loads its own model set (DATA.PAK/BATLE/BTL_PCnnn.ROM), picked by a
+# directory of names inside the BATLE overlay image, so a field-model swap
+# never reaches combat and a battle swap never shows in the field. The
+# directory holds 103 names at image offset 0x5E9A4, 16 bytes each: the 82
+# party models below, with a block of 21 enemy names (btl_ecNNN) between the
+# 77th and 78th party entries. A character's battle model is the name at
+# their directory position; rewriting that one name re-skins them in battle
+# only. The directory sits at the same offsets, byte-identical, on PAL
+# discs. Proven in game with a two-way swap: the Prince's and Roy's names
+# exchanged, the Prince fought as Roy and the field stayed stock.
+
+BATTLE_MODEL_DIR_OFF = 0x5E9A4
+BATTLE_MODEL_DIR_STRIDE = 16
+_BATTLE_NAME_RE = re.compile(r"^btl_pc(\d{3})$")
+
+# The 82 party battle models in directory order, by file number. A base look
+# is character id + 1 (btl_pc001 is the Prince, id 0); a 2xx/4xx number is an
+# extra look for the character whose base row it follows. btl_pc110
+# (Arshtat, id 109) sits out of order between ids 21 and 22.
+_BATTLE_MODEL_NUMS = (
+    1, 401, 201, 4, 6, 8, 9, 209, 11, 12, 13, 213, 14, 15, 17, 18, 19, 20,
+    21, 221, 22, 110, 23, 25, 26, 28, 30, 33, 37, 38, 40, 42, 43, 44, 45, 46,
+    48, 49, 51, 52, 58, 59, 60, 61, 62, 63, 67, 68, 69, 70, 71, 72, 73, 74,
+    76, 77, 78, 79, 80, 81, 82, 85, 86, 87, 90, 91, 96, 97, 98, 100, 101,
+    102, 103, 104, 107, 207, 109, 120, 121, 122, 123, 124)
+
+
+def _battle_stock():
+    """The 82 party rows as {dir, num, char_id}: `dir` is the entry's index
+    in the overlay's name directory (rows past the enemy block sit 21 places
+    later than their row number), `num` the BTL_PC file number, `char_id`
+    the character the row belongs to."""
+    rows, char = [], None
+    for i, num in enumerate(_BATTLE_MODEL_NUMS):
+        if num < 200: char = num - 1
+        rows.append({"dir": i if i < 77 else i + 21, "num": num,
+                     "char_id": char})
+    return rows
+
+
+BATTLE_MODEL_STOCK = _battle_stock()
+
+
+def _battle_name(num): return "btl_pc%03d" % num
+
+
+def _battle_directory(data):
+    """The 82 party names currently in a decompressed BATLE image, in row
+    order. Raises ValueError if any party position does not hold a
+    btl_pcNNN name: a foreign or differently built overlay is never
+    written over."""
+    names = []
+    for row in BATTLE_MODEL_STOCK:
+        off = BATTLE_MODEL_DIR_OFF + row["dir"] * BATTLE_MODEL_DIR_STRIDE
+        nm = data[off:off + BATTLE_MODEL_DIR_STRIDE].split(b"\x00")[0] \
+            .decode("latin1")
+        if not _BATTLE_NAME_RE.match(nm):
+            raise ValueError("battle model directory not recognised "
+                             "(entry %d holds %r)" % (row["dir"], nm))
+        names.append(nm)
+    return names
+
+
+def read_battle_models(iso):
+    """The battle-model directory: 82 rows, one per party look the battle
+    code can load. `name`/`file` are the model the row currently loads,
+    `default_name`/`default_file` the factory one, `char` the character
+    the row belongs to and `target_char` the character the current model
+    belongs to. Characters with no directory entry (some story-only
+    fighters) have no row and cannot be picked."""
+    names = _battle_directory(_batle_bin(iso))
+    chars = {c["id"]: c["name"] for c in F.load_characters()}
+    owner = {_battle_name(r["num"]): r for r in BATTLE_MODEL_STOCK}
+    out = []
+    for i, (row, cur) in enumerate(zip(BATTLE_MODEL_STOCK, names)):
+        stock = _battle_name(row["num"])
+        tgt = owner[cur]
+        out.append({"id": i, "dir": row["dir"],
+                    "off": BATTLE_MODEL_DIR_OFF
+                           + row["dir"] * BATTLE_MODEL_DIR_STRIDE,
+                    "name": cur, "file": cur.upper() + ".ROM",
+                    "default_name": stock,
+                    "default_file": stock.upper() + ".ROM",
+                    "char_id": row["char_id"],
+                    "char": chars.get(row["char_id"], ""),
+                    "target_char_id": tgt["char_id"],
+                    "target_char": chars.get(tgt["char_id"], ""),
+                    "changed": cur != stock})
+    _number_looks(out)
+    return out
+
+
+def battle_model_targets(iso):
+    """The 82 battle models a picker can offer: the stock directory
+    entries, each labelled with its owner and look number."""
+    chars = {c["id"]: c["name"] for c in F.load_characters()}
+    out = []
+    for row in BATTLE_MODEL_STOCK:
+        nm = _battle_name(row["num"])
+        out.append({"name": nm, "file": nm.upper() + ".ROM",
+                    "char_id": row["char_id"],
+                    "char": chars.get(row["char_id"], ""), "group": "Cast"})
+    _number_looks(out)
+    for t in out:
+        if t["look"] > 1: t["group"] = "Story alternates"
+    return out
+
+
+def battle_model_group(iso, row_id):
+    """Every battle-model row that belongs to the same character as this
+    one. As on the field, a character's looks normally move as a set,
+    because the game picks the alternate looks by itself for some
+    battles."""
+    rows = read_battle_models(iso)
+    if not 0 <= row_id < len(rows):
+        raise ValueError(f"battle model row must be 0..{len(rows) - 1}")
+    cid = rows[row_id]["char_id"]
+    return [r["id"] for r in rows if r["char_id"] == cid]
+
+
+def write_battle_models(iso, changes):
+    """Write battle-model picks, {row id: name}, in one overlay rewrite.
+    Only the 9-byte names at the picked rows' directory positions change;
+    the image keeps its size and is repacked in the form the disc already
+    uses. reinsert_overlay refuses if the repacked overlay outgrows its
+    sector slot, so a refused write changes nothing. The directory layout
+    is validated before any write and every entry is re-read and verified
+    after it."""
+    changes = {int(k): str(v) for k, v in dict(changes).items()}
+    stock = {_battle_name(r["num"]) for r in BATTLE_MODEL_STOCK}
+    for i, nm in changes.items():
+        if not 0 <= i < len(BATTLE_MODEL_STOCK):
+            raise ValueError(f"battle model row must be "
+                             f"0..{len(BATTLE_MODEL_STOCK) - 1}")
+        if nm not in stock:
+            raise ValueError(f"{nm} is not a battle model "
+                             f"(see battle_model_targets)")
+    data = bytearray(_batle_bin(iso))
+    before = _battle_directory(bytes(data))
+    for i, nm in changes.items():
+        off = BATTLE_MODEL_DIR_OFF \
+            + BATTLE_MODEL_STOCK[i]["dir"] * BATTLE_MODEL_DIR_STRIDE
+        data[off:off + BATTLE_MODEL_DIR_STRIDE] = \
+            nm.encode("ascii").ljust(BATTLE_MODEL_DIR_STRIDE, b"\x00")
+    backup(iso.path)
+    import tempfile
+    fd, tmp = tempfile.mkstemp(prefix="s5_batle_", suffix=".bin")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(bytes(data))
+        res = reinsert_overlay(iso, "BATLE.ROM", tmp)
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+    after = _battle_directory(_batle_bin(iso))
+    want = [changes.get(i, before[i]) for i in range(len(BATTLE_MODEL_STOCK))]
+    if after != want:
+        raise AssertionError("battle-model write did not verify")
+    return {"ok": True, "ids": sorted(changes), "overlaySlack": res["slack"]}
+
+
+def set_battle_model(iso, row_id, name):
+    """Point one character's battle directory entry at another battle
+    model. reset_battle_model undoes it."""
+    return write_battle_models(iso, {row_id: name})
+
+
+def reset_battle_model(iso, row_id):
+    """Restore one row's factory battle model name."""
+    if not 0 <= row_id < len(BATTLE_MODEL_STOCK):
+        raise ValueError(f"battle model row must be "
+                         f"0..{len(BATTLE_MODEL_STOCK) - 1}")
+    return write_battle_models(
+        iso, {row_id: _battle_name(BATTLE_MODEL_STOCK[row_id]["num"])})
+
 def model_info(iso_path, file):
     """Structure summary of a field model in DATA.PAK: bone count, geometry sizes and
     animation count, read straight out of its RenderWare clump. Geometry sizes are the
@@ -3341,6 +3521,27 @@ def _setmodel(a):
     for i in ids: print(f"model #{i} -> {rows[i]['file']}")
     return 0
 
+def _battlemodels(a):
+    with Iso(a.iso) as g:
+        for m in read_battle_models(g):
+            who = m["char"] + (f" (look {m['look']} of {m['looks']})" if m["looks"] > 1 else "")
+            mark = "  <- " + m["file"] if m["changed"] else ""
+            print(f"  #{m['id']:>3} {m['default_file']:<14} {who}{mark}")
+    return 0
+
+def _setbattlemodel(a):
+    if a.name is None and not a.reset:
+        raise SystemExit("give --name btl_pcNNN (see `battle-models`) or --reset")
+    with Iso(a.iso) as g:
+        ids = [a.id] if a.one else battle_model_group(g, a.id)
+    changes = {i: (_battle_name(BATTLE_MODEL_STOCK[i]["num"]) if a.reset
+                   else a.name) for i in ids}
+    with Iso(a.iso, writable=True) as g:
+        write_battle_models(g, changes)
+    with Iso(a.iso) as g: rows = read_battle_models(g)
+    for i in ids: print(f"battle model #{i} -> {rows[i]['file']}")
+    return 0
+
 def _ladder(a):
     with Iso(a.iso) as g:
         print("extra @0x%X:" % F.LADDER_EXTRA_OFF, g.ru(F.LADDER_EXTRA_OFF, 2))
@@ -3458,6 +3659,10 @@ def main(argv=None):
     add("set-model", _setmodel, [(("--id",), dict(type=int, required=True)),
         (("--slot",), dict(type=int)), (("--reset",), dict(action="store_true")),
         (("--one",), dict(action="store_true", help="just this id, not the character's other looks"))])
+    add("battle-models", _battlemodels)
+    add("set-battle-model", _setbattlemodel, [(("--id",), dict(type=int, required=True)),
+        (("--name",), dict()), (("--reset",), dict(action="store_true")),
+        (("--one",), dict(action="store_true", help="just this row, not the character's other looks"))])
     add("ladder", _ladder)
     add("find-bytes", _findbytes, [(("--hex",), dict(required=True)), (("--max",), dict(type=int, default=16))])
     add("dump-region", _dumpregion, [(("--off",), dict(required=True)), (("--len",), dict(type=int, default=256))])
