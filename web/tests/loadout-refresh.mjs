@@ -27,6 +27,7 @@ import { fileURLToPath } from "url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const web = path.join(here, "..");
 const isoSrc = fs.readFileSync(path.join(web, "iso.js"), "utf8");
+const commonSrc = fs.readFileSync(path.join(web, "common.js"), "utf8");
 
 let n = 0, fail = 0;
 const ok = (name, cond, extra) => {
@@ -83,10 +84,13 @@ const decl = (name) => {
 const FNS = ["commitIso", "onIsoField", "applyIsoWrite", "trackIso", "markDirty",
              "afterIsoWrite", "loWordLabel", "renderLoadoutSection",
              "refreshLoadoutCaps", "loTrack", "loSetSkill"];
-const parts = [decl("LO_CUR"), decl("LO_ORIG"), decl("LO_CID"),
+/* common.js loads before iso.js on the page, so its noteFold helper is
+ * part of the environment the extracted code runs in. */
+const parts = [extractFn(commonSrc, "noteFold"),
+               decl("LO_CUR"), decl("LO_ORIG"), decl("LO_CID"),
                ...FNS.map((f) => extractFn(isoSrc, f))];
 ok("iso.js declares the loadout state (LO_CUR / LO_ORIG / LO_CID)",
-   parts[0] && parts[1] && parts[2]);
+   parts[1] && parts[2] && parts[3]);
 ok("iso.js defines refreshLoadoutCaps", !!extractFn(isoSrc, "refreshLoadoutCaps"));
 ok("afterIsoWrite hooks the equipable skills table",
    (extractFn(isoSrc, "afterIsoWrite") || "").includes("equipable skills"));
