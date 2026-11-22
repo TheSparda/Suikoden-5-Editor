@@ -705,15 +705,18 @@ xdelta commands cover the whole disc.
   Swaps are proven in game. Two files in DATA.PAK, ec012c.rom and ec015c.rom, have no
   name-table slot, so they cannot be picked or loaded, and a model's companion animation
   files are keyed by the original file number, so they do not follow a swap.
-- **Battle models**: which model file a character fights as, edited in the section at the
-  bottom of the Field models tab. Battle uses its own model files (BTL_PCnnn.ROM) and
-  picks them from a name directory in the battle overlay, so this is separate from the
-  field swap in both directions. A pick rewrites one name in that directory; the overlay
-  is repacked in place and the write is refused if it outgrows its slot. Reset restores
-  the factory names. Looks move together by default, with their own checkbox. A
-  one-sided pick is proven in game: the donor keeps their own model, so two fighters
-  can share one, and combat plays normally with another character's model. Some story
-  characters have no directory entry and are not listed.
+- **Battle models**: which model file a character fights as, edited in the same tab, in
+  each character's block under their field picker. Battle uses its own model files
+  (BTL_PCnnn.ROM) and picks them from a name directory in the battle overlay, so this is
+  separate from the field swap in both directions. A pick rewrites one name in that
+  directory; the overlay is repacked in place and the write is refused if it outgrows
+  its slot. Reset restores the factory names. Looks move together by default, with
+  their own checkbox. A one-sided pick is proven in game: the donor keeps their own
+  model, so two fighters can share one, and combat plays normally with another
+  character's model. Some story characters have no directory entry; their block shows
+  a note instead of a picker. Picks in either set set the other set's matching look by
+  default; untick *set field and battle models together* at the top of the tab to
+  change them separately.
 - **Assets**: a read-only browser for the ~7,700 files packed into `DATA.PAK`. It reads from
   your file on demand and never writes.
 - **Reference**: the name lists (characters, spells, skills, runes, enemies, items) the

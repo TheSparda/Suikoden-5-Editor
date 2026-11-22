@@ -340,6 +340,14 @@ together by default**: pick a file on the Prince's row and all three of his rows
 he stays re-skinned through the scenes that ask for an alternate. Untick *keep a character's
 looks together* to set a single row on its own. Reset is grouped the same way.
 
+The tab lays the two model sets out together: one block per character, with the field
+picker for each look and the battle picker for the same look directly under it (see Battle
+models below). Picks pair the two sets by default: pick a field model and the character's
+battle model becomes the same character's matching battle look, and a battle pick does the
+same to the field side. Untick *set field and battle models together* to change the two
+separately. Where a character or a look has no counterpart on the other side, the pick
+still lands and the block shows a short note where the missing picker would be.
+
 Who owns which alternate comes from the disc itself: a compare chain inside the ELF's
 func_002111A0 folds a character's alternate ids onto one handler, grouping `{2, 119, 128}`
 as the Prince, `{10, 120}` Lyon, `{14, 121}` Kyle and `{22, 122}` Georg. The four it omits
@@ -363,10 +371,11 @@ while you walk around rather than in pre-rendered story scenes.
 
 Combat does not use the field models. Battle loads its own model set, 82 files in
 `DATA.PAK/BATLE/` (`BTL_PCnnn.ROM`), and the battle overlay picks one per character from
-a directory of names inside it. The **Battle models** section at the bottom of the Field
-models tab edits that directory: pick a battle model for a character and that is the
-model they fight as. It is separate from the field swap in both directions: a field swap
-never shows in battle, and a battle swap never shows in the field.
+a directory of names inside it. The battle pickers sit in the same tab, in each
+character's block under their field picker, and edit that directory: pick a battle model
+for a character and that is the model they fight as. It is separate from the field swap
+in both directions: a field swap never shows in battle, and a battle swap never shows in
+the field.
 
 A pick rewrites the 9-byte name at each of the character's directory positions. The
 overlay is repacked and written back in place, and the write is refused if the repacked
@@ -376,7 +385,7 @@ A pick affects only the character picked: the character the model came from keep
 their own model, so two fighters can share one model. File numbers follow the
 field pattern: a base look is character id + 1 (`btl_pc001` is the Prince) and 2xx / 4xx
 numbers are extra looks for the character they follow. A few story characters have no
-entry in the directory, so they are not listed.
+entry in the directory; their block shows a note in place of a battle picker.
 
 Proven in game with a one-sided pick: only the Prince's entries were set to Roy's
 model. The Prince fought as Roy, Roy himself was unchanged, and the field models
