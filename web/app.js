@@ -1073,7 +1073,7 @@ function renderInv(i){
     if(entries.length < INV_CAPS[list])
       h += `<div style="padding:2px 0 8px"><button type="button" class="ghost" onclick="pickInvItem(${i},'${list}',${entries.length})">+ Add item…</button></div>`;
   }
-  h += `<div class="fnote" style="padding-bottom:8px">Removing an entry closes the gap, the way the game keeps the list. Trade goods and antiques carry a value set by the game (price paid, appraised value): kept when only the quantity changes, reset when the item is replaced.</div>`;
+  h += `<div class="fnote" style="padding-bottom:8px">${noteFold(`Removing an entry closes the gap, the way the game keeps the list.`, `Trade goods and antiques carry a value set by the game (price paid, appraised value): kept when only the quantity changes, reset when the item is replaced.`)}</div>`;
   box.innerHTML = h;
 }
 function invRow(i, list, e){
@@ -1381,7 +1381,7 @@ function renderChar(i){
     + numFld("sp", "SP", c.sp || 0, 0, 65535)
     + recruitToggleHTML(i, c)
     + `</div>`
-    + `<div class="fnote" style="margin:2px 16px 0">Checking this recruits the character; unchecking makes them not recruited. A character joins with the level, gear and skills already in their record. Nothing else in the record changes.</div>`
+    + `<div class="fnote" style="margin:2px 16px 0">${noteFold(`Checking this recruits the character; unchecking makes them not recruited.`, `A character joins with the level, gear and skills already in their record. Nothing else in the record changes.`)}</div>`
     + guideHTML(idx)
     + sub("Equipment")
     + `<div class="grid" style="grid-template-columns:150px;padding-top:8px">`
