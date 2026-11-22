@@ -364,8 +364,8 @@ by the original file number and do not follow a swap.
 **i** reads a model's skeleton straight off the disc (bone count, mesh sizes, animation
 count). Matching mesh sizes are the tell that two models are the same character redressed;
 bone count only describes a model, and a base model and its alternate differ on it for
-most of the cast. Cutscenes ship their own baked copies of the cast, so a swap shows
-while you walk around rather than in pre-rendered story scenes.
+most of the cast. Swaps also show in the game's event scenes, which use these same
+models; only the pre-rendered movie scenes are baked video and never change.
 
 ### Battle models
 

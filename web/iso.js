@@ -1839,8 +1839,9 @@ function modelLayoutHTML(fdata, bdata) {
       and combat plays normally with another character's model. Two files in
       <code>DATA.PAK</code>, <code>ec012c.rom</code> and <code>ec015c.rom</code>, have no
       name-table slot, so they cannot be picked, and a model's extra animation files stay
-      with the original file instead of following a swap. Cutscenes use their own copies of
-      the cast, so a swap shows while you walk around, not in pre-rendered story scenes.
+      with the original file instead of following a swap. Swaps also show in the game's
+      event scenes, which use these same models. Only the pre-rendered movie scenes are
+      baked video and never change.
       Some story characters have no battle model entry; their block says so instead of
       offering a picker.`)}</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="pairModels" ${paired}

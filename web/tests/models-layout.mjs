@@ -184,6 +184,9 @@ ok("the intro states the pairing default and the separation of the sets",
    && flat.includes("a field swap never shows in battle"));
 ok("the intro keeps the proven-in-game wording",
    flat.includes("proven in game"));
+ok("the intro states swaps reach event scenes and only the movies are baked",
+   flat.includes("Swaps also show in the game's event scenes")
+   && flat.includes("Only the pre-rendered movie scenes are baked video"));
 ok("the intro is folded: first sentence as the summary, the rest behind the expander",
    html.includes('<details class="fold"><summary>Every field and town model the engine can load')
    && html.includes('<div class="fold-rest">Field and battle are separate sets'));
