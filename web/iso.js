@@ -529,7 +529,7 @@ function renderCharTables(cid) {
   for (const [table, fields] of Object.entries(r.tables)) {
     const help = (isoMAPS.help || {})[table];
     h += `<div class="subhd">${esc(table)}</div>`;
-    if (help) h += `<div class="note" style="margin:0 14px">${esc(help)}</div>`;
+    if (help) h += `<div class="note" style="margin:0 14px">${noteFoldText(help)}</div>`;
     if (table === "equipable skills")   // B18 presets: fill the whole cap array at once
       h += `<div class="row" style="padding:0 14px"><span class="note">Presets:</span>
         <button class="ghost mini" onclick="charSkillPreset(${cid},7)">Max all (SS)</button>
@@ -541,14 +541,15 @@ function renderCharTables(cid) {
       // the read-only record labels before the editable bytes.
       const rec = r.weapon.record;
       const users = (rec.users || []).map(u => esc(u.name)).join(", ");
-      h += `<div class="note" style="margin:0 14px">Weapon record ${rec.id}`
-        + (rec.typeName ? ` · ${esc(rec.typeName)}` : "")
-        + (rec.stageNames && rec.stageNames.some(s => s)
-            ? ` · stages: ${rec.stageNames.map(s => esc(s || "?")).join(" / ")}` : "")
-        + `<br>Shared by: ${users || "no other character"} - editing this growth
-           changes every character with Weapon id ${rec.id}.
-           Range/class byte ${rec.rangeByte} and affinity index byte ${rec.indexByte}
-           are shown read-only (their gameplay meaning is unproven).</div>`;
+      h += `<div class="note" style="margin:0 14px">${noteFold(
+           `Weapon record ${rec.id}`
+           + (rec.typeName ? ` · ${esc(rec.typeName)}` : "")
+           + (rec.stageNames && rec.stageNames.some(s => s)
+               ? ` · stages: ${rec.stageNames.map(s => esc(s || "?")).join(" / ")}` : "")
+           + `<br>Shared by: ${users || "no other character"} - editing this growth
+              changes every character with Weapon id ${rec.id}.`,
+           `Range/class byte ${rec.rangeByte} and affinity index byte ${rec.indexByte}
+              are shown read-only (their gameplay meaning is unproven).`)}</div>`;
     }
     h += `<div class="grid" style="padding-top:8px">` + fields.map(f =>
       renderField(f, { view: "char", ident: JSON.stringify({ id: cid }), table,
@@ -556,10 +557,10 @@ function renderCharTables(cid) {
   }
   if (!("weapon growth" in r.tables))   // issue #22: Weapon id 0 = no record
     h += `<div class="subhd">weapon growth</div>
-      <div class="note" style="margin:0 14px">This character has no weapon record
+      <div class="note" style="margin:0 14px">${noteFold(`This character has no weapon record
       (Weapon id 0): it is a non-combat, support, or body-weapon unit, so there
-      is no growth curve to show or edit. Give it a Weapon id (1-81) under
-      starting equipment to attach one.</div>`;
+      is no growth curve to show or edit.`, `Give it a Weapon id (1-81) under
+      starting equipment to attach one.`)}</div>`;
   h += renderLoadoutSection(cid, name);
   $("isoCbody").innerHTML = h;
 }
@@ -593,13 +594,13 @@ function renderLoadoutSection(cid, name) {
   LO_ORIG = JSON.parse(JSON.stringify(lo));
   const armorNames = (slot, v) => nameFor(slot, v);
   let h = `<div class="subhd">starting loadout (new game)</div>
-    <div class="note" style="margin:0 14px">These tables are read when a new
+    <div class="note" style="margin:0 14px">${noteFold(`These tables are read when a new
     game starts. Existing saves hold their own copies and are not affected
-    by edits here.
-    Starts at level ${lo.level} with armor Head ${esc(armorNames("armorhead", lo.armor[0]))} /
+    by edits here.`,
+    `Starts at level ${lo.level} with armor Head ${esc(armorNames("armorhead", lo.armor[0]))} /
     Body ${esc(armorNames("armorbody", lo.armor[1]))} / Arm ${esc(armorNames("armorarm", lo.armor[2]))} /
     Feet ${esc(armorNames("armorfoot", lo.armor[3]))}. Level and armor are edited under
-    Starting equipment above (the same record).</div>`;
+    Starting equipment above (the same record).`)}</div>`;
   h += `<div class="grid" style="padding-top:8px">` + lo.runes.map((r, s) => {
     const lbl = { head: "Head", right: "Right hand", left: "Left hand" }[r.slot];
     return `<div class="fld"><label>Starting rune: ${lbl}</label><div class="in">
@@ -761,7 +762,7 @@ VIEW_RENDER.gear = async (body) => {
         <span class="pickbtn-name" id="isoGpickName">—</span>
         <span class="pickbtn-id note" id="isoGpickId"></span></button></div>
       <div class="fnote" id="isoGname"></div></div></div>
-    <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).gear||"")}</div>
+    <div class="fnote" style="margin:2px 16px">${noteFoldText((isoMAPS.help||{}).gear||"")}</div>
     <div id="isoGbody"></div>`;
   const loadSlot = async () => {
     const slot = $("isoGslot").value;
@@ -788,18 +789,18 @@ function renderGearReqs() {
   const r = JSON.parse(window.PYISO.gearreqs());
   if (r.error) { host.innerHTML = `<div class="subhd">Equip requirements</div><p class="bad">${esc(r.error)}</p>`; return; }
   host.innerHTML = `<div class="subhd">Equip requirements: Corruption Shell and Saint's Cloak</div>
-    <p class="note">These two body armors carry their equip requirements in the game code, not
-      in their item data. The Shell needs max HP and kills at or above its minimums. The Cloak
+    <p class="note">${noteFold(`These two body armors carry their equip requirements in the game code, not
+      in their item data.`, `The Shell needs max HP and kills at or above its minimums. The Cloak
       needs max HP at or above its minimum and kills at or below its maximum. The four values
       below are the code constants, so editing one changes the requirement for every character.
       Set a minimum to 0 to remove that check. The Code patches tab has one switch that removes
-      all four at once.</p>
+      all four at once.`)}</p>
     <div class="grid" style="padding-top:6px">` + r.fields.map(f =>
       renderField(f, { view: "gearreq", ident: JSON.stringify({ field: f.field }), key: `gearreq:${f.field}`,
         group: "Gear" })).join("") + `</div>
-    <div class="fnote" style="margin:2px 16px">Saint's Cloak maximum kills: a character with more
-      kills than this cannot equip it. Set it to 32766 to all but remove the limit.
-      Stock: Shell 350 max HP and 100 kills; Cloak 300 max HP and 30 kills.</div>`;
+    <div class="fnote" style="margin:2px 16px">${noteFold(`Saint's Cloak maximum kills: a character with more
+      kills than this cannot equip it.`, `Set it to 32766 to all but remove the limit.
+      Stock: Shell 350 max HP and 100 kills; Cloak 300 max HP and 30 kills.`)}</div>`;
 }
 const gearCur = {}, GEAR_LIST = {};
 function openGearPicker(){
@@ -865,9 +866,9 @@ VIEW_RENDER.sets = async (body) => {
   body.innerHTML = `<div class="row" style="padding:10px 16px 0"><span class="note">Set</span>
       <select id="isoSetSel">${d.sets.map(s=>`<option value="${s.index}">${esc(s.name)}</option>`).join("")}</select>
       <span class="note">${d.sets.length} sets</span></div>
-    <div class="fnote" style="margin:6px 16px">Wearing every listed piece on one character grants the
-      set bonus. The pieces, the bonus values and the effect itself are all editable, so you can
-      build custom sets. Bonus values match the Suikosource armor-set guide.</div>
+    <div class="fnote" style="margin:6px 16px">${noteFold(`Wearing every listed piece on one character grants the
+      set bonus.`, `The pieces, the bonus values and the effect itself are all editable, so you can
+      build custom sets. Bonus values match the Suikosource armor-set guide.`)}</div>
     <div id="isoSetBody"></div>`;
   $("isoSetSel").onchange = () => renderSet(+$("isoSetSel").value);
   // keep the user on the set they were editing across re-renders (effect / restriction
@@ -914,7 +915,7 @@ function renderSet(idx){
   h += `<div class="subhd">Set bonus</div>`;
   if (!eff.length) {
     h += `<div class="fnote" style="margin:0 16px 6px">${s.noop
-      ? "This set has no stat effect here. The game applies it elsewhere (for example Prosperity's potch doubling, Pale Moon's per-turn heal), so there is no value to edit. You can still give it a different effect below."
+      ? noteFoldText("This set has no stat effect here. The game applies it elsewhere (for example Prosperity's potch doubling, Pale Moon's per-turn heal), so there is no value to edit. You can still give it a different effect below.")
       : "No editable magnitudes decoded."}</div>`;
   } else {
     h += `<div class="grid" style="padding-top:6px">` + eff.map((e,i) => {
@@ -987,15 +988,16 @@ function renderSet(idx){
     const isCustom = s.handler === EFFTARGETS.customHandler;
     h += `<div class="subhd">Build a custom bonus
         <span class="note">add effects this set doesn't normally have</span></div>
-      <div class="fnote" style="margin:0 16px 4px">Assembled into free space on the disc, so this
-        <b>adds</b> effects rather than only retuning existing ones. Room for up to
+      ${isCustom ? `<div class="fnote" style="margin:0 16px 4px"><b>This set is currently using a custom bonus.</b></div>` : ""}
+      <div class="fnote" style="margin:0 16px 4px">${noteFold(`Assembled into free space on the disc, so this
+        <b>adds</b> effects rather than only retuning existing ones.`, `Room for up to
         <b>${cap.maxAdd}</b> "+" effects (or ${cap.maxSet} "=" effects). Targets marked
         <i>inferred</i> sit inside a verified block but aren't individually proven.
         <br>Numeric fields (HP, Attack, Critical % …) let you <b>increase by +</b> the
         character's current value or <b>force to =</b> a flat one. Element affinities are
         <b>ranks</b>, so those rows lock to "force to" and you pick the tier by name.
-        ${isCustom ? "<b>This set is currently using a custom bonus.</b> " : ""}Only one set can hold
-        a custom bonus at a time. They share the same code space.</div>
+        Only one set can hold
+        a custom bonus at a time. They share the same code space.`)}</div>
       <div id="cbRows" style="padding:0 16px"></div>
       <div class="row" style="padding:0 16px 12px">
         <button class="chip mini" onclick="cbAddRow()">+ Add effect</button>
@@ -1382,7 +1384,7 @@ VIEW_RENDER.patches = async (body) => {
           data-lbl="${esc(t.label)}" data-grp="${esc(t.group || "Code patches")}"
           onchange="onIsoField(this)">
           <span class="note">${stateNote(t)}</span></label>${REVERT_BTN}</div>
-        <div class="fnote">${esc(t.blurb || "")} ${esc(EFFECT_NOTE[t.effect] || "")}</div></div>`;
+        <div class="fnote">${noteFoldText(t.blurb || "")} ${esc(EFFECT_NOTE[t.effect] || "")}</div></div>`;
     }).join("") + (gname === "Dash tuning" ? dashFlds : "") + `</div>`).join("")
     + `<div class="fnote" style="margin:10px 14px 0">Every patch is one or two words, located by
       signature on this disc (NTSC-U and PAL alike), and fully reversible: switch it back off and
@@ -1399,7 +1401,7 @@ VIEW_RENDER.enemy = async (body) => {
   body.innerHTML = `<div id="isoDrPanel" style="padding:12px 14px 0"></div>
     <div class="row" style="padding:10px 14px 0"><span class="note">Enemy/unit</span>
       <select id="isoEsel">${list.map(e=>`<option value="${e.id}">${e.id}: ${esc(e.name)} (HP ${e.hp})</option>`).join("")}</select></div>
-    <div class="fnote" style="margin:2px 16px">${esc((isoMAPS.help||{}).enemy||"")}</div>
+    <div class="fnote" style="margin:2px 16px">${noteFoldText((isoMAPS.help||{}).enemy||"")}</div>
     <div id="isoEbody"></div>`;
   await ensureBatleStaged();   // the drop-rate panel reads the BATLE overlay, past the slice
   renderDropRates();
@@ -1412,12 +1414,12 @@ function renderDropRates() {
   if (r.error) { host.innerHTML = `<div class="subhd">Drop rates (global)</div><p class="bad">${esc(r.error)}</p>`; return; }
   const num = (id, v) => `<input type="number" id="${id}" value="${v}" min="0" max="99" step="1" style="width:64px">`;
   host.innerHTML = `<div class="subhd">Drop rates (global)</div>
-    <p class="note">Drop rates are constants in the battle code, not per-enemy data, so this panel is
-      <b>global</b>: one set of rates applies to every enemy. Slots 1 to 5 are the drop slots by position.
+    <p class="note">${noteFold(`Drop rates are constants in the battle code, not per-enemy data, so this panel is
+      <b>global</b>: one set of rates applies to every enemy.`, `Slots 1 to 5 are the drop slots by position.
       The Treasure Discovery support skill adds its rank bonus on top. The game caps every roll at
       99 percent. The dish rate is for each enemy's Food dish (Cook) slot: a dish is awarded only when
       the party's Cook skill is rank 6 or 7, and those two chances are set here too. The dish's stock
-      rate is 100, which the cap makes the same as 99 in play.</p>
+      rate is 100, which the cap makes the same as 99 in play.`)}</p>
     <div class="row">
       <label>Slot 1 % ${num("drS1", r.slots[0])}</label>
       <label>Slot 2 % ${num("drS2", r.slots[1])}</label>
@@ -1479,7 +1481,7 @@ function renderUnite(uid) {
   const u = (window._unites || []).find(x => x.id === uid); if (!u) return;
   const roster = JSON.parse(window.PYISO.chars()).chars || [];
   const list = roster.map(c => ({ id: c.id, name: c.name }));
-  let h = `<div class="subhd">${esc(u.name)}</div><div class="note" style="margin:0 14px">${esc(u.effect||"")}</div>
+  let h = `<div class="subhd">${esc(u.name)}</div><div class="note" style="margin:0 14px">${noteFoldText(u.effect||"")}</div>
     <div class="grid" style="padding-top:8px">`;
   h += u.members.map((m, slot) =>
     `<div class="fld"><label>Member ${slot+1}</label><div class="in">
@@ -1521,15 +1523,15 @@ VIEW_RENDER.mp = async (body) => {
 VIEW_RENDER.skillfx = async (body) => {
   const r = JSON.parse(window.PYISO.skillfx());
   let h = `<div style="padding:10px 14px 0">
-    <p class="note" style="margin:0 0 10px">Each row is <b>one sub-effect</b>, and a skill usually owns several:
-      <i>Defense</i> is rows 2-5 (Defense +, % Block, % Parry, % Weapon Defense). A <b>0 at E/D</b> means that
+    <p class="note" style="margin:0 0 10px">${noteFold(`Each row is <b>one sub-effect</b>, and a skill usually owns several:
+      <i>Defense</i> is rows 2-5 (Defense +, % Block, % Parry, % Weapon Defense).`, `A <b>0 at E/D</b> means that
       sub-effect does not unlock until C. The skill is still live at E through its other rows, which is why
       Defense + pays 3 there. Editing a 0 is a real change, not a no-op.
       <b>Read each row's scale off its own values</b>, not its name: rows in the 1xx range are 100-based
       (110 = 10%, so fill an empty E/D with 101-109), rows that climb from 0/2/5 are direct amounts
       (<i>Thief (% chance of success)</i> runs 0-50), and a few are literal counts
       (<i>Mow Down (number target)</i> is 1-4, and 65535 means every enemy).
-      This table is <b>global</b>: it applies to every unit with that skill, not one character.</p>
+      This table is <b>global</b>: it applies to every unit with that skill, not one character.`)}</p>
     <input class="pick-q" id="fxQ" type="search" placeholder="filter skill…" style="max-width:260px"></div>
     <div class="tablewrap"><table><thead><tr><th>#</th><th>Skill</th>${r.ranks.map(rk=>`<th>${rk}</th>`).join("")}</tr></thead><tbody id="fxBody">`;
   h += r.skills.map(s => `<tr data-name="${esc((s.name||"").toLowerCase())}"><td class="note">${s.id}</td><td>${esc(s.name)}</td>` +
@@ -1544,10 +1546,10 @@ VIEW_RENDER.skillfx = async (body) => {
 
 VIEW_RENDER.balance = async (body) => {
   body.innerHTML = `<div style="padding:14px">
-    <div class="note">${esc((isoMAPS.help||{}).stats||"")}</div>
+    <div class="note">${noteFoldText((isoMAPS.help||{}).stats||"")}</div>
     <div class="subhd" style="margin:12px 0 4px">Characters</div>
-    <p class="note">Scale every character's <b>starting stats</b> by a factor. The baseline is
-      remembered, so applying again does not compound. Applies to a new game.</p>
+    <p class="note">${noteFold(`Scale every character's <b>starting stats</b> by a factor.`, `The baseline is
+      remembered, so applying again does not compound. Applies to a new game.`)}</p>
     <div class="row">
       <label>Factor <input type="number" id="hmFactor" value="1.5" min="0.1" max="10" step="0.1" style="width:90px"></label>
       <button id="hmApply">Apply multiplier</button>
@@ -1556,9 +1558,9 @@ VIEW_RENDER.balance = async (body) => {
     <div id="hmMsg" class="note"></div>
 
     <div class="subhd" style="margin:22px 0 4px">Character growth</div>
-    <p class="note">Scale every character's <b>per-level growth</b> (what each stat gains on a level-up) by a
-      factor. The multiplier above changes only starting stats; this one changes only growth.
-      The baseline is remembered, so applying again does not compound. Applies to a new game.</p>
+    <p class="note">${noteFold(`Scale every character's <b>per-level growth</b> (what each stat gains on a level-up) by a
+      factor.`, `The multiplier above changes only starting stats; this one changes only growth.
+      The baseline is remembered, so applying again does not compound. Applies to a new game.`)}</p>
     <div class="row">
       <label>Factor <input type="number" id="gsFactor" value="1.5" min="0.1" max="10" step="0.1" style="width:90px"></label>
       <button id="gsApply">Apply multiplier</button>
@@ -1567,10 +1569,10 @@ VIEW_RENDER.balance = async (body) => {
     <div id="gsMsg" class="note"></div>
 
     <div class="subhd" style="margin:22px 0 4px">Enemies</div>
-    <p class="note">Scale every enemy's <b>combat stats</b>: HP, Attack, Technique, Accuracy, Magic, Evasion,
-      PDF, MDF, Speed, Luck. Potch, skill-point rewards, elemental affinities and item drops are left untouched.
+    <p class="note">${noteFold(`Scale every enemy's <b>combat stats</b>: HP, Attack, Technique, Accuracy, Magic, Evasion,
+      PDF, MDF, Speed, Luck.`, `Potch, skill-point rewards, elemental affinities and item drops are left untouched.
       HP takes its own multiplier, so you can make enemies tankier without making them hit harder. The baseline is
-      remembered, so applying again never compounds. Each stat holds 0 to 65535; anything past that is capped.</p>
+      remembered, so applying again never compounds. Each stat holds 0 to 65535; anything past that is capped.`)}</p>
     <div class="row">
       <label>Stats × <input type="number" id="esFactor" value="2" min="0.1" max="20" step="0.1" style="width:90px"></label>
       <label>HP × <input type="number" id="esHp" value="3" min="0.1" max="20" step="0.1" style="width:90px"></label>
@@ -1649,14 +1651,14 @@ VIEW_RENDER.csv = async (body) => {
   const opts = Object.entries(r.datasets || {})
     .map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
   body.innerHTML = `<div style="padding:14px">
-    <p class="note">Export a table as CSV, bulk-edit it in Excel / Sheets / LibreOffice, then import it back.
-      Only the cells you <b>changed</b> are written; blank and non-numeric cells are skipped. Keep the
+    <p class="note">${noteFold(`Export a table as CSV, bulk-edit it in Excel / Sheets / LibreOffice, then import it back.`,
+      `Only the cells you <b>changed</b> are written; blank and non-numeric cells are skipped. Keep the
       <code>id</code> column and the header row intact. The <code>name</code> column is there to read by
-      and is ignored on import.</p>
-    <p class="note">Every field is a fixed-width number, so a value that doesn't fit is capped at that field's
+      and is ignored on import.`)}</p>
+    <p class="note">${noteFold(`Every field is a fixed-width number, so a value that doesn't fit is capped at that field's
       maximum and listed in the report (enemy stats hold 0-65535, so tripling a 30,000 HP boss lands on 65535
-      instead of failing). For a straight across-the-board multiplier, the <b>Balance</b> tab is easier and
-      can be undone exactly.</p>
+      instead of failing).`, `For a straight across-the-board multiplier, the <b>Balance</b> tab is easier and
+      can be undone exactly.`)}</p>
     <div class="row">
       <label>Table <select id="csvDs">${opts}</select></label>
       <button id="csvExport">Export CSV</button>
@@ -1816,9 +1818,9 @@ function modelLayoutHTML(fdata, bdata) {
       + `</div>` : "";
   const paired = PAIR_MODELS ? "checked" : "", linked = MODEL_LINK ? "checked" : "",
         blinked = BATTLE_LINK ? "checked" : "";
-  return `<div class="fnote" style="margin:10px 16px">Every field and town model the engine can load, and
-      which file each one reads, with the same character's battle model beside it.
-      Field and battle are separate sets: combat loads its own model files
+  return `<div class="fnote" style="margin:10px 16px">${noteFold(`Every field and town model the engine can load, and
+      which file each one reads, with the same character's battle model beside it.`,
+      `Field and battle are separate sets: combat loads its own model files
       (<code>BTL_PCnnn.ROM</code> in <code>DATA.PAK</code>), so a field swap never shows in
       battle and a battle swap never shows in the field. Pick a different field file and
       that character walks around as that model; only a 4-byte pointer changes and nothing
@@ -1840,7 +1842,7 @@ function modelLayoutHTML(fdata, bdata) {
       with the original file instead of following a swap. Cutscenes use their own copies of
       the cast, so a swap shows while you walk around, not in pre-rendered story scenes.
       Some story characters have no battle model entry; their block says so instead of
-      offering a picker.</div>
+      offering a picker.`)}</div>
     <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="pairModels" ${paired}
       onchange="PAIR_MODELS = this.checked"> Set field and battle models together</label>
     <label class="chk"><input type="checkbox" id="modelLink" ${linked}
@@ -2016,10 +2018,10 @@ function b64bytes(b64) {
 
 let PAK_FILTER = "";
 VIEW_RENDER.assets = async (body) => {
-  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every asset packed into
-      <code>DATA.PAK</code>, the disc's 2.3 GB volume of about 7,700 files. It sits past the
+  body.innerHTML = `<div class="fnote" style="margin:10px 16px">${noteFold(`Every asset packed into
+      <code>DATA.PAK</code>, the disc's 2.3 GB volume of about 7,700 files.`, `It sits past the
       part of the disc the editor holds in memory, so files are read from your disc on demand.
-      Nothing is uploaded, and nothing here writes to the disc.</div>
+      Nothing is uploaded, and nothing here writes to the disc.`)}</div>
     <div class="row" style="padding:0 16px 6px">
       <button id="pakGo">Browse DATA.PAK</button>
       <input class="pick-q" id="pakQ" type="search" placeholder="filter path… (try FACE)" style="max-width:240px">
@@ -2120,14 +2122,14 @@ async function pakZip(i) {
  * dropped, so the list is complete. */
 VIEW_RENDER.changes = async (body) => {
   body.innerHTML = `<div style="padding:12px 16px">
-    <p class="note" style="text-transform:none;max-width:70ch">Compare the disc you have open
+    <p class="note" style="text-transform:none;max-width:70ch">${noteFold(`Compare the disc you have open
     (including any edits made in this session) against a pristine, unmodified copy of the
-    game. Every differing table field is listed with its old and new values. Changes in
+    game.`, `Every differing table field is listed with its old and new values. Changes in
     places no table covers (code patches, overlays) are shown as <b>Unmapped</b> hex rows
     rather than hidden. The base disc is read the same way the editor reads the open
     disc: its front slice plus the BATLE.ROM overlay region, so drop-rate edits are
     covered too. The comparison runs in the Python engine and can take a few
-    seconds on a large diff.</p>
+    seconds on a large diff.`)}</p>
     <div class="row" style="padding:8px 0">
       <button class="mini" id="chgPick">Choose pristine base ISO…</button>
       <span class="note" id="chgBaseName">no base chosen yet</span>
