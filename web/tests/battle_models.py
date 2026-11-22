@@ -127,6 +127,27 @@ for region, path in sorted(isos.items()):
         codec, dec, ok = P.rom_decode(raw)
         chk("%s repack round-trips" % region, ok and dec == img, codec)
 
+        # the container must also parse the way the game's loader reads
+        # it: the header word at +0x10 is the total container size
+        # (header + stream), equal to the directory size, and the
+        # stream is the rest of the file, decoding to the image with
+        # every stream byte consumed. (rom_decode above slices by the
+        # header word itself, so it cannot catch a wrong word; a
+        # stream-length word there leaves the game 0x40 bytes short
+        # and hangs the overlay load.)
+        total = int.from_bytes(raw[0x10:0x14], "little")
+        chk("%s repack header carries the total container size" % region,
+            total == ov2["size"] == len(raw), str(total))
+        if codec == "szl":
+            import s5rom
+            try:
+                gout, gconsumed = s5rom.lzss_decompress(
+                    raw[0x40:total], len(img))
+                gok = gout == img and gconsumed == total - 0x40
+            except Exception:
+                gok = False
+            chk("%s repack decodes the game way" % region, gok)
+
         r = json.loads(g["iso_setbattlemodel"](0, "", 1))
         chk("%s grouped reset ok" % region, r.get("ok") is True)
         chk("%s grouped reset restores the image byte-for-byte" % region,

@@ -911,7 +911,11 @@ def reinsert_overlay(iso, name, bin_path):
     else:  # bpe
         comp = _bpe_compress(edited)
     header[0x0C:0x10] = len(edited).to_bytes(4, "little")   # decSize (unchanged)
-    header[0x10:0x14] = len(comp).to_bytes(4, "little")     # compSize
+    header[0x10:0x14] = (0x40 + len(comp)).to_bytes(4, "little")
+    # +0x10 is the TOTAL container size (header + stream), as stock discs
+    # carry it and as the game's loader reads it. Writing the bare stream
+    # length here makes the loader read the container 0x40 bytes short,
+    # which truncates the stream and hangs the overlay load in game.
     container = bytes(header) + comp
     budget = ((ov["size"] + _SECT - 1) // _SECT) * _SECT     # sector-aligned slot
     if len(container) > budget:
@@ -2324,8 +2328,11 @@ def reset_model(iso, model_id):
 # 77th and 78th party entries. A character's battle model is the name at
 # their directory position; rewriting that one name re-skins them in battle
 # only. The directory sits at the same offsets, byte-identical, on PAL
-# discs. Proven in game with a two-way swap: the Prince's and Roy's names
-# exchanged, the Prince fought as Roy and the field stayed stock.
+# discs. Proven in game with a one-sided pick: only the Prince's entries
+# were set to Roy's model, the Prince fought as Roy, Roy himself was
+# unchanged, and the field stayed stock. Combat plays normally with
+# another character's model: the swapped character attacks, casts runes,
+# and finishes battles as usual.
 
 BATTLE_MODEL_DIR_OFF = 0x5E9A4
 BATTLE_MODEL_DIR_STRIDE = 16
