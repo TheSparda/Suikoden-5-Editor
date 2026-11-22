@@ -1739,65 +1739,129 @@ VIEW_RENDER.name = async (body) => {
 VIEW_RENDER.model = async (body) => {
   const r = JSON.parse(window.PYISO.models());
   if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  const rows = (r.models || []).filter(m => !m.placeholder), targets = r.targets || [];
-  const groups = [...new Set(targets.map(t => t.group))];
-  const label = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
-  // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
-  const opts = m => (targets.some(t => t.slot === m.slot) ? ""
-      : `<option value="${m.slot}" selected>${esc(m.file)}</option>`)
-    + groups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
-    .map(t => `<option value="${t.slot}" ${t.slot === m.slot ? "selected" : ""}>${esc(label(t))}</option>`).join("")
-    + `</optgroup>`).join("");
-  const linked = MODEL_LINK ? "checked" : "";
-  // The hero's looks sit at ids 2, 119 and 128 — far apart in id order — so they get their own
-  // block at the top instead of the player hunting three rows down a 128-row list.
-  const hero = (rows.find(m => m.id === 2) || {}).char;
-  const heroRows = hero ? rows.filter(m => m.char === hero) : [];
-  const otherRows = hero ? rows.filter(m => m.char !== hero) : rows;
-  const grid = (rs) => modelGrid(rs, opts);
-  body.innerHTML = `<div class="fnote" style="margin:10px 16px">Every field and town model the engine can load, and
-      which file each one reads. Pick a different file and that character walks around as that model.
-      Only a 4-byte pointer changes; nothing in <code>DATA.PAK</code> is touched. Model ids are
-      <b>character id + 2</b> (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx, 3xx and
-      4xx are extra looks for the <b>same person</b> that the game's scripts switch to for particular
-      scenes: the Prince and Georg have two extra each, and Lyon, Kyle, Zegai, Cathari, Gunde and
-      Miakis one. A character's looks move together by default. Swaps are proven in game. Two files
-      in <code>DATA.PAK</code>, <code>ec012c.rom</code> and <code>ec015c.rom</code>, have no name-table
-      slot, so they cannot be picked, and a model's extra animation files stay with the original
-      file instead of following a swap. Cutscenes use their own copies of the
-      cast, so a swap shows while you walk around, not in pre-rendered story scenes.
-      Battle is separate: combat loads its own model files, edited under
-      <b>Battle models</b> below, and a swap here does not change them.</div>
-    <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="modelLink" ${linked}
-      onchange="MODEL_LINK = this.checked"> keep a character's looks together</label></div>`
-    + `<div class="subhd">${esc(hero || "Hero")}: all ${heroRows.length} looks</div>`
-    + `<div class="fnote" style="margin:0 16px 4px">The game switches between these three looks by itself
-       as the story moves, so they are kept together here instead of scattered down the list by
-       model id.</div>`
-    + grid(heroRows)
-    + `<div class="subhd">Everyone else</div>` + grid(otherRows)
-    + `<div id="battleModels"></div>`
-    + `<div class="fnote" id="modelInfoOut" style="margin:0 16px 14px"></div>`;
-  await renderBattleModels();
+  await ensureBatleStaged();   // the battle directory sits in the overlay, past the front slice
+  let r2 = null;
+  try { r2 = JSON.parse(window.PYISO.battlemodels()); }
+  catch (e) { r2 = { error: String((e && e.message) || e) }; }
+  body.innerHTML = modelLayoutHTML(r, r2);
 };
-/* One row per model id. Split out so the hero's block and the rest render identically. */
-function modelGrid(rows, opts) {
-  return `<div class="grid" style="padding:0 16px 14px">` + rows.map(m => `<div class="fld">
-      <label>#${m.id} ${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
-      <div class="in"><select data-mid="${m.id}" onchange="onModelPick(this)">${opts(m)}</select>
+/* The tab as one layout: a block per character, one cell per look, and in
+ * each cell the character's field picker with their battle picker directly
+ * under it, because the two are separate model sets for the same people
+ * and moving between them is the common case. The hero's block comes
+ * first, then the cast in field order, then anyone battle has that the
+ * field does not. Rows that belong to no character (unnamed field slots,
+ * and the battle rows whose character has no name) trail in their own
+ * list. Pure composition over the two glue payloads, so the structure is
+ * testable without a disc: fdata is the models() payload, bdata the
+ * battlemodels() payload, or {error} when the overlay could not be read,
+ * in which case the battle rows are left out and the error shows instead. */
+function modelLayoutHTML(fdata, bdata) {
+  const rows = (fdata.models || []).filter(m => !m.placeholder), targets = fdata.targets || [];
+  const fgroups = [...new Set(targets.map(t => t.group))];
+  const flabel = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
+  // a row pointed somewhere the picker doesn't list (set by CLI) still shows what it loads
+  const fopts = m => (targets.some(t => t.slot === m.slot) ? ""
+      : `<option value="${m.slot}" selected>${esc(m.file)}</option>`)
+    + fgroups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
+    .map(t => `<option value="${t.slot}" ${t.slot === m.slot ? "selected" : ""}>${esc(flabel(t))}</option>`).join("")
+    + `</optgroup>`).join("");
+  const bOk = !!(bdata && !bdata.error);
+  const brows = bOk ? (bdata.models || []) : [], btargets = bOk ? (bdata.targets || []) : [];
+  const bgroups = [...new Set(btargets.map(t => t.group))];
+  const blabel = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
+  const bopts = m => (btargets.some(t => t.name === m.name) ? ""
+      : `<option value="${esc(m.name)}" selected>${esc(m.file)}</option>`)
+    + bgroups.map(g => `<optgroup label="${esc(g)}">` + btargets.filter(t => t.group === g)
+    .map(t => `<option value="${esc(t.name)}" ${t.name === m.name ? "selected" : ""}>${esc(blabel(t))}</option>`).join("")
+    + `</optgroup>`).join("");
+  const fieldRow = m => `<div class="in"><span class="syslab">Field</span><select data-mid="${m.id}" onchange="onModelPick(this)">${fopts(m)}</select>
       ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
         onclick="onModelReset(${m.id})" tabindex="-1">↺</button>` : ""}
       <button type="button" class="ghost mini" onclick="modelInfo('${esc(m.file)}')"
-        title="read this model's skeleton off the disc">i</button></div></div>`).join("") + `</div>`;
+        title="read this model's skeleton off the disc">i</button></div>`;
+  const noFieldRow = `<div class="in"><span class="syslab">Field</span><span class="sysnote">No field model</span></div>`;
+  const battleRow = m => `<div class="in"><span class="syslab">Battle</span><select data-bmid="${m.id}" onchange="onBattleModelPick(this)">${bopts(m)}</select>
+      ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
+        onclick="onBattleModelReset(${m.id})" tabindex="-1">↺</button>` : ""}</div>`;
+  const noBattleRow = `<div class="in"><span class="syslab">Battle</span><span class="sysnote">No battle model</span></div>`;
+  const hero = (rows.find(m => m.id === 2) || {}).char || "";
+  const order = [], seen = new Set();
+  const push = name => { if (name && !seen.has(name)) { seen.add(name); order.push(name); } };
+  push(hero); rows.forEach(m => push(m.char)); brows.forEach(m => push(m.char));
+  const block = name => {
+    const fl = rows.filter(m => m.char === name), bl = brows.filter(m => m.char === name);
+    const n = Math.max(fl.length, bl.length);
+    let cells = "";
+    for (let k = 0; k < n; k++) {
+      const bits = [];
+      if (fl[k]) bits.push("#" + fl[k].id);
+      if (n > 1) bits.push(`look ${k + 1} of ${n}`);
+      cells += `<div class="fld">` + (bits.length ? `<label>${bits.join(" · ")}</label>` : "")
+        + (fl[k] ? fieldRow(fl[k]) : noFieldRow)
+        + (bOk ? (bl[k] ? battleRow(bl[k]) : noBattleRow) : "")
+        + `</div>`;
+    }
+    return `<div class="subhd">${esc(name)}${n > 1 ? `: all ${n} looks` : ""}</div>`
+      + (name === hero && name ? `<div class="fnote" style="margin:0 16px 4px">The game switches between these three looks by itself
+       as the story moves, so they are kept together here instead of scattered down the list by
+       model id.</div>` : "")
+      + `<div class="grid" style="padding:0 16px 14px">${cells}</div>`;
+  };
+  const strayF = rows.filter(m => !m.char), strayB = brows.filter(m => !m.char);
+  const stray = (strayF.length || strayB.length)
+    ? `<div class="subhd">Models with no character</div><div class="grid" style="padding:0 16px 14px">`
+      + strayF.map(m => `<div class="fld"><label>#${m.id} ${esc(m.char || "—")}</label>${fieldRow(m)}</div>`).join("")
+      + strayB.map(m => `<div class="fld"><label>${esc(m.default_file)}</label>${battleRow(m)}</div>`).join("")
+      + `</div>` : "";
+  const paired = PAIR_MODELS ? "checked" : "", linked = MODEL_LINK ? "checked" : "",
+        blinked = BATTLE_LINK ? "checked" : "";
+  return `<div class="fnote" style="margin:10px 16px">Every field and town model the engine can load, and
+      which file each one reads, with the same character's battle model beside it.
+      Field and battle are separate sets: combat loads its own model files
+      (<code>BTL_PCnnn.ROM</code> in <code>DATA.PAK</code>), so a field swap never shows in
+      battle and a battle swap never shows in the field. Pick a different field file and
+      that character walks around as that model; only a 4-byte pointer changes and nothing
+      in <code>DATA.PAK</code> is touched. A battle pick changes only the name in the battle
+      code's directory; the overlay is rewritten in place and the write is refused if it
+      ever outgrows its slot. Picks set the field and battle models together by default:
+      pick Roy's field model for a character and their battle model becomes Roy's matching
+      battle look too, and the other way round. Untick <b>Set field and battle models
+      together</b> to change them separately. Model ids are <b>character id + 2</b>
+      (the Prince is #2 → <code>pc001c.rom</code>). Files numbered 2xx, 3xx and 4xx are
+      extra looks for the <b>same person</b> that the game's scripts switch to for
+      particular scenes: the Prince and Georg have two extra each, and Lyon, Kyle, Zegai,
+      Cathari, Gunde and Miakis one. A character's looks move together by default.
+      Both swaps are proven in game: a one-sided battle pick is proven too, the Prince was
+      set to Roy's battle model on its own, fought as Roy, and Roy himself was unchanged,
+      and combat plays normally with another character's model. Two files in
+      <code>DATA.PAK</code>, <code>ec012c.rom</code> and <code>ec015c.rom</code>, have no
+      name-table slot, so they cannot be picked, and a model's extra animation files stay
+      with the original file instead of following a swap. Cutscenes use their own copies of
+      the cast, so a swap shows while you walk around, not in pre-rendered story scenes.
+      Some story characters have no battle model entry; their block says so instead of
+      offering a picker.</div>
+    <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="pairModels" ${paired}
+      onchange="PAIR_MODELS = this.checked"> Set field and battle models together</label>
+    <label class="chk"><input type="checkbox" id="modelLink" ${linked}
+      onchange="MODEL_LINK = this.checked"> keep a character's looks together</label>
+    <label class="chk"><input type="checkbox" id="battleModelLink" ${blinked}
+      onchange="BATTLE_LINK = this.checked"> keep a character's battle looks together</label></div>`
+    + order.map(block).join("")
+    + (bOk ? "" : `<div class="subhd">Battle models</div>
+    <p class="bad" style="padding:0 16px">${esc((bdata && bdata.error) || "battle models unavailable")}</p>`)
+    + stray
+    + `<div class="fnote" id="modelInfoOut" style="margin:0 16px 14px"></div>`;
 }
 let MODEL_LINK = true;
+let PAIR_MODELS = true;
 /* The model view commits on its own: one pick can rewrite several pointers, so it writes,
  * mirrors every touched row into the edit list, then re-renders so the siblings show it.
  * Undo is byte-diffed against the previous snapshot, so the whole group is one step. */
 async function writeModels(id, slot) {
   spin(true);
   try {
-    const res = JSON.parse(window.PYISO.setmodel(id, slot, MODEL_LINK ? 1 : 0));
+    const res = JSON.parse(window.PYISO.setmodel(id, slot, MODEL_LINK ? 1 : 0, PAIR_MODELS ? 1 : 0));
     if (res.error) { toast("Write rejected: " + res.error, "bad"); return; }
     const rows = (JSON.parse(window.PYISO.models()).models) || [];
     (res.ids || []).forEach(i => {
@@ -1806,11 +1870,21 @@ async function writeModels(id, slot) {
                                             group: "Field models", to: m.file };
       else delete isoEdits[key];
     });
+    if ((res.battle_ids || []).length) {
+      const brows = (JSON.parse(window.PYISO.battlemodels()).models) || [];
+      res.battle_ids.forEach(i => {
+        const m = brows[i], key = "battlemodel:" + i;
+        if (m && m.changed) isoEdits[key] = { label: `Battle model ${m.char || "#" + i} (${m.default_file})`,
+                                              group: "Battle models", to: m.file };
+        else delete isoEdits[key];
+      });
+    }
     updateIsoToolbar();
     captureUndoStep();
     await VIEW_RENDER.model($("isoBody"));
     const n = (res.ids || []).length, who = rows[id] && rows[id].char;
     toast(n > 1 ? `${who}'s ${n} looks → ${rows[id].file}` : `Model #${id} → ${rows[id].file}`, "ok");
+    if (res.pair_error) toast("Paired battle write failed: " + res.pair_error, "bad");
   } catch (e) { toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
   finally { spin(false); }
 }
@@ -1833,61 +1907,20 @@ function onModelReset(id) { return writeModels(id, -1); }
 
 /* ---------------- Battle models ----------------
  * Combat loads its own model files (BTL_PCnnn.ROM), picked by a directory of
- * names inside the BATLE overlay, so this section is independent of the
- * field swap above: neither side's picks affect the other. The overlay sits
- * past the front slice, so it is staged on demand like the drop-rate panel.
- * A pick rewrites the overlay in place; the engine refuses if the repacked
- * overlay ever outgrows its sector slot. */
+ * names inside the BATLE overlay, so in the game the two systems never
+ * affect each other; the tab pairs them only as an editing convenience
+ * (PAIR_MODELS, on by default). The overlay sits past the front slice, so
+ * it is staged on demand like the drop-rate panel. A battle pick rewrites
+ * the overlay in place; the engine refuses if the repacked overlay ever
+ * outgrows its sector slot. */
 let BATTLE_LINK = true;
-async function renderBattleModels() {
-  const host = $("battleModels"); if (!host) return;
-  await ensureBatleStaged();
-  const r = JSON.parse(window.PYISO.battlemodels());
-  if (r.error) {
-    host.innerHTML = `<div class="subhd">Battle models</div>
-      <p class="bad" style="padding:0 16px">${esc(r.error)}</p>`;
-    return;
-  }
-  const rows = r.models || [], targets = r.targets || [];
-  const groups = [...new Set(targets.map(t => t.group))];
-  const label = t => `${t.file}${t.char ? " · " + t.char + (t.looks > 1 ? ` · look ${t.look} of ${t.looks}` : "") : ""}`;
-  const opts = m => (targets.some(t => t.name === m.name) ? ""
-      : `<option value="${esc(m.name)}" selected>${esc(m.file)}</option>`)
-    + groups.map(g => `<optgroup label="${esc(g)}">` + targets.filter(t => t.group === g)
-    .map(t => `<option value="${esc(t.name)}" ${t.name === m.name ? "selected" : ""}>${esc(label(t))}</option>`).join("")
-    + `</optgroup>`).join("");
-  const grid = (rs) => `<div class="grid" style="padding:0 16px 14px">` + rs.map(m => `<div class="fld">
-      <label>${esc(m.char || "—")}${m.looks > 1 ? " · look " + m.look + " of " + m.looks : ""}</label>
-      <div class="in"><select data-bmid="${m.id}" onchange="onBattleModelPick(this)">${opts(m)}</select>
-      ${m.changed ? `<button type="button" class="revert" title="Back to ${esc(m.default_file)}"
-        onclick="onBattleModelReset(${m.id})" tabindex="-1">↺</button>` : ""}</div></div>`).join("") + `</div>`;
-  const hero = (rows.find(m => m.char_id === 0) || {}).char;
-  const heroRows = hero ? rows.filter(m => m.char === hero) : [];
-  const otherRows = hero ? rows.filter(m => m.char !== hero) : rows;
-  const linked = BATTLE_LINK ? "checked" : "";
-  host.innerHTML = `<div class="subhd">Battle models</div>
-    <div class="fnote" style="margin:0 16px 4px">Battle uses its own model files
-      (<code>BTL_PCnnn.ROM</code> in <code>DATA.PAK</code>), chosen separately from the field
-      models above: a field swap never shows in battle, and a battle swap never shows in the
-      field. Pick each character's battle model here. Only the name in the battle code's
-      directory changes; the overlay is rewritten in place and the write is refused if it
-      ever outgrows its slot. A one-sided pick is proven in game: the Prince was set to
-      Roy's battle model on its own, fought as Roy, and Roy himself was unchanged.
-      Combat plays normally with another character's model. Some story characters have no battle model
-      entry, so they are not listed.</div>
-    <div class="row" style="padding:0 16px 6px"><label class="chk"><input type="checkbox" id="battleModelLink" ${linked}
-      onchange="BATTLE_LINK = this.checked"> keep a character's battle looks together</label></div>`
-    + (heroRows.length ? `<div class="fnote" style="margin:0 16px 4px">${esc(hero)}: all ${heroRows.length} battle looks</div>`
-      + grid(heroRows) : "")
-    + grid(otherRows);
-}
 /* Like the field view, a battle pick commits on its own: one pick can rewrite
  * several directory names, so it writes, mirrors every touched row into the
  * edit list, then re-renders so the siblings show it. */
 async function writeBattleModels(id, name) {
   spin(true);
   try {
-    const res = JSON.parse(window.PYISO.setbattlemodel(id, name, BATTLE_LINK ? 1 : 0));
+    const res = JSON.parse(window.PYISO.setbattlemodel(id, name, BATTLE_LINK ? 1 : 0, PAIR_MODELS ? 1 : 0));
     if (res.error) { toast("Write rejected: " + res.error, "bad"); return; }
     const rows = (JSON.parse(window.PYISO.battlemodels()).models) || [];
     (res.ids || []).forEach(i => {
@@ -1896,11 +1929,21 @@ async function writeBattleModels(id, name) {
                                             group: "Battle models", to: m.file };
       else delete isoEdits[key];
     });
+    if ((res.field_ids || []).length) {
+      const frows = (JSON.parse(window.PYISO.models()).models) || [];
+      res.field_ids.forEach(i => {
+        const m = frows[i], key = "model:" + i;
+        if (m && m.changed) isoEdits[key] = { label: `Model #${i} (${m.default_file})`,
+                                              group: "Field models", to: m.file };
+        else delete isoEdits[key];
+      });
+    }
     updateIsoToolbar();
     captureUndoStep();
-    await renderBattleModels();
+    await VIEW_RENDER.model($("isoBody"));
     const n = (res.ids || []).length, who = rows[id] && rows[id].char;
     toast(n > 1 ? `${who}'s ${n} battle looks → ${rows[id].file}` : `Battle model → ${rows[id].file}`, "ok");
+    if (res.pair_error) toast("Paired field write failed: " + res.pair_error, "bad");
   } catch (e) { toast("Write failed: " + (e.message || e), "bad"); console.error(e); }
   finally { spin(false); }
 }

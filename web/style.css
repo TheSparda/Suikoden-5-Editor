@@ -112,6 +112,8 @@ input[type=file]{display:none}
 .fnote{font-size:11px;color:var(--mut);opacity:.85;line-height:1.25}
 .fnote b{font-weight:600;color:var(--ink)}
 .fnote .dim{opacity:.65;font-style:italic}
+.fld .in .syslab{flex:0 0 auto;min-width:36px;font-size:11px;color:var(--mut)}
+.fld .in .sysnote{font-size:12px;color:var(--mut)}
 .fld.faded{opacity:.45}
 .fld.faded:focus-within,.fld.faded:hover{opacity:1}
 .pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--mut);
