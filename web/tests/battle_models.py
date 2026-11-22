@@ -5,8 +5,13 @@ from the lab report, a grouped set through the verbatim web glue moves the
 Prince's three rows and no other bytes in the overlay image, a one-sided
 set moves one row, the repack round-trips, the sector fit check refuses an
 incompressible repack, and a grouped reset restores the factory image
-byte-for-byte. Emits JSON for tests/battle-models.mjs. Skips cleanly
-without ISOs, like models_grouping.py.
+byte-for-byte. The pairing section pins the tab's default coupling: a
+paired pick through the glue writes the picked system and the counterpart
+rows of the other system, an unpaired pick writes only its own system,
+and an unpairable target (an ec file, or a look the other side does not
+have) still lands on the picked side alone. Emits JSON for
+tests/battle-models.mjs. Skips cleanly without ISOs, like
+models_grouping.py.
 """
 import glob, json, os, random, re, sys, tempfile
 
@@ -172,6 +177,119 @@ for region, path in sorted(isos.items()):
         json.loads(g["iso_setbattlemodel"](74, "", 0))
         chk("%s one-sided reset restores the image byte-for-byte" % region,
             image() == pristine)
+
+        # ---- pairing (the tab's default): a pick in one system also sets
+        # the other system's rows for the same character to the picked
+        # target's counterpart there (same character, same look number).
+        def ptr_bytes():
+            with open(tmp, "rb") as f:
+                f.seek(F.MODEL_PTR_BASE)
+                return f.read(4 * F.MODEL_PTR_COUNT)
+
+        def field_rows():
+            return json.loads(g["iso_models"]())["models"]
+
+        def brows_now():
+            return json.loads(g["iso_battlemodels"]())["models"]
+
+        before_ptr = ptr_bytes()
+
+        # grouped field pick on the Prince to Cathari pairs his battle rows
+        r = json.loads(g["iso_setmodel"](2, 20, 1, 1))
+        chk("%s paired field pick reports the battle group" % region,
+            r.get("ok") is True and r.get("battle_ids") == PRINCE
+            and not r.get("pair_error"), str(r))
+        pfr, pbr = field_rows(), brows_now()
+        chk("%s paired field pick moves the field group" % region,
+            all(pfr[i]["file"] == "pc020c.rom" and pfr[i]["changed"]
+                for i in (2, 119, 128)))
+        chk("%s paired field pick moves the battle group to Cathari" % region,
+            all(pbr[i]["name"] == "btl_pc020" and pbr[i]["changed"]
+                for i in PRINCE))
+        chk("%s paired field pick moves no other battle row" % region,
+            not any(x["changed"] for x in pbr if x["id"] not in PRINCE))
+        img = image()
+        diff = {i for i in range(len(img)) if img[i] != pristine[i]}
+        chk("%s paired field pick changes only the three battle entries" % region,
+            diff <= spans(*PRINCE), "%d bytes differ" % len(diff))
+        r = json.loads(g["iso_setmodel"](2, -1, 1, 1))
+        chk("%s paired reset restores both systems" % region,
+            r.get("ok") is True and ptr_bytes() == before_ptr
+            and image() == pristine)
+
+        # grouped battle pick on the Prince to Roy pairs his field rows
+        r = json.loads(g["iso_setbattlemodel"](0, "btl_pc107", 1, 1))
+        chk("%s paired battle pick reports the field group" % region,
+            r.get("ok") is True and r.get("field_ids") == [2, 119, 128]
+            and not r.get("pair_error"), str(r))
+        pfr, pbr = field_rows(), brows_now()
+        chk("%s paired battle pick moves the battle group" % region,
+            all(pbr[i]["name"] == "btl_pc107" and pbr[i]["changed"]
+                for i in PRINCE))
+        chk("%s paired battle pick moves the field group to Roy" % region,
+            all(pfr[i]["file"] == "pc107c.rom" and pfr[i]["changed"]
+                for i in (2, 119, 128)))
+        chk("%s paired battle pick moves no other field row" % region,
+            not any(x["changed"] for x in pfr if x["id"] not in (2, 119, 128)))
+        r = json.loads(g["iso_setbattlemodel"](0, "", 1, 1))
+        chk("%s paired battle reset restores both systems" % region,
+            r.get("ok") is True and ptr_bytes() == before_ptr
+            and image() == pristine)
+
+        # pairing off: only the picked system moves
+        r = json.loads(g["iso_setmodel"](2, 20, 1, 0))
+        chk("%s unpaired field pick leaves the battle image alone" % region,
+            r.get("ok") is True and not r.get("battle_ids")
+            and image() == pristine)
+        json.loads(g["iso_setmodel"](2, -1, 1, 0))
+        r = json.loads(g["iso_setbattlemodel"](0, "btl_pc107", 1, 0))
+        chk("%s unpaired battle pick leaves the field table alone" % region,
+            r.get("ok") is True and not r.get("field_ids")
+            and ptr_bytes() == before_ptr)
+        json.loads(g["iso_setbattlemodel"](0, "", 1, 0))
+        chk("%s unpaired resets restore both systems" % region,
+            ptr_bytes() == before_ptr and image() == pristine)
+
+        # a single paired pick pairs just the touched look
+        r = json.loads(g["iso_setmodel"](2, 20, 0, 1))
+        pbr = brows_now()
+        chk("%s single paired field pick pairs battle look 1 only" % region,
+            r.get("battle_ids") == [0] and pbr[0]["name"] == "btl_pc020"
+            and not any(x["changed"] for x in pbr if x["id"] != 0),
+            str(r.get("battle_ids")))
+        json.loads(g["iso_setmodel"](2, -1, 0, 1))
+        chk("%s single paired reset restores both systems" % region,
+            ptr_bytes() == before_ptr and image() == pristine)
+
+        # unpairable picks still land on the picked side alone: an ec
+        # target is not a character model, and Georg's third field look
+        # has no third battle look opposite it
+        ec = next(t["slot"] for t in json.loads(g["iso_models"]())["targets"]
+                  if t["group"] == "Other characters")
+        r = json.loads(g["iso_setmodel"](2, ec, 0, 1))
+        pfr = field_rows()
+        chk("%s paired pick of an ec target changes only the field row" % region,
+            r.get("ok") is True and not r.get("battle_ids")
+            and pfr[2]["changed"] and image() == pristine, str(r))
+        json.loads(g["iso_setmodel"](2, -1, 0, 1))
+        r = json.loads(g["iso_setmodel"](125, 20, 0, 1))
+        pfr = field_rows()
+        chk("%s paired pick past the battle look count changes only the field row"
+            % region,
+            r.get("ok") is True and not r.get("battle_ids")
+            and pfr[125]["changed"] and image() == pristine, str(r))
+        json.loads(g["iso_setmodel"](125, -1, 0, 1))
+        # and the other way: Roy's second battle look has no field look 2
+        r = json.loads(g["iso_setbattlemodel"](0, "btl_pc207", 0, 1))
+        pbr = brows_now()
+        chk("%s paired pick of Roy's second battle look changes only the battle row"
+            % region,
+            r.get("ok") is True and not r.get("field_ids")
+            and pbr[0]["name"] == "btl_pc207" and ptr_bytes() == before_ptr,
+            str(r))
+        json.loads(g["iso_setbattlemodel"](0, "", 0, 1))
+        chk("%s pairing checks leave both systems pristine" % region,
+            ptr_bytes() == before_ptr and image() == pristine)
 
         # guards: unknown names and rows are refused and change nothing
         chk("%s an unknown battle model refused" % region,

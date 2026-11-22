@@ -542,16 +542,102 @@ def iso_models():
         with P.Iso(ISO) as g:
             return json.dumps({"models": P.read_models(g), "targets": P.model_targets(g)})
     except Exception as e: return json.dumps({"error": str(e)})
-def iso_setmodel(mid, slot, group=0):
+
+# ---- Pairing: the Field models tab sets the two systems together by
+# default. A pick in one system also sets the other system's rows for the
+# same character to the picked target's counterpart there (same character,
+# same look number, as both pickers label them). Pairing never blocks a
+# pick: when nothing pairs (the target is not a character model, or the
+# counterpart look does not exist on the other side) the picked side
+# still lands and the other side is left as it was.
+def _pair_char_id(file):
+    """The character id a field model file belongs to, from its number:
+    pcNNNc is character NNN-1, and a 2xx/3xx/4xx number is an extra look
+    for the character whose base number it follows (pc401c is the Prince,
+    id 0). Mirrors s5patch._model_owner's numbering. None for files that
+    are not character models (the ec files, the placeholder)."""
+    f = (file or "").lower()
+    if len(f) == 10 and f[:2] == "pc" and f[5:] == "c.rom" and f[2:5].isdigit():
+        n = int(f[2:5])
+        return (n % 100 if n >= 200 else n) - 1
+    return None
+
+def _paired_battle_changes(g, mid, slot, grouped):
+    """The battle half of a paired field pick, as {battle row: name}. The
+    picked row's character is set to the picked target's battle
+    counterpart on every battle look the pick covers: for a grouped pick,
+    every battle look that has a grouped field look opposite it; for a
+    single pick, the battle look with the picked row's own look number.
+    A reset pairs with a reset of those same rows. Empty when nothing
+    pairs."""
+    frows = P.read_models(g)
+    if not 0 <= mid < len(frows): return {}
+    src = frows[mid]
+    cid = _pair_char_id(src["default_file"])
+    if cid is None: return {}
+    brows = P.read_battle_models(g)
+    mine = [r for r in brows if r["char_id"] == cid]
+    if grouped: mirror = [r for r in mine if r["look"] <= src["looks"]]
+    else: mirror = [r for r in mine if r["look"] == src["look"]]
+    if not mirror: return {}
+    if slot < 0:
+        return {r["id"]: r["default_name"] for r in mirror}
+    tf = next((t for t in P.model_targets(g) if t["slot"] == slot), None)
+    if tf is None: return {}
+    tid = _pair_char_id(tf["file"])
+    if tid is None: return {}
+    tb = next((t for t in P.battle_model_targets(g)
+               if t["char_id"] == tid and t["look"] == tf["look"]), None)
+    if tb is None: return {}
+    return {r["id"]: tb["name"] for r in mirror}
+
+def _paired_field_plan(g, mid, name, grouped):
+    """The field half of a paired battle pick, as [(model id, slot)] with
+    -1 for a reset. The mirror of _paired_battle_changes: the picked
+    row's character is set to the picked target's field counterpart on
+    every field look the pick covers. Empty when nothing pairs."""
+    brows = P.read_battle_models(g)
+    if not 0 <= mid < len(brows): return []
+    src = brows[mid]
+    frows = P.read_models(g)
+    mine = [r for r in frows
+            if _pair_char_id(r["default_file"]) == src["char_id"]]
+    if grouped: mirror = [r for r in mine if r["look"] <= src["looks"]]
+    else: mirror = [r for r in mine if r["look"] == src["look"]]
+    if not mirror: return []
+    if name == "":
+        return [(r["id"], -1) for r in mirror]
+    tb = next((t for t in P.battle_model_targets(g) if t["name"] == name), None)
+    if tb is None: return []
+    tf = next((t for t in P.model_targets(g)
+               if _pair_char_id(t["file"]) == tb["char_id"]
+               and t["look"] == tb["look"]), None)
+    if tf is None: return []
+    return [(r["id"], tf["slot"]) for r in mirror]
+
+def iso_setmodel(mid, slot, group=0, pair=0):
     try:
         mid = int(mid); slot = int(slot)
+        changes, pair_error = {}, ""
         with P.Iso(ISO) as g:
             ids = P.model_group(g, mid) if int(group) else [mid]
+            if int(pair):
+                try: changes = _paired_battle_changes(g, mid, slot, int(group))
+                except Exception as e: pair_error = str(e)
         with P.Iso(ISO, writable=True) as g:
             for i in ids:
                 if slot < 0: P.reset_model(g, i)
                 else: P.set_model(g, i, slot)
-        return json.dumps({"ok": True, "ids": ids})
+        battle_ids = []
+        if changes:
+            try:
+                with P.Iso(ISO, writable=True) as g:
+                    P.write_battle_models(g, changes)
+                battle_ids = sorted(changes)
+            except Exception as e:
+                pair_error = str(e)
+        return json.dumps({"ok": True, "ids": ids, "battle_ids": battle_ids,
+                           "pair_error": pair_error})
     except Exception as e: return json.dumps({"error": str(e)})
 
 # ---- Battle models: the name directory in the BATLE overlay (see s5patch.write_battle_models).
@@ -561,16 +647,31 @@ def iso_battlemodels():
         with P.Iso(ISO) as g:
             return json.dumps({"models": P.read_battle_models(g), "targets": P.battle_model_targets(g)})
     except Exception as e: return json.dumps({"error": str(e)})
-def iso_setbattlemodel(mid, name, group=0):
+def iso_setbattlemodel(mid, name, group=0, pair=0):
     try:
         mid = int(mid)
+        plan, pair_error = [], ""
         with P.Iso(ISO) as g:
             ids = P.battle_model_group(g, mid) if int(group) else [mid]
             rows = P.read_battle_models(g)
+            if int(pair):
+                try: plan = _paired_field_plan(g, mid, name, int(group))
+                except Exception as e: pair_error = str(e)
         changes = {i: (rows[i]["default_name"] if name == "" else name) for i in ids}
         with P.Iso(ISO, writable=True) as g:
             P.write_battle_models(g, changes)
-        return json.dumps({"ok": True, "ids": ids})
+        field_ids = []
+        if plan:
+            try:
+                with P.Iso(ISO, writable=True) as g:
+                    for i, s in plan:
+                        if s < 0: P.reset_model(g, i)
+                        else: P.set_model(g, i, s)
+                field_ids = sorted(i for i, _s in plan)
+            except Exception as e:
+                pair_error = str(e)
+        return json.dumps({"ok": True, "ids": ids, "field_ids": field_ids,
+                           "pair_error": pair_error})
     except Exception as e: return json.dumps({"error": str(e)})
 
 # ---- Equipment sets (membership + bonus magnitudes + effect assignment + piece text)
