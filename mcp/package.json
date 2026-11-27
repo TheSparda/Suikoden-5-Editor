@@ -1,0 +1,1 @@
+{"description":"Local MCP server for the Suikoden V Editor. The server itself is Python (mcp/server.py, standard library only); this file only describes the small Node bridge (mcp/xdelta_bridge.mjs) that runs web/vcdiff.js for .xdelta exports. There are no dependencies to install.","name":"suikoden-5-editor-mcp","private":true,"type":"module","version":"1.0.0"}
