@@ -20,6 +20,7 @@ const SHELL = [
   "./", "./index.html", "./style.css",
   "./diff-core.js", "./common.js", "./app.js", "./iso.js",
   "./health-core.js", "./vcdiff.js",
+  "./crest.webp", "./crest-sil.webp", "./fret.svg",
   "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png",
   // Reused, unchanged from the desktop editor — single source of truth.
