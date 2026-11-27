@@ -17,7 +17,7 @@ copy.
 > frozen build lives at the `v1.20.7` tag. The web editor is the only version now. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.26.0**.
+Current release: **v1.27.0**.
 
 > 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md): what every
 > editable value means, its scale and its limits, table by table, plus the ISO offsets if
