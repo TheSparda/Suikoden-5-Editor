@@ -47,7 +47,6 @@ const ISO_VIEWS = [
   { id: "sets",     label: "Sets" },
   { id: "spell",    label: "Spells" },
   { id: "rune",     label: "Runes" },
-  { id: "passive",  label: "Passives" },
   { id: "patches",  label: "Code patches" },
   { id: "runeprice",label: "Rune prices" },
   { id: "healprice",label: "Heal prices" },
@@ -64,13 +63,13 @@ const ISO_VIEWS = [
   { id: "ref",      label: "Reference" },
 ];
 
-/* The 20 views in four groups, for the rail tree (desktop) and the chip strip
+/* The 19 views in four groups, for the rail tree (desktop) and the chip strip
  * (small screens): one nav markup serves both, the group wrappers collapse
  * away in strip mode (docs/TWO_PANE_WORKSPACE.md). */
 const ISO_VIEW_GROUPS = [
   ["Roster", ["char", "name", "model"]],
   ["Items and Economy", ["gear", "sets", "runeprice", "healprice", "csv"]],
-  ["Combat", ["spell", "rune", "passive", "enemy", "unite", "mp", "skillfx", "balance"]],
+  ["Combat", ["spell", "rune", "enemy", "unite", "mp", "skillfx", "balance"]],
   ["System", ["patches", "assets", "changes", "ref"]],
 ];
 const ISO_VIEW_GROUP_OF = {};
@@ -90,13 +89,16 @@ const GICONS = {
  * isoEdits keys name their writing path before the first colon; this table
  * maps each prefix to the one ISO view that path belongs to. Imports (recipe
  * and xdelta) have no reliable view and are deliberately absent: they surface
- * as a dirty dot on Changes, never as an invented count. */
+ * as a dirty dot on Changes, never as an invented count. The same goes for a
+ * stale runealways key left in a journal from before v1.27.0, when the
+ * Passives view wrote the rune gates; those edits are registry toggles now
+ * and count to Code patches when made from there. */
 const EDIT_VIEW_BY_PREFIX = {
   char: "char", name: "name", model: "model", battlemodel: "model",
   gear: "gear", gearname: "gear", gearreq: "gear",
   setdesc: "sets", setbonus: "sets", setgate: "sets", sethandler: "sets", customset: "sets",
   runeprice: "runeprice", healprice: "healprice", csv: "csv",
-  spell: "spell", rune: "rune", runealways: "passive",
+  spell: "spell", rune: "rune",
   enemy: "enemy", droprates: "enemy", unite: "unite", mp: "mp", skillfx: "skillfx",
   enemyscale: "balance", balance: "balance", growthscale: "balance",
   toggle: "patches", dashmul: "patches",
@@ -445,6 +447,7 @@ function renderTabs() {
 }
 let curView = null;
 async function selectView(id) {
+  if (!VIEW_RENDER[id]) id = "char";   // a stale id (the removed Passives view, say) lands on a real view
   curView = id;
   qa("#isoTabs .chip").forEach(t => {
     const on = t.dataset.view === id;
@@ -621,11 +624,6 @@ function afterIsoWrite(view, ident, el) {
   }
   // reassigning a set's effect changes which magnitudes exist -> re-render the panel
   if (view === "sethandler") { try { VIEW_RENDER.sets($("isoBody")); } catch (_) {} }
-  if (view === "runealways") {
-    const lbl = el && el.nextElementSibling;   // the specific row's caption, not the first one
-    if (lbl) lbl.innerHTML = el.checked ? "<b>On</b>: always active, no rune needed"
-                                        : "Off: only works while equipped";
-  }
   if (view === "toggle") {
     const lbl = el && el.nextElementSibling;
     if (lbl) lbl.innerHTML = el.checked ? "<b>On</b>" : "Off";
@@ -662,8 +660,6 @@ async function applyIsoWrite(el, value) {
     else if (view === "setdesc") res = window.PYISO.setdesc(el.dataset.slot, +el.dataset.statid, value);
     else if (view === "gearname") res = window.PYISO.setgearname(el.dataset.slot, +el.dataset.gid, value);
     else if (view === "setgate") res = window.PYISO.setgate(+el.dataset.setidx, value ? 1 : 0, +el.dataset.word || 0);
-    else if (view === "runealways") res = window.PYISO.setrunealways(+el.dataset.rid, value ? 1 : 0,
-      JSON.stringify(RUNE_GATE_WORDS[el.dataset.rid] || {}));
     else if (view === "toggle") res = window.PYISO.settoggle(el.dataset.tid, value ? 1 : 0,
       JSON.stringify(TOGGLE_ORIGINALS[el.dataset.tid] || {}));
     const r = JSON.parse(res);
@@ -1428,86 +1424,11 @@ function rowFor(view, p, cols) {
       data-field="${c.field}" data-kind="num" data-orig="${p[c.field]}" data-lbl="${esc(nm+" "+c.label)}" data-grp="${esc(c.group)}"
       onchange="onIsoField(this)" style="width:100px">${REVERT_BTN}</td>`).join("") + `</tr>`;
 }
-/* ---- Passive runes: force a rune's field effect on without equipping it ----------
- * Each of these runes gates its effect behind "is it equipped AND is its flag set".
- * Both checks branch to the same "inactive" label, so NOPing the pair leaves only the
- * active path — the effect applies permanently, party-wide, with the rune slot free.
- * RUNE_GATE_WORDS remembers the original instructions so ↺ / disable can put them back. */
-const RUNE_GATE_WORDS = {};
-VIEW_RENDER.passive = async (body) => {
-  const r = JSON.parse(window.PYISO.runealways());
-  if (r.error) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(r.error)}</p>`; return; }
-  const runes = r.runes || [];
-  for (const x of runes) {
-    if (x.allForced) continue;                   // don't overwrite a remembered original with zeros
-    RUNE_GATE_WORDS[x.runeId] = Object.fromEntries(x.sites.map(s => [s.vaddr, [s.word1, s.word2]]));
-  }
-  /* Blurbs are the disc's own English descriptions, read out of the rune description pool
-   * (0x669000+, five languages per rune, English first) and cross-checked against the rune
-   * name pool (0x664000+) — all 21 names in the id 73-92 band match s5_rune_ids.json exactly,
-   * so the alignment across these ids is solid rather than inferred.
-   *
-   * Deliberately NOT here: Raven Rune (83, "100%% evasion of direct attacks in dungeons")
-   * would be a great pick but has no canonical gate, so it can't be forced. Firefly (62) is
-   * "Bull's Eye status: Become target of foes" — a battle effect, not an encounter one. */
-  const GROUPS = [
-    { title: "Random encounters",
-      note: `The game's only two encounter-rate runes. Champion's brings fewer, weaker enemies.
-             Great Firefly brings more, which is what you want for grinding.`,
-      runes: { 79: "fewer encounters: suppresses weak enemies",
-               80: "more encounters" } },
-    /* Reported broken in-game (issues #18, #20), and the disc agrees. Each of these has one
-     * canonical gate, in the resolver, and its active path only stores a code into
-     * 16348($gp), which the script VM reads. The actual bonuses are applied elsewhere:
-     * Fortune has a second, non-canonical hasRune check at 0x436548, and Prosperity and
-     * Godspeed have no other hasRune caller at all. Kept (not removed) so a disc that was
-     * already patched can still be switched back off. */
-    { title: "Party perks (not working)",
-      note: `<b>These do not work.</b> The toggle bypasses the rune's check, but only the
-             check the game's event scripts read. The bonuses themselves (battle EXP,
-             Potch, movement speed, escape) are applied somewhere else. Players have
-             confirmed no effect in game. If you turned one on, turn it off to restore
-             the disc.`,
-      runes: { 77: "NOT working: meant to give 2x experience; no effect in battle",
-               78: "NOT working: meant to double Potch after battle; no effect",
-               82: "NOT working: meant to give 2x field speed and 100% escape; no effect" } },
-  ];
-  // The disc's name field is 16 bytes, so rune 80 stores the truncated "Great Firefly Rn".
-  const FULL_NAME = { 80: "Great Firefly Rune" };
-
-  const missing = GROUPS.flatMap(g => Object.keys(g.runes).map(Number))
-    .filter(id => !runes.some(x => x.runeId === id));
-  if (missing.length) {
-    body.innerHTML = `<p class="bad" style="padding:14px">Expected runes ${missing.join(", ")} in
-      this disc's rune table and didn't find them. This build only supports NTSC-U.</p>`;
-    return;
-  }
-
-  body.innerHTML = GROUPS.map(g => `<div class="subhd">${g.title}</div>
-    <div class="note" style="margin:0 14px 6px">${g.note}</div>
-    <div class="grid" style="padding-top:0">` + Object.keys(g.runes).map(Number).map(id => {
-      const x = runes.find(v => v.runeId === id);
-      return `<div class="fld"><label>${esc(FULL_NAME[id] || x.name)}</label><div class="in">
-        <label class="chk"><input type="checkbox" ${x.allForced ? "checked" : ""}
-          data-key="runealways:${id}" data-view="runealways" data-rid="${id}"
-          data-kind="num" data-orig="${x.allForced ? 1 : 0}"
-          data-lbl="${esc(FULL_NAME[id] || x.name)} · always on" data-grp="Passives"
-          onchange="onIsoField(this)">
-          <span class="note">${x.allForced ? "<b>On</b>: always active, no rune needed"
-                                           : "Off: only works while equipped"}</span></label>${REVERT_BTN}</div>
-        <div class="fnote">${g.runes[id]} · rune #${id}</div></div>`;
-    }).join("") + `</div>`).join("")
-    + `<div class="fnote" style="margin:10px 14px 0">Each toggle removes the rune's equip check
-      and is fully reversible: switch it back off and the disc is byte-identical. The check is
-      bypassed and nothing else on the disc changes. The encounter runes' effects have not been
-      tested in game. The party perks above do not work.</div>`;
-};
-
 /* ---- Code patches: the s5toggles registry, one checkbox per toggle ----------
  * The registry locates every site by signature on the actual disc and refuses
- * foreign bytes; gate toggles (the not-working perks) need their displaced
+ * foreign bytes; gate toggles (the five rune perks) need their displaced
  * originals back to restore, so an off toggle's span bytes are remembered here
- * at render time, the RUNE_GATE_WORDS pattern. The five CT-survey toggles are
+ * at render time in TOGGLE_ORIGINALS. The five CT-survey toggles are
  * self-restoring and do not need them. */
 const TOGGLE_ORIGINALS = {};
 VIEW_RENDER.patches = async (body) => {

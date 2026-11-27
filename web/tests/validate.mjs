@@ -201,28 +201,28 @@ ok("NG+ descriptions warn about the carry-over reset (#18)",
    && fs.readFileSync(path.join(web, "..", "README.md"), "utf8").includes(ngWarn)
    && fs.readFileSync(path.join(web, "..", "docs", "editing-guide.md"), "utf8").includes(ngWarn));
 
-// 3b) Passives tab: exposes the verified passive runes, correctly labelled
-ok("iso.js registers the Passives tab",
-   /id:\s*"passive",\s*label:\s*"Passives"/.test(isoSrc) && isoSrc.includes("VIEW_RENDER.passive"));
-ok("iso.js can force a rune always on", isoSrc.includes('view === "runealways"'));
-const grpM = isoSrc.match(/const GROUPS = \[([\s\S]*?)\n  \];/);
-ok("passive groups are defined", !!grpM);
-const gsrc = grpM ? grpM[1] : "";
-// Verified against the disc's own description pool (names cross-checked id 73-92).
-ok("Champion's 79 = fewer encounters", /79:\s*"fewer encounters/.test(gsrc));
-ok("Great Firefly 80 = more encounters", /80:\s*"more encounters/.test(gsrc));
-// Fortune/Prosperity/Godspeed only reach the script-facing resolver gate; players confirmed
-// no in-game effect (#18, #20). They must stay labelled as not working until that changes.
-for (const [id, nm] of [[77, "Fortune"], [78, "Prosperity"], [82, "Godspeed"]])
-  ok(`${nm} ${id} is labelled as not working`, new RegExp(`${id}:\\s*"NOT working`).test(gsrc));
-ok("party-perk group says it doesn't work", /Party perks \(not working\)/.test(gsrc));
-ok("Firefly 62 is not offered (it is Bull's Eye, not an encounter rune)", !/\b62\s*:/.test(gsrc));
-ok("Raven 83 is not offered (it has no forceable gate)", !/\b83\s*:/.test(gsrc));
-ok("checkbox caption states the mode, not a requirement",
-   isoSrc.includes("Off: only works while equipped") && isoSrc.includes("always active, no rune needed"));
-ok("tab bails out rather than half-render", isoSrc.includes("missing.length"));
-ok("glue exposes the always-on adapters",
-   appSrc.includes("def iso_runealways") && appSrc.includes("def iso_setrunealways"));
+// 3b) Rune perks: the Passives view was merged into Code patches in v1.27.0.
+// The five rune always-on toggles live in the s5toggles registry now; the old
+// view, its bridge adapters and its engine writers are gone, and the registry
+// carries the labels (the three perks stay "not working", #18/#20).
+ok("iso.js no longer registers a Passives view",
+   !/id:\\s*"passive"/.test(isoSrc) && !isoSrc.includes("VIEW_RENDER.passive")
+   && !isoSrc.includes("RUNE_GATE_WORDS"));
+ok("glue no longer exposes the always-on adapters",
+   !appSrc.includes("def iso_runealways") && !appSrc.includes("def iso_setrunealways"));
+const togglesSrc = fs.readFileSync(path.join(web, "..", "Editor", "s5toggles.py"), "utf8");
+ok("registry holds the five rune perks in one group",
+   (togglesSrc.match(/"group": "Rune perks: always on"/g) || []).length === 5
+   && togglesSrc.includes('"id": "champions-always"') && togglesSrc.includes('"id": "firefly-always"')
+   && togglesSrc.includes("_gate_sites(79)") && togglesSrc.includes("_gate_sites(80)"));
+ok("the three perks keep their not-working labels in the registry",
+   ["fortune-always", "prosperity-always", "godspeed-always"].every(id =>
+     new RegExp(`"id": "${id}", "label": "[^"]*not working in game`).test(togglesSrc)));
+ok("Champion's and Great Firefly blurbs carry the untested honesty note",
+   (togglesSrc.match(/encounter effect itself has not been tested in game/g) || []).length === 2);
+ok("engine no longer carries the removed rune-always writers",
+   !fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def read_rune_always_on")
+   && !fs.readFileSync(path.join(web, "..", "Editor", "s5patch.py"), "utf8").includes("def write_rune_always_on"));
 ok("engine keeps the gate scan inside the resolver",
    /RUNE_GATE_LO\s*=\s*0x253C00/.test(fieldsSrc) && /RUNE_GATE_HI\s*=\s*0x255D00/.test(fieldsSrc));
 

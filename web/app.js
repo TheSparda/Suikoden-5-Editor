@@ -143,7 +143,6 @@ function isoGlueHandles(){
     sets:g("iso_sets"), setmember:g("iso_setmember"), setbonus:g("iso_setbonus"),
     sethandler:g("iso_sethandler"), setdesc:g("iso_setdesc"), accnames:g("iso_accnames"),
     setgate:g("iso_setgate"), setgatechar:g("iso_setgatechar"),
-    runealways:g("iso_runealways"), setrunealways:g("iso_setrunealways"),
     toggles:g("iso_toggles"), settoggle:g("iso_settoggle"),
     effecttargets:g("iso_effecttargets"), customsetbonus:g("iso_customsetbonus"),
     exportmod:g("iso_exportmod"), importmod:g("iso_importmod"), modstatus:g("iso_modstatus"),
@@ -729,16 +728,6 @@ def iso_setgate(idx, enabled, original_word):
         with P.Iso(ISO, writable=True) as g:
             return json.dumps(P.write_set_gate(g, int(idx), bool(int(enabled)),
                                                int(original_word) if original_word else None))
-    except Exception as e: return json.dumps({"error": str(e)})
-def iso_runealways():
-    try:
-        with P.Iso(ISO) as g: return json.dumps(P.read_rune_always_on(g))
-    except Exception as e: return json.dumps({"error": str(e)})
-def iso_setrunealways(rid, enabled, originals_json):
-    try:
-        with P.Iso(ISO, writable=True) as g:
-            orig = json.loads(originals_json) if originals_json else None
-            return json.dumps(P.write_rune_always_on(g, int(rid), bool(int(enabled)), orig))
     except Exception as e: return json.dumps({"error": str(e)})
 def iso_gearreqs():
     try:

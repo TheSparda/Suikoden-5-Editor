@@ -1865,48 +1865,6 @@ def _rune_gate_sites(iso):
                     "word1": b1, "word2": b2, "forced": forced})
     return out
 
-def read_rune_always_on(iso):
-    """Runes whose effect can be forced permanently on, grouped by rune."""
-    try: names = F.res_json("s5_rune_ids.json")
-    except Exception: names = []
-    by = {}
-    for g in _rune_gate_sites(iso):
-        rid = g["runeId"]
-        e = by.setdefault(rid, {"runeId": rid,
-                                "name": names[rid] if rid < len(names) else "Rune %d" % rid,
-                                "sites": [], "forced": 0})
-        e["sites"].append(g)
-        if g["forced"]: e["forced"] += 1
-    out = []
-    for rid in sorted(by):
-        e = by[rid]
-        e["siteCount"] = len(e["sites"])
-        e["allForced"] = e["forced"] == len(e["sites"])
-        out.append(e)
-    return {"runes": out, "hasRuneFn": F.RUNE_HAS_FN}
-
-def write_rune_always_on(iso, rune_id, enabled, originals=None):
-    """Force (or restore) a rune's effect so it applies without the rune equipped.
-    Enabling NOPs both gate branches at every canonical site for that rune; disabling
-    restores the original instruction words supplied by the caller."""
-    sites = [g for g in _rune_gate_sites(iso) if g["runeId"] == int(rune_id)]
-    if not sites: raise KeyError("rune %s has no forceable gate" % rune_id)
-    if enabled:
-        for g in sites:
-            iso.wu(g["off1"], 4, 0); iso.wu(g["off2"], 4, 0)
-        return {"ok": True, "runeId": int(rune_id), "sites": len(sites), "forced": True}
-    if not originals: raise ValueError("restoring needs the original instruction words")
-    orig = {int(k): v for k, v in (originals or {}).items()}
-    n = 0
-    for g in sites:
-        pair = orig.get(g["vaddr"])
-        if not pair: continue
-        iso.wu(g["off1"], 4, int(pair[0]) & 0xFFFFFFFF)
-        iso.wu(g["off2"], 4, int(pair[1]) & 0xFFFFFFFF)
-        n += 1
-    if not n: raise ValueError("no original instructions matched this rune's sites")
-    return {"ok": True, "runeId": int(rune_id), "sites": n, "forced": False}
-
 _DAWN_RE = None
 
 def _dawn_pattern():

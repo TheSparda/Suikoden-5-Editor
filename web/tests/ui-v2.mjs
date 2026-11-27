@@ -89,7 +89,9 @@ ok("Roster group is Characters, Char names, Field models",
 ok("Items and Economy group", JSON.stringify(groupOf["Items and Economy"]) ===
   JSON.stringify(["gear", "sets", "runeprice", "healprice", "csv"]));
 ok("Combat group", JSON.stringify(groupOf["Combat"]) ===
-  JSON.stringify(["spell", "rune", "passive", "enemy", "unite", "mp", "skillfx", "balance"]));
+  JSON.stringify(["spell", "rune", "enemy", "unite", "mp", "skillfx", "balance"]));
+ok("nineteen ISO views after the Passives merge", VIEWS.length === 19, `${VIEWS.length}`);
+ok("no passive view remains", !VIEWS.some(v => v.id === "passive") && !isoSrc.includes("VIEW_RENDER.passive"));
 ok("System group", JSON.stringify(groupOf["System"]) ===
   JSON.stringify(["patches", "assets", "changes", "ref"]));
 
@@ -105,7 +107,9 @@ const count = (edits) => vm.runInContext(`isoViewCounts(${JSON.stringify(edits)}
 ok("char field counts to Characters", count({ "char:0:stats:HP": {} }).counts.char === 1);
 ok("battle model counts to Field models", count({ "battlemodel:3": {} }).counts.model === 1);
 ok("drop rates count to Enemies", count({ "droprates": {} }).counts.enemy === 1);
-ok("rune-always counts to Passives", count({ "runealways:82": {} }).counts.passive === 1);
+ok("a registry toggle counts to Code patches", count({ "toggle:champions-always": {} }).counts.patches === 1);
+ok("a stale runealways key from a pre-merge journal is a dot, never a count",
+  (() => { const r = count({ "runealways:82": {} }); return r.dot === true && Object.keys(r.counts).length === 0; })());
 ok("dash multiplier counts to Code patches", count({ "dashmul:speed": {} }).counts.patches === 1);
 ok("csv import counts to Excel / CSV", count({ "csv:characters": {} }).counts.csv === 1);
 ok("imported recipe is a dot, never a count", (() => { const r = count({ "imported": {} }); return r.dot === true && Object.keys(r.counts).length === 0; })());

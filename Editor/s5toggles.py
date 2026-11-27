@@ -113,8 +113,8 @@ def _dawn_sites(iso):
     cur = iso.rd(s["off"], 4)
     w = struct.unpack("<I", cur)[0]
     # Any forced count (FORCE|1..4) is the on state, not just this
-    # toggle's own count of 4: the Passives tab's finer control must not
-    # read as foreign bytes.
+    # toggle's own count of 4: a disc patched by another tool to a
+    # different forced count must not read as foreign bytes.
     shape = ("off" if cur == stock else
              "on" if (w & 0xFFFF0000) == F.DAWN_FORCE_WORD else "foreign")
     return [{"label": "Dawn Rune spell-count word @0x%X" % s["off"],
