@@ -119,7 +119,7 @@ check("the editable region is the parsed ELF span",
       d["editableRegion"] == {"start": "0xad900", "end": "0xa91980"},
       str(d["editableRegion"]))
 err, txt, d = call("iso_list_views")
-check("iso_list_views returns all 20 views", len(d["views"]) == 20)
+check("iso_list_views returns all 19 views", len(d["views"]) == 19)
 err, txt, d = call("iso_describe_view", {"view": "char"})
 check("iso_describe_view char exposes the stats table",
       "HP" in d["tables"]["stats"])
@@ -148,8 +148,8 @@ check("an unknown field is refused in plain words", err and "Nope" in txt)
 # ---- toggles ---------------------------------------------------------------------
 print("Code patches toggles:")
 err, txt, d = call("iso_list_toggles")
-check("iso_list_toggles lists the registry (12 toggles, all off)",
-      len(d["toggles"]) == 12 and all(t["state"] == "off" for t in d["toggles"]),
+check("iso_list_toggles lists the registry (14 toggles, all off)",
+      len(d["toggles"]) == 14 and all(t["state"] == "off" for t in d["toggles"]),
       ",".join(t["id"] for t in d["toggles"]))
 err, txt, d = call("iso_set_toggle", {"toggle": "sig-skills-normal", "on": True})
 check("iso_set_toggle stages a toggle on", not err and d["on"] is True)

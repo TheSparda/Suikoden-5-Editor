@@ -97,7 +97,7 @@ ISO:
 | Tool | Purpose |
 | --- | --- |
 | `iso_open` | Open an ISO (copied to the work area, region verified by the engine) |
-| `iso_list_views` | The editor's 20 views, parsed from `web/iso.js`, with record-editing marks |
+| `iso_list_views` | The editor's 19 views, parsed from `web/iso.js`, with record-editing marks |
 | `iso_describe_view` | A record view's editable fields, from the `s5fields` registries |
 | `iso_list_records` | Records of a view (characters, gear, sets, spells, runes, prices, enemies, unites, MP growth, skill effects, char names, field models) |
 | `iso_get_field` / `iso_set_field` | Read or stage one field of one record (Characters takes a `table` argument, Gear a `slot` argument) |
