@@ -17,20 +17,26 @@ Suikoden IV editor's ISO toggles):
     word is a constant) restore from the registry alone. Gate toggles
     (the rune always-on gates) have per-site stock bytes (branch words
     differ per call site), so apply() returns the originals it displaced
-    and restore requires them back, the same contract
-    s5patch.write_rune_always_on already uses; the web editor keeps them
+    and restore requires them back; the web editor keeps them
     in its mod journal, the CLI prints them as JSON.
 
 Registered toggles are honest about their in-game effect. The Dawn Rune
-unlock is proven (its mechanism is documented in s5fields). The three
-perk always-on toggles (Fortune, Prosperity, Godspeed) are registered
+unlock is proven (its mechanism is documented in s5fields). Five rune
+always-on toggles sit in the "Rune perks: always on" group. Three of
+them (Fortune, Prosperity, Godspeed) are registered
 with effect "not-working": the lab proved their gates feed only a
 script-VM condition resolver that battle code never consumes
 (ps2-re games/suikoden5/PASSIVES_CATHARI.md), and the reward-path trace
 (ps2-re games/suikoden5/BATLE_REWARDS.md) found no statically provable
 patch point that would make them work. They are in the registry so a
 disc already patched with them can be verified and restored exactly,
-not as a recommendation to apply them.
+not as a recommendation to apply them. The other two are the encounter
+runes, Champion's and Great Firefly, with effect "code-verified":
+their gate sites and mechanism were checked against the game code,
+but the encounter effects themselves have not been tested in game.
+Until v1.26.0 these five were also offered by a separate Passives
+view writing the same gates through its own engine path; the registry
+is now the only surface, so the two can never disagree.
 
 The five CT-survey toggles (training SP x2, train-to-SS, forge x2) are
 the community cheat table's code patches with their sites located by
@@ -409,22 +415,38 @@ TOGGLES = [
      "blurb": "Gives the Dawn Rune all four spells from the start of "
               "the game.",
      "find": _dawn_sites, "self_restoring": True},
+    {"id": "champions-always", "label": "Champion's Rune always-on",
+     "group": "Rune perks: always on", "effect": "code-verified",
+     "blurb": "Removes the rune's equip check so its encounter effect "
+              "applies with no rune equipped: fewer random encounters, "
+              "and weak enemies are suppressed. The gate sites and the "
+              "mechanism were checked against the game code; the "
+              "encounter effect itself has not been tested in game.",
+     "find": _gate_sites(79), "self_restoring": False},
+    {"id": "firefly-always", "label": "Great Firefly Rune always-on",
+     "group": "Rune perks: always on", "effect": "code-verified",
+     "blurb": "Removes the rune's equip check so its encounter effect "
+              "applies with no rune equipped: more random encounters, "
+              "which is what you want for grinding. The gate sites and "
+              "the mechanism were checked against the game code; the "
+              "encounter effect itself has not been tested in game.",
+     "find": _gate_sites(80), "self_restoring": False},
     {"id": "fortune-always", "label": "Fortune always-on (not working in game)",
-     "group": "Code patches", "effect": "not-working",
+     "group": "Rune perks: always on", "effect": "not-working",
      "blurb": "Does not work: the gates this removes feed a script "
               "check that battle rewards never use. Listed so a disc "
               "already patched with it can be checked and restored "
               "exactly.",
      "find": _gate_sites(77), "self_restoring": False},
     {"id": "prosperity-always", "label": "Prosperity always-on (not working in game)",
-     "group": "Code patches", "effect": "not-working",
+     "group": "Rune perks: always on", "effect": "not-working",
      "blurb": "Does not work: the gates this removes feed a script "
               "check that battle rewards never use. Listed so a disc "
               "already patched with it can be checked and restored "
               "exactly.",
      "find": _gate_sites(78), "self_restoring": False},
     {"id": "godspeed-always", "label": "Godspeed always-on (not working in game)",
-     "group": "Code patches", "effect": "not-working",
+     "group": "Rune perks: always on", "effect": "not-working",
      "blurb": "Does not work: the gates this removes feed a script "
               "check that movement and escape code never use. Listed "
               "so a disc already patched with it can be checked and "

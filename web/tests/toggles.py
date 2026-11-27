@@ -53,8 +53,9 @@ def file_bytes():
 
 with P.Iso(tmp, writable=True) as g:
     sts = {s["id"]: s for s in T.list_toggles(g)}
-    chk("registry holds the twelve toggles",
-        set(sts) == {"dawn-unlock", "fortune-always", "prosperity-always",
+    chk("registry holds the fourteen toggles",
+        set(sts) == {"dawn-unlock", "champions-always", "firefly-always",
+                     "fortune-always", "prosperity-always",
                      "godspeed-always", "godspeed-dash", "training-sp-free",
                      "training-sp-gain", "train-ss-rank", "forge-once-max",
                      "smith-forge-max", "sig-skills-normal",
@@ -64,6 +65,20 @@ with P.Iso(tmp, writable=True) as g:
         sts["dawn-unlock"]["effect"] == "proven"
         and all(sts[k]["effect"] == "not-working"
                 for k in ("fortune-always", "prosperity-always", "godspeed-always")))
+    chk("all five rune perks sit in the Rune perks group; the encounter "
+        "runes are code-verified",
+        all(sts[k]["group"] == "Rune perks: always on"
+            for k in ("champions-always", "firefly-always", "fortune-always",
+                      "prosperity-always", "godspeed-always"))
+        and sts["champions-always"]["effect"] == "code-verified"
+        and sts["firefly-always"]["effect"] == "code-verified")
+    chk("gate sites are found for Champion's (79) and Great Firefly (80)",
+        len(sts["champions-always"]["sites"]) >= 1
+        and len(sts["firefly-always"]["sites"]) >= 1
+        and sts["champions-always"]["state"] == "off"
+        and sts["firefly-always"]["state"] == "off",
+        "%d / %d sites" % (len(sts["champions-always"]["sites"]),
+                           len(sts["firefly-always"]["sites"])))
     chk("everything is off on a pristine disc",
         all(s["state"] == "off" for s in sts.values()),
         ", ".join("%s=%s" % (k, v["state"]) for k, v in sts.items()))
@@ -72,7 +87,8 @@ with P.Iso(tmp, writable=True) as g:
     # The framework's gate scan must agree with s5patch's own finder.
     agree = True
     for tid, rid in (("fortune-always", 77), ("prosperity-always", 78),
-                     ("godspeed-always", 82)):
+                     ("godspeed-always", 82), ("champions-always", 79),
+                     ("firefly-always", 80)):
         theirs = [x for x in P._rune_gate_sites(g) if x["runeId"] == rid]
         if len(theirs) != len(sts[tid]["sites"]):
             agree = False
@@ -101,6 +117,22 @@ with P.Iso(tmp, writable=True) as g:
     T.set_toggle(g, "fortune-always", False, r["originals"])
     chk("fortune reads off after restore",
         T.toggle_status(g, "fortune-always")["state"] == "off")
+
+    # Champion's: the same gate contract for a new registry toggle.
+    nspans = sum(len(s["spans"]) for s in sts["champions-always"]["sites"])
+    r = T.set_toggle(g, "champions-always", True)
+    chk("champions apply NOPs both branch words of every gate",
+        r["changed"] == nspans, "changed %d of %d" % (r["changed"], nspans))
+    chk("champions reads on after apply",
+        T.toggle_status(g, "champions-always")["state"] == "on")
+    try:
+        T.set_toggle(g, "champions-always", False)
+        chk("champions restore without originals refuses", False, "no error")
+    except ValueError:
+        chk("champions restore without originals refuses", True)
+    T.set_toggle(g, "champions-always", False, r["originals"])
+    chk("champions reads off after restore",
+        T.toggle_status(g, "champions-always")["state"] == "off")
 
     # CT-survey toggles: signature-located, one word each, at the offsets
     # the disassembly proof established for NTSC-U.
@@ -257,6 +289,21 @@ with P.Iso(tmp, writable=True) as g:
     except ValueError:
         chk("apply over a half-patched gate refuses", True)
     chk("the refused gate apply wrote nothing", g.rd(0, len(pristine)) == before)
+    g.wu(spans[0]["off"], 4, orig_word)   # repair
+
+    # Half-patched Champion's gate: NOP only one branch word.
+    spans = T._gate_scan(g, 79)[0]["spans"]
+    orig_word = g.ru(spans[0]["off"], 4)
+    g.wu(spans[0]["off"], 4, 0)
+    chk("a half-patched champions gate reads as foreign",
+        T.toggle_status(g, "champions-always")["state"] == "foreign")
+    before = g.rd(0, len(pristine))
+    try:
+        T.set_toggle(g, "champions-always", True)
+        chk("apply over a half-patched champions gate refuses", False, "no error")
+    except ValueError:
+        chk("apply over a half-patched champions gate refuses", True)
+    chk("the refused champions apply wrote nothing", g.rd(0, len(pristine)) == before)
     g.wu(spans[0]["off"], 4, orig_word)   # repair
 
     # A CT toggle's span word corrupted to neither stock nor patched:
@@ -421,5 +468,42 @@ if pal_iso:
             chk("PAL apply/restore cycle leaves the file byte-identical",
                 f.read() == pristine2)
     os.remove(tmp2)
+
+# --- Recipe back-compat -------------------------------------------------------
+# Recipes (.s5mod) store raw byte runs ({off, old, new}), never edit keys,
+# so a recipe exported by v1.26.0 or earlier, when the Passives view wrote
+# Champion's gate NOPs through its own engine path, must still land after
+# the merge: the same bytes at the same offsets, and the registry toggle
+# (which reads its state from the disc bytes) must read on afterwards.
+tmp3 = os.path.join(tempfile.gettempdir(), "s5_toggles_recipe_test.bin")
+with open(tmp3, "wb") as o:
+    o.write(pristine)
+if P.set_region_for(tmp3) == "ntsc-u":
+    import s5fields as F
+    with P.Iso(tmp3) as g:
+        serial = g.rd(F.SERIAL_OFF, len(F.SERIAL_STR)).decode("latin1", "replace")
+        scan = T._gate_scan(g, 79)
+        gate_offs = sorted(sp["off"] for s in P._rune_gate_sites(g)
+                           if s["runeId"] == 79
+                           for sp in ({"off": s["off1"]}, {"off": s["off2"]}))
+    patches = [{"off": sp["off"], "old": sp["cur"].hex(), "new": "00000000"}
+               for s in scan for sp in s["spans"]]
+    chk("the synthetic old-format recipe covers exactly the gate spans",
+        sorted(p["off"] for p in patches) == gate_offs,
+        "%d runs" % len(patches))
+    r = P.apply_mod(tmp3, {"format": "s5mod", "version": 1, "serial": serial,
+                           "note": "web editor", "patchCount": len(patches),
+                           "patches": patches}, make_backup=False)
+    chk("the old-format recipe applies with no mismatched runs",
+        r["mismatchedRuns"] == 0 and r["patchCount"] == len(patches)
+        and r["appliedBytes"] == 4 * len(patches), str(r))
+    with P.Iso(tmp3) as g:
+        chk("after the recipe, champions-always reads on in the registry",
+            T.toggle_status(g, "champions-always")["state"] == "on")
+        chk("after the recipe, the other rune perks stay off",
+            all(T.toggle_status(g, k)["state"] == "off"
+                for k in ("firefly-always", "fortune-always",
+                          "prosperity-always", "godspeed-always")))
+    os.remove(tmp3)
 
 print(json.dumps({"checks": checks}))
