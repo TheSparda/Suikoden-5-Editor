@@ -78,7 +78,7 @@ def _load_views():
     if not m:
         raise RuntimeError("could not find ISO_VIEWS in web/iso.js")
     return [{"id": vid, "label": label}
-            for vid, label in re.findall(r'\{ id: "(\w+)",\s+label: "([^"]+)" \}', m.group(1))]
+            for vid, label in re.findall(r'\{ id: "(\w+)",\s*label: "([^"]+)" \}', m.group(1))]
 
 
 VIEWS = _load_views()
@@ -978,7 +978,7 @@ def t_save_open(a):
         save = {"name": os.path.basename(p), "sourcePath": p,
                 "sourceHash": sha256_file(p), "format": "individual",
                 "individual": True, "folder": None, "saves": [s],
-                "index": 0, "staged": {}}
+                "index": 0, "staged": {}, "work": work}
         chosen = s
     else:
         saves = SV.read_all_saves(work)
@@ -994,7 +994,7 @@ def t_save_open(a):
                 "sourceHash": sha256_file(p),
                 "format": SV._sniff_format(work), "individual": False,
                 "folder": chosen.get("folder"), "saves": saves,
-                "index": index, "staged": {}}
+                "index": index, "staged": {}, "work": work}
     flds = chosen.get("fields") or {}
     return {"opened": save["name"], "format": save["format"],
             "saveCount": len(save["saves"]),
