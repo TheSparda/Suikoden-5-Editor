@@ -17,7 +17,7 @@ copy.
 > frozen build lives at the `v1.20.7` tag. The web editor is the only version now. See
 > [The desktop editor](#the-desktop-editor-retired).
 
-Current release: **v1.25.1**.
+Current release: **v2.0.0**.
 
 > 📖 **Field reference:** [`docs/editing-guide.md`](docs/editing-guide.md): what every
 > editable value means, its scale and its limits, table by table, plus the ISO offsets if
@@ -495,7 +495,13 @@ guesses a byte layout.
 - **Save in place** through the File System Access API after a permission prompt, with a
   transparent **download** fallback, and **Web Share** in and out on Android (share a save
   into the installed app, share the edited copy back out).
-- **Two themes**: Falena Twilight and Sun Rune, mobile-first and safe-area aware.
+- **Two-pane workspace on wide screens**: at 1024px and up the ISO editor's views sit in a
+  left rail, grouped as Roster, Items and Economy, Combat and System, each showing its
+  staged-edit count, with the disc identity and session actions in a panel at the rail
+  foot. Narrower screens keep the chip strip, and on small screens the ISO toolbar
+  collapses to a bottom strip with an Actions sheet. See `docs/TWO_PANE_WORKSPACE.md`.
+- **Two themes**: Falena Twilight and Sun Rune, chosen in the header, mobile-first and
+  safe-area aware. A first visit follows the system light or dark preference.
 - **PWA and offline**: installable, with a network-first service worker that keeps returning
   users on the latest deploy yet still opens offline. The pinned Pyodide runtime is cached
   once, same-origin fetches revalidate, and every script and style URL carries a
