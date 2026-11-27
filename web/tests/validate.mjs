@@ -154,7 +154,7 @@ ok("app.js loads the save-space rune names", appSrc.includes("s5_rune_save_ids.j
   const swSrc = fs.readFileSync(path.join(web, "sw.js"), "utf8");
   ok("sw.js precaches health-core.js", swSrc.includes('"./health-core.js"'));
   ok("sw.js precaches vcdiff.js", swSrc.includes('"./vcdiff.js"'));
-  ok("sw.js cache name bumped with the v2.0.0 version bump",
+  ok("sw.js cache name bumped with the v1.26.0 version bump",
      swSrc.includes('const CACHE = "s5editor-v44"'));
 }
 

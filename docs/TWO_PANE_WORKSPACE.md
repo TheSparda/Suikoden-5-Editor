@@ -1,6 +1,6 @@
-# Two-pane workspace and v2.0 UI: spec
+# Two-pane workspace and UI overhaul: spec
 
-Status: approved direction (Kevin, 2026-11-27), built as v2.0.0, local only until he says ship.
+Status: approved direction (Kevin, 2026-11-27), built as v1.26.0, a local test build until he says ship.
 Origin: the Suikoden III editor got this treatment first (its spec lives in that repo as
 docs/TWO_PANE_WORKSPACE.md): 23 views in one clipping chip strip, no grouping, no per-view
 dirty markers, session actions scattered, and a 900px column wasting desktop width. Kevin
@@ -166,7 +166,7 @@ existing service-worker reset). The success flow and the update prompt are untou
 ## Preserved behaviour
 
 Boot flow, undo/redo, staged vs saved separation, the paired model pickers, PWA and
-service worker behaviour (network-first shell, cache-first Pyodide). Version v2.0.0,
+service worker behaviour (network-first shell, cache-first Pyodide). Version v1.26.0,
 service worker cache s5editor-v44.
 
 ## Verification

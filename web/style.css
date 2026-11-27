@@ -288,7 +288,7 @@ footer .note{flex-basis:100%;color:var(--mut);font-size:12px}
 .capnote{font-variant-numeric:tabular-nums}
 .capnote.at-cap{color:var(--warn);font-weight:600}
 
-/* ===== v2.0: crest, fretwork, header theme switch ==========================
+/* ===== v1.26: crest, fretwork, header theme switch ==========================
    Art: the Sun Rune crest (crest.webp, original art drawn for this editor,
    see docs/TWO_PANE_WORKSPACE.md) and an original SVG fretwork tile. */
 .crest { width:34px; height:34px; object-fit:contain; flex:none; }
@@ -313,7 +313,7 @@ button.primary { background:var(--sel); color:var(--sel-ink); border-color:var(-
 /* The Save button glows while unsaved changes exist. */
 #isoSaveBtn.hot { box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 0 16px 3px var(--focusring); }
 
-/* ===== v2.0: boot panel ====================================================
+/* ===== v1.26: boot panel ====================================================
    The boot card as a dialogue-style panel over the dawn backdrop (lazy CSS
    background, never precached). The panel stays readable in both themes. */
 .boot-panel { position:relative; overflow:hidden; text-align:center; }
@@ -332,7 +332,7 @@ body.light .boot-panel::before { opacity:.22; }
   margin-top:4px; overflow-wrap:anywhere; }
 .boot-panel .row { justify-content:center; }
 
-/* ===== v2.0: two-pane workspace (docs/TWO_PANE_WORKSPACE.md) ==============
+/* ===== v1.26: two-pane workspace (docs/TWO_PANE_WORKSPACE.md) ==============
    Desktop: a left rail holds the grouped view tree and, pinned at its foot,
    the session panel. Below the breakpoint the rail vanishes and the same
    nodes live in the card. One DOM, relocated by iso.js placeChrome(). */
@@ -381,7 +381,7 @@ body.light .boot-panel::before { opacity:.22; }
   .iso-rail .toolbar button { justify-content:center; }
 }
 
-/* ===== v2.0: view temperature and the Runes watermark ===================== */
+/* ===== v1.26: view temperature and the Runes watermark ===================== */
 .iso-main { position:relative; --temp:var(--acc2); }
 .iso-main[data-temp="items-and-economy"] { --temp:var(--teal); }
 .iso-main[data-temp="combat"] { --temp:#e88a6a; }
@@ -393,7 +393,7 @@ body.light .iso-main[data-temp="system"] { --temp:#4a5fa5; }
   background:url("crest.webp") center/contain no-repeat; opacity:0; pointer-events:none; }
 .iso-main[data-view="rune"]::after { opacity:.07; }
 
-/* ===== v2.0: small-screen action sheet ====================================
+/* ===== v1.26: small-screen action sheet ====================================
    At the slim breakpoints the ISO toolbar starts collapsed: a fixed strip
    carries the Actions reveal and a mirror of the unsaved pill; the toolbar
    is a fixed sheet above it. Session actions inside the sheet fold under
