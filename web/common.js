@@ -222,7 +222,15 @@ function confirmReview(title, groups, destLabel, onConfirm) {
   document.body.appendChild(back);
 }
 
-/* ---------- theme switcher (footer buttons, like the S3 editor) ---------- */
+/* ---------- theme switcher (header buttons) ---------- */
+/* First visit follows the system preference; a saved choice always wins.
+ * Pure so the theme suite can pin it without a DOM. */
+function pickTheme(saved, prefersLight) {
+  if (saved === "light") saved = "sun";        // migrate old checkbox values
+  if (saved === "dark") saved = "twilight";
+  if (saved === "sun" || saved === "twilight") return saved;
+  return prefersLight ? "sun" : "twilight";
+}
 function initTheme() {
   const btns = qa(".tb");
   const apply = (theme) => {
@@ -233,11 +241,10 @@ function initTheme() {
     try { localStorage.setItem("s5theme", theme); } catch (_) {}
   };
   btns.forEach((b) => b.addEventListener("click", () => apply(b.dataset.theme)));
-  let saved = "twilight";
-  try { saved = localStorage.getItem("s5theme") || "twilight"; } catch (_) {}
-  if (saved === "light") saved = "sun";        // migrate old checkbox values
-  if (saved === "dark") saved = "twilight";
-  apply(saved);
+  let saved = null;
+  try { saved = localStorage.getItem("s5theme"); } catch (_) {}
+  const prefersLight = !!(window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches);
+  apply(pickTheme(saved, prefersLight));
 }
 
 /* ---------- PWA install button (Chromium/Android) ---------- */

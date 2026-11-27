@@ -17,10 +17,14 @@
 <body>
 <div class="wrap">
   <header>
-    <span class="logo"></span>
+    <img class="crest" src="crest.webp" alt="" aria-hidden="true"><img class="crest crest-sil" src="crest-sil.webp" alt="" aria-hidden="true">
     <h1>Suikoden V Editor</h1>
     <span class="tag">web · runs on your device</span>
-    <button id="installBtn" class="chip hidden" style="margin-left:auto">⬇ Install app</button>
+    <span class="themesw" role="group" aria-label="Theme">
+      <button class="tb" data-theme="twilight">Falena Twilight</button>
+      <button class="tb" data-theme="sun">Sun Rune</button>
+    </span>
+    <button id="installBtn" class="chip hidden">⬇ Install app</button>
   </header>
 
   <nav class="modebar">
@@ -29,10 +33,19 @@
   </nav>
 
   <!-- Shared boot / Pyodide status -->
-  <div id="boot" class="card build">
+  <div id="boot" class="card build boot-panel">
+    <img class="crest boot-crest" src="crest.webp" alt="" aria-hidden="true">
     <h2>Getting ready</h2>
     <div id="bootmsg" class="muted">Loading the Python engine (Pyodide)… first load fetches a few MB; later loads are instant and work offline.</div>
     <div class="bar"><div id="bootfill" class="bar-fill"></div></div>
+    <div id="bootFail" class="hidden">
+      <p class="boot-fail-msg">The editor could not start. Check your connection and reload to try again.</p>
+      <div class="boot-detail" id="bootDetail"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="bootRetry" class="primary">Retry</button>
+        <button id="bootForce" class="ghost">Force refresh</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============================ SAVE EDITOR ============================ -->
@@ -90,26 +103,44 @@
     </div>
 
     <div id="isoViews" class="hidden">
-      <div id="isoTabs" class="subtabs"></div>
-      <div id="isoBody"></div>
-    </div>
-
-    <!-- Sticky action toolbar -->
-    <div id="isoToolbar" class="toolbar hidden">
-      <span id="isoUnsaved" class="badge-unsaved">No changes</span>
-      <button class="chip mini" id="isoUndoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
-      <button class="chip mini" id="isoRedoBtn" title="Redo (Ctrl+Y)" disabled>Redo ↷</button>
-      <span class="sp"></span>
-      <button class="mini" id="isoImportBtn" title="Apply a shared .s5mod recipe or .xdelta patch">Import recipe / patch</button>
-      <button class="mini" id="isoExportBtn" title="Export your edits as a shareable .s5mod recipe">Export recipe</button>
-      <button class="mini" id="isoXdeltaBtn" title="Export your edits as a standard .xdelta patch (captures changes a recipe cannot express)">Export .xdelta</button>
-      <button class="primary" id="isoSaveBtn" title="Write changed bytes into the ISO / export a recipe">Save<span class="dot hidden"></span></button>
+      <div class="iso-shell">
+        <aside class="iso-rail">
+          <div class="rail-head"><img class="crest" src="crest.webp" alt="" aria-hidden="true"><img class="crest crest-sil" src="crest-sil.webp" alt="" aria-hidden="true"><span class="rail-title">Disc editor</span></div>
+          <div class="slot" id="railNavSlot"></div>
+          <div class="rail-session">
+            <div class="rail-disc" id="railDisc"></div>
+            <div class="slot" id="railBarSlot"></div>
+          </div>
+        </aside>
+        <div class="iso-main" id="isoMain">
+          <div class="slot" id="navSlot"><div id="isoTabs" class="subtabs" role="tablist" aria-label="ISO editor views"></div></div>
+          <div id="isoBody"></div>
+          <div class="slot" id="barSlot">
+            <div class="barstrip" id="isoBarStrip">
+              <button id="isoBarReveal" class="bar-reveal" aria-expanded="false" aria-controls="isoToolbar">▴ Actions</button>
+              <span class="pill" id="isoStripUnsaved" hidden></span>
+            </div>
+            <!-- Sticky action toolbar: lives here below 1024px, in the rail session panel on desktop -->
+            <div id="isoToolbar" class="toolbar hidden">
+              <span id="isoUnsaved" class="badge-unsaved">No changes</span>
+              <button class="chip mini" id="isoUndoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button>
+              <button class="chip mini" id="isoRedoBtn" title="Redo (Ctrl+Y)" disabled>Redo ↷</button>
+              <span class="sp"></span>
+              <button class="mini morebtn" id="isoMoreBtn" aria-expanded="false" aria-controls="isoToolbar">More ▾</button>
+              <button class="mini opt" id="isoImportBtn" title="Apply a shared .s5mod recipe or .xdelta patch">Import recipe / patch</button>
+              <button class="mini opt" id="isoExportBtn" title="Export your edits as a shareable .s5mod recipe">Export recipe</button>
+              <button class="mini opt" id="isoXdeltaBtn" title="Export your edits as a standard .xdelta patch (captures changes a recipe cannot express)">Export .xdelta</button>
+              <button class="mini opt" id="isoRevertBtn" title="Discard every staged change and restore the last saved state">Revert all</button>
+              <button class="mini opt" id="isoCloseBtn" title="Close this disc and return to the open screen">Close</button>
+              <button class="primary" id="isoSaveBtn" title="Write changed bytes into the ISO / export a recipe"><span id="isoSaveLbl">Save</span><span class="dot hidden"></span></button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
   <footer>
-    <button class="tb" data-theme="twilight">Falena Twilight</button>
-    <button class="tb" data-theme="sun">Sun Rune</button>
     <span class="credit">Made by <b>TheSparda</b> ·
       <a href="https://github.com/TheSparda/Suikoden-5-Editor" target="_blank" rel="noopener">GitHub</a>
       · <span id="ver">v1.25.1</span> ·

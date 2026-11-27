@@ -64,17 +64,87 @@ const ISO_VIEWS = [
   { id: "ref",      label: "Reference" },
 ];
 
+/* The 20 views in four groups, for the rail tree (desktop) and the chip strip
+ * (small screens): one nav markup serves both, the group wrappers collapse
+ * away in strip mode (docs/TWO_PANE_WORKSPACE.md). */
+const ISO_VIEW_GROUPS = [
+  ["Roster", ["char", "name", "model"]],
+  ["Items and Economy", ["gear", "sets", "runeprice", "healprice", "csv"]],
+  ["Combat", ["spell", "rune", "passive", "enemy", "unite", "mp", "skillfx", "balance"]],
+  ["System", ["patches", "assets", "changes", "ref"]],
+];
+const ISO_VIEW_GROUP_OF = {};
+ISO_VIEW_GROUPS.forEach(([g, ids]) => ids.forEach(id => { ISO_VIEW_GROUP_OF[id] = g; }));
+/* Monochrome rail-group glyphs from Falena motifs (original SVG): a crown for
+ * the roster, a potch coin for the economy, crossed swords for combat, a rune
+ * ring for system. currentColor, so they follow the theme and temperature. */
+const gico = (paths) => `<svg class="gico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const GICONS = {
+  "Roster": gico(`<path d="M4 17.5L3 7l5.2 3.4L12 5l3.8 5.4L21 7l-1 10.5z"/><path d="M4.5 20.5h15"/>`),
+  "Items and Economy": gico(`<circle cx="12" cy="12" r="8"/><path d="M12 7.2v9.6M9.2 9.4c.7-1 1.7-1.4 2.8-1.4 1.5 0 2.7.9 2.7 2.1 0 2.9-5.5 1.5-5.5 4.3 0 1.2 1.2 2.1 2.8 2.1 1.1 0 2.1-.5 2.8-1.4"/>`),
+  "Combat": gico(`<path d="M5.5 3.5L16 14M18.5 3.5L8 14"/><path d="M13.9 15.1l3.3 3.3M10.1 15.1l-3.3 3.3"/><circle cx="18.4" cy="19.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="5.6" cy="19.6" r="1.05" fill="currentColor" stroke="none"/>`),
+  "System": gico(`<circle cx="12" cy="12" r="7.4"/><circle cx="12" cy="12" r="2.6"/><path d="M12 2.6v2.3M12 19.1v2.3M2.6 12h2.3M19.1 12h2.3"/>`),
+};
+
+/* ---- per-view edit counts ---------------------------------------------------
+ * isoEdits keys name their writing path before the first colon; this table
+ * maps each prefix to the one ISO view that path belongs to. Imports (recipe
+ * and xdelta) have no reliable view and are deliberately absent: they surface
+ * as a dirty dot on Changes, never as an invented count. */
+const EDIT_VIEW_BY_PREFIX = {
+  char: "char", name: "name", model: "model", battlemodel: "model",
+  gear: "gear", gearname: "gear", gearreq: "gear",
+  setdesc: "sets", setbonus: "sets", setgate: "sets", sethandler: "sets", customset: "sets",
+  runeprice: "runeprice", healprice: "healprice", csv: "csv",
+  spell: "spell", rune: "rune", runealways: "passive",
+  enemy: "enemy", droprates: "enemy", unite: "unite", mp: "mp", skillfx: "skillfx",
+  enemyscale: "balance", balance: "balance", growthscale: "balance",
+  toggle: "patches", dashmul: "patches",
+};
+function viewForEditKey(key) {
+  const prefix = String(key).split(":")[0];
+  return EDIT_VIEW_BY_PREFIX[prefix] || null;
+}
+/* { counts: {viewId: n}, dot: true when an unattributed edit exists } */
+function isoViewCounts(edits) {
+  const counts = {}; let dot = false;
+  for (const key of Object.keys(edits || {})) {
+    const v = viewForEditKey(key);
+    if (v) counts[v] = (counts[v] || 0) + 1; else dot = true;
+  }
+  return { counts, dot };
+}
+function updateNavCounts() {
+  const tabs = qa("#isoTabs .chip"); if (!tabs.length) return;
+  const { counts, dot } = isoViewCounts(isoEdits);
+  tabs.forEach(t => {
+    const v = t.dataset.view;
+    const c = q(".vcount", t), d = q(".vdot", t);
+    if (c) { const n = counts[v] || 0; c.hidden = n === 0; c.textContent = n ? String(n) : ""; }
+    if (d) { const on = (v === "changes") && dot; d.hidden = !on; }
+  });
+}
+
 /* Called by app.js once Pyodide + engines are ready. */
 window.isoReady = function () {
   $("isoOpen").classList.remove("hidden");
   $("isoPickBtn").onclick = pickISO;
   wireIsoDrop();
-  $("isoImportBtn").onclick = importRecipe;
-  $("isoExportBtn").onclick = exportRecipe;
-  $("isoXdeltaBtn").onclick = exportXdelta;
-  $("isoSaveBtn").onclick = saveISO;
+  $("isoSaveBtn").onclick = () => { setSheetOpen(false); saveISO(); };
   $("isoUndoBtn").onclick = isoUndo;
   $("isoRedoBtn").onclick = isoRedo;
+  $("isoImportBtn").onclick = () => { setSheetOpen(false); importRecipe(); };
+  $("isoExportBtn").onclick = () => { setSheetOpen(false); exportRecipe(); };
+  $("isoXdeltaBtn").onclick = () => { setSheetOpen(false); exportXdelta(); };
+  $("isoRevertBtn").onclick = () => { setSheetOpen(false); revertAllISO(); };
+  $("isoCloseBtn").onclick = () => { setSheetOpen(false); closeISO(); };
+  $("isoBarReveal").onclick = () => setSheetOpen(!$("isoToolbar").classList.contains("open"));
+  $("isoMoreBtn").onclick = () => {
+    const open = $("isoToolbar").classList.toggle("more");
+    $("isoMoreBtn").setAttribute("aria-expanded", open ? "true" : "false");
+    $("isoMoreBtn").textContent = open ? "Less ▴" : "More ▾";
+  };
+  placeChrome(); syncBarSheet();
   document.addEventListener("keydown", (e) => {
     if (!ORIG || document.querySelector('.mode-pane[data-mode="iso"]').hidden) return;   // ISO mode only
     const mod = e.ctrlKey || e.metaKey; if (!mod) return;
@@ -86,10 +156,95 @@ window.isoReady = function () {
   // in place, but you can still open + edit + export a .s5mod recipe to apply on desktop.
   if (!HAS_FS_ACCESS) {
     const note = $("isoNoFsNote"); if (note) note.classList.remove("hidden");
-    const sv = $("isoSaveBtn"); if (sv) sv.textContent = "Export recipe";
   }
+  setSaveLabel();
   restoreLastISO();
 };
+/* ---- two-pane chrome: one nav strip and one action bar, two homes ---------
+ * On desktop the SAME #isoTabs and #isoToolbar nodes live in the left rail;
+ * below the breakpoint they live in the card, exactly where they always did.
+ * They are moved, never copied, so handlers, ids and state survive the move
+ * (docs/TWO_PANE_WORKSPACE.md). */
+const DESKTOP_MQ = typeof window !== "undefined" && window.matchMedia
+  ? window.matchMedia("(min-width:1024px)") : null;
+function placeChrome() {
+  const tabs = $("isoTabs"), bar = $("isoToolbar"); if (!tabs || !bar) return;
+  const desk = !!(DESKTOP_MQ && DESKTOP_MQ.matches);
+  const navDest = $(desk ? "railNavSlot" : "navSlot"), barDest = $(desk ? "railBarSlot" : "barSlot");
+  if (navDest && tabs.parentElement !== navDest) navDest.appendChild(tabs);
+  if (barDest && bar.parentElement !== barDest) barDest.appendChild(bar);
+}
+if (DESKTOP_MQ) {
+  if (DESKTOP_MQ.addEventListener) DESKTOP_MQ.addEventListener("change", placeChrome);
+  else if (DESKTOP_MQ.addListener) DESKTOP_MQ.addListener(placeChrome);
+}
+
+/* ---- small-screen action sheet ---------------------------------------------
+ * At the slim-bar breakpoints the toolbar starts COLLAPSED: a fixed strip at
+ * the bottom (#isoBarStrip, CSS shows it only in this range) carries the
+ * reveal button and a mirror of the unsaved pill; the toolbar itself becomes
+ * a fixed sheet that slides up over the content when revealed. The query
+ * string must stay identical to the CSS media query in style.css. */
+const SMALL_MQ = typeof window !== "undefined" && window.matchMedia
+  ? window.matchMedia("(max-width:820px), (max-height:660px) and (max-width:1023px)") : null;
+function syncBarSheet() {
+  const bar = $("isoToolbar"); if (!bar) return;
+  const small = !!(SMALL_MQ && SMALL_MQ.matches);
+  bar.classList.toggle("sheet", small);
+  if (!small) setSheetOpen(false);
+}
+function setSheetOpen(open) {
+  const bar = $("isoToolbar"), btn = $("isoBarReveal"); if (!bar) return;
+  bar.classList.toggle("open", !!open);
+  if (btn) { btn.setAttribute("aria-expanded", open ? "true" : "false"); btn.textContent = open ? "▾ Actions" : "▴ Actions"; }
+}
+if (SMALL_MQ) {
+  if (SMALL_MQ.addEventListener) SMALL_MQ.addEventListener("change", syncBarSheet);
+  else if (SMALL_MQ.addListener) SMALL_MQ.addListener(syncBarSheet);
+}
+
+/* One save-button label logic everywhere: the button promises exactly what
+ * saveISO will do for the disc currently open (or the browser at large
+ * before one is). In place where a writable handle exists, Export recipe
+ * everywhere else. */
+function setSaveLabel() {
+  const lbl = $("isoSaveLbl"); if (!lbl) return;
+  const inPlace = HAS_FS_ACCESS && (!ORIG || !!isoHandle);
+  lbl.textContent = inPlace ? "Save" : "Export recipe";
+}
+
+/* Revert all: restore the in-memory image to the baseline bytes. ORIG is the
+ * last saved state (writeISO advances it on every save), never a stale one. */
+function revertAllISO() {
+  if (!ORIG) return;
+  const d = recomputeIsoDirty();
+  if (!d.runs) { toast("Nothing to revert.", "ok"); return; }
+  pyodide.FS.writeFile(ISO_PATH, ORIG.slice());
+  ISO_PREV = ORIG.slice(); ISO_PREV_EDITS = {}; isoEdits = {};
+  undoStack.length = 0; redoStack.length = 0; updateUndoButtons();
+  if (curView) selectView(curView);
+  updateIsoToolbar();
+  toast("Reverted all staged changes.", "ok");
+}
+
+/* Close: tear the session down and return to the open card. Confirms first
+ * when the byte diff is non-empty; the last-opened row is left untouched so
+ * reopening goes through the normal permission flow. */
+function closeISO() {
+  if (!ORIG) return;
+  const d = recomputeIsoDirty();
+  if (d.runs && !window.confirm("Discard staged edits and close this ISO?")) return;
+  ORIG = null; ISO_PREV = null; ISO_PREV_EDITS = {}; isoEdits = {};
+  undoStack.length = 0; redoStack.length = 0;
+  isoFile = null; isoHandle = null; isoRegion = null; isoMAPS = null; SPELL_LIST = [];
+  batleStaged = false; curView = null;
+  try { pyodide.FS.unlink(ISO_PATH); } catch (_) {}
+  $("isoViews").classList.add("hidden");
+  $("isoToolbar").classList.add("hidden");
+  $("isoOpen").classList.remove("hidden");
+  setSheetOpen(false); updateUndoButtons(); setSaveLabel();
+}
+
 /* Lazily nothing extra on tab-show (kept for parity with common.js hook). */
 window.onIsoModeShown = function () {};
 window.isoHasUnsaved = () => !!ORIG && recomputeIsoDirty().runs > 0;
@@ -178,6 +333,8 @@ async function openISO(src) {
     batleStaged = false;
     isoRegion = load.region; isoEdits = {}; ISO_PREV_EDITS = {}; undoStack.length = 0; redoStack.length = 0;
     $("isoFilename").textContent = `${file.name} · ${(file.size/1073741824).toFixed(2)} GB · ${load.regionName}${isHandle ? "" : " · read-only (recipe export only)"}`;
+    const rd = $("railDisc");
+    if (rd) rd.innerHTML = `<b class="acc2">${esc(file.name)}</b> <span class="muted">· ${(file.size/1073741824).toFixed(2)} GB · ${esc(load.regionName)}${isHandle ? "" : " · read-only"}</span>`;
     isoMAPS = JSON.parse(window.PYISO.maps());
     try { SPELL_LIST = (JSON.parse(window.PYISO.spellnames()).spells || [])
       .map((n, i) => ({ id: i, name: n || ("Spell " + i) })); } catch (_) { SPELL_LIST = []; }
@@ -185,6 +342,7 @@ async function openISO(src) {
     $("isoViews").classList.remove("hidden");
     $("isoToolbar").classList.remove("hidden");
     renderTabs();
+    placeChrome(); syncBarSheet(); setSaveLabel();
     selectView("char");
     if (isHandle) await idbSet("iso:last", { name: file.name, handle: src, when: Date.now() });
     updateIsoToolbar(); updateUndoButtons();
@@ -267,14 +425,36 @@ async function ensureBatleStaged() {
 
 /* ---------------- tab strip ---------------- */
 function renderTabs() {
-  $("isoTabs").innerHTML = ISO_VIEWS.map(v =>
-    `<button class="chip" data-view="${v.id}">${esc(v.label)}</button>`).join("");
+  const labelOf = Object.fromEntries(ISO_VIEWS.map(v => [v.id, v.label]));
+  $("isoTabs").innerHTML = ISO_VIEW_GROUPS.map(([g, ids]) =>
+    `<div class="navgroup"><div class="navgroup-h">${GICONS[g] || ""}${esc(g)}</div>` +
+    ids.map(id =>
+      `<button class="chip" role="tab" id="isotab-${id}" aria-selected="${id === curView ? "true" : "false"}" tabindex="${id === (curView || "char") ? "0" : "-1"}" data-view="${id}">${esc(labelOf[id])}<span class="vcount" hidden></span><span class="vdot" hidden></span></button>`).join("") +
+    `</div>`).join("");
   qa("#isoTabs .chip").forEach(t => t.onclick = () => selectView(t.dataset.view));
+  $("isoTabs").onkeydown = (e) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const tabs = qa("#isoTabs .chip"); if (!tabs.length) return;
+    const i = tabs.indexOf(document.activeElement); if (i < 0) return;
+    e.preventDefault();
+    const dir = (e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1;
+    const next = tabs[(i + dir + tabs.length) % tabs.length];
+    next.focus(); selectView(next.dataset.view);
+  };
+  updateNavCounts();
 }
 let curView = null;
 async function selectView(id) {
   curView = id;
-  qa("#isoTabs .chip").forEach(t => t.classList.toggle("on", t.dataset.view === id));
+  qa("#isoTabs .chip").forEach(t => {
+    const on = t.dataset.view === id;
+    t.classList.toggle("on", on);
+    t.setAttribute("aria-selected", on ? "true" : "false");
+    t.tabIndex = on ? 0 : -1;
+    if (on && t.scrollIntoView) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+  const main = $("isoMain");
+  if (main) { main.dataset.temp = (ISO_VIEW_GROUP_OF[id] || "").toLowerCase().replace(/[^a-z]+/g, "-"); main.dataset.view = id; }
   const body = $("isoBody"); body.innerHTML = `<div class="note" style="padding:14px">Loading…</div>`;
   try { await VIEW_RENDER[id](body); }
   catch (e) { body.innerHTML = `<p class="bad" style="padding:14px">${esc(e.message || e)}</p>`; console.error(e); }
@@ -2219,6 +2399,10 @@ function updateIsoToolbar() {
     badge.textContent = d.runs ? `${d.bytes} byte${d.bytes===1?"":"s"} in ${d.runs} run${d.runs===1?"":"s"}` : "No changes";
     badge.classList.toggle("on", d.runs > 0);
     const dot = q("#isoSaveBtn .dot"); if (dot) dot.classList.toggle("hidden", d.runs === 0);
+    const sv = $("isoSaveBtn"); if (sv) sv.classList.toggle("hot", d.runs > 0);
+    const strip = $("isoStripUnsaved");
+    if (strip) { strip.hidden = d.runs === 0; strip.textContent = badge.textContent; }
+    updateNavCounts();
   });
 }
 /* ---------------- undo / redo (B18) ----------------

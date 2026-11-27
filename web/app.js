@@ -103,8 +103,10 @@ async function boot(){
     pickSharedFile();
     beforeUnloadGuard();
   }catch(e){
-    setBoot("Failed to load: " + (e && e.message ? e.message : e), 100);
+    setBoot("The editor could not start.", 100);
     if($("bootfill")) $("bootfill").style.background = "var(--bad)";
+    if($("bootDetail")) $("bootDetail").textContent = (e && e.message) ? e.message : String(e);
+    if($("bootFail")) $("bootFail").classList.remove("hidden");
     toast("Could not start the editor. Check your connection and reload.", "bad");
     console.error(e);
   }
@@ -1770,5 +1772,9 @@ function beforeUnloadGuard(){
     if(dirty){ e.preventDefault(); e.returnValue = ""; }
   });
 }
+
+/* Boot failure actions (the panel itself lives in index.html). */
+if ($("bootRetry")) $("bootRetry").onclick = () => location.reload();
+if ($("bootForce")) $("bootForce").onclick = () => { if (typeof forceRefresh === "function") forceRefresh(); };
 
 boot();
