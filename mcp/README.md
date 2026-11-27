@@ -160,11 +160,13 @@ which are therefore not offered rather than faked:
   not exposed: they run on the web editor's overlay staging and file
   hand-off machinery, or are bulk transforms over the same field writes that
   an MCP client can compose from the field tools.
-- **The Passives view** (always-on rune gates) is not exposed: on this branch
-  it still runs on its own gate path in `s5patch`, separate from the toggle
-  registry. Its five runes are expected to join the registry when the
-  Passives merge lands, at which point they flow through `iso_list_toggles`
-  and `iso_set_toggle` with no server change.
+- **The Passives view** (always-on rune gates) is not exposed as its own
+  surface: this branch predates the Passives merge, where the view still ran
+  on its own gate path in `s5patch`. That merge has since landed on main
+  (v1.27.0), moving all five runes into the toggle registry; once this
+  branch is merged, they flow through `iso_list_toggles` and
+  `iso_set_toggle` with no server change, because the toggle surface reads
+  the registry at runtime.
 - **The health check's verdicts** are not re-run: `save_get` with section
   `health` returns the audit snapshot from `s5save`, but the rules live in
   the web editor's `web/health-core.js` and are not duplicated here.
