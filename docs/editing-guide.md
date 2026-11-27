@@ -19,7 +19,7 @@ a save. Use the Save editor for an in-progress game.
 - [Gear](#gear)
 - [Sets](#sets)
 - [Spells](#spells)
-- [Runes, passives, and the Dawn Rune](#runes-passives-and-the-dawn-rune)
+- [Runes, rune perks, and the Dawn Rune](#runes-rune-perks-and-the-dawn-rune)
 - [Prices](#prices)
 - [Unites](#unites)
 - [MP growth](#mp-growth)
@@ -488,7 +488,7 @@ hidden rather than shown as something it might not be.
 
 ---
 
-## Runes, passives, and the Dawn Rune
+## Runes, rune perks, and the Dawn Rune
 
 ### Rune → spell grants
 
@@ -512,7 +512,12 @@ regions, and it's fully reversible. The unlock is offered in exactly one place, 
 Code patches list ("Dawn Rune: unlock all four spells"); the Dawn Rune's own panel
 only points there, so no second switch can disagree with it.
 
-### Passives ("always-on" rune effects)
+### Rune perks ("always-on" rune effects)
+
+All five of these toggles live in the Code patches view, in the group named
+"Rune perks: always on". Before v1.27.0 they were also offered in a separate
+Passives view writing the same gates; that view was removed so the two
+surfaces could never disagree about the same patch.
 
 85 of the 173 call sites that ask "does this character have this rune equipped" share one gate
 shape: check the rune, then check the rune's own enable flag. Both branches land on the same
@@ -535,7 +540,7 @@ by a signature search of the executable (never a hard-coded address), must match
 once, and is refused untouched if the bytes there are neither the stock nor the patched
 form. The exceptions are the armor-requirements patch below and the Dash tuning patches:
 their sites sit at the traced offsets for the disc's region and are verified against their
-stock and anchor words instead. All of them restore exactly. The Dawn Rune unlock and the three not-working perk
+stock and anchor words instead. All of them restore exactly. The Dawn Rune unlock and the five rune-perk
 toggles above are in this list too; the five below come from the community cheat table,
 with their sites found by disassembly and verified on both the NTSC-U and PAL discs.
 Their effect is labelled **code-verified**: the patched instruction does what the label
@@ -685,7 +690,7 @@ Char names, Field models). The region map is built from the same table constants
 edits with, so a field the editor can write is a field the Changes list can name.
 
 Changed bytes that no table claims (code patches such as the Balance scalers and the
-passives, overlay rewrites, anything in the gaps between known fields) are shown as
+rune perks, overlay rewrites, anything in the gaps between known fields) are shown as
 **Unmapped** hex rows rather than dropped: the list is complete, or it says why a row is
 only hex. Only the front slice of the base disc is read, the same slice the editor works
 on, so a difference past that slice (inside DATA.PAK, say) cannot be shown here; the CLI's

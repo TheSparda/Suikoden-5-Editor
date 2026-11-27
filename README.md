@@ -191,10 +191,12 @@ and status effect, with the readable description built from those fields.
   The patch site is found by signature, so the toggle does not appear on a disc
   that does not carry it.
 
-### Passives
+### Rune perks: always on
 
-Force a rune's overworld effect to be **permanently active**, so nobody has to equip the
-rune and the slot stays free:
+Five toggles in the Code patches view, grouped as **Rune perks: always on**, force a
+rune's effect to be **permanently active**, so nobody has to equip the rune and the slot
+stays free. Before v1.27.0 the editor also offered these in a separate Passives view
+writing the same gates; the Code patches registry is now the only surface:
 
 | Rune | Effect |
 |---|---|
@@ -432,7 +434,7 @@ byte runs.
   Chromium.
 
 Because the recipe is built from the byte diff rather than from a list of field names, it
-captures everything the web editor can do, including the code-level features (sets, passives,
+captures everything the web editor can do, including the code-level features (sets, rune perks,
 the Dawn Rune toggle, model swaps).
 
 `.xdelta` patches work in the web editor (export, plus import for patches whose changes land
@@ -448,7 +450,7 @@ plus the PAL rune-price stride.
 **NTSC-U only**, because they patch code or text whose PAL offsets are not mapped:
 
 - **Sets** (the set detector, dispatcher and handlers)
-- **Passives** (the rune equip gates)
+- **Rune perks** (the rune equip gates, in Code patches)
 - **Char names** (the short-name table base)
 
 Everything else, including Characters, Gear stats, Spells, Runes, all three price tables,
@@ -617,7 +619,7 @@ npm run test:all          # both
   footprint, round trips, and the party / no-record / non-recruitable guards).
 - **`sets-unit.mjs`**, **`sets-iso.mjs`**: the armor-set decode and rewrite, checked against
   the Suikosource guide as ground truth.
-- **`runes-always.mjs`**, **`dawn-rune.mjs`**: the passive gates and the Dawn Rune counter,
+- **`runes-always.mjs`**, **`dawn-rune.mjs`**: the rune gate scan and the Dawn Rune counter,
   including that switching a toggle back off restores the original bytes exactly.
 - **`enemy-base.mjs`**: guards the region-specific enemy table bases against a real disc
   layout, and that the scan stops at the end of the table instead of running on into the

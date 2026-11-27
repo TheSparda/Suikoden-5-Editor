@@ -24,11 +24,11 @@ Desktop (viewport width 1024px and up): the ISO editor becomes two panes.
 - The save editor keeps its current single column and gets only the shared chrome:
   header theme switch, boot panel, art, and small-screen strip sizing.
 
-View groups (all 20 views from ISO_VIEWS in iso.js, each in exactly one group):
+View groups (all 19 views from ISO_VIEWS in iso.js, each in exactly one group):
 
 - Roster: Characters, Char names, Field models
 - Items and Economy: Gear, Sets, Rune prices, Heal prices, Excel / CSV
-- Combat: Spells, Runes, Passives, Enemies, Unites, MP growth, Skill effects, Balance
+- Combat: Spells, Runes, Enemies, Unites, MP growth, Skill effects, Balance
 - System: Code patches, Assets, Changes, Reference
 
 Below 1024px the rail is hidden and the current layout returns: chip strip in the card,
@@ -52,7 +52,7 @@ over the edit keys:
 
 - Every edit key's prefix names its writing path (char, gear, gearname, gearreq, spell,
   rune, runeprice, healprice, enemy, unite, mp, skillfx, name, model, battlemodel,
-  runealways, toggle, dashmul, droprates, the Balance bulk keys, the Sets keys, csv).
+  toggle, dashmul, droprates, the Balance bulk keys, the Sets keys, csv).
   A static prefix table maps each prefix to exactly one ISO view.
 - Character-table edits made from the Characters view count to Characters even when the
   field belongs to a spell or rune record rendered inside that view, because the key
@@ -177,3 +177,12 @@ service worker cache s5editor-v44.
   1440 wide, the 1024 boundary on both sides, and 960x640, 480x320, 320x480 with the
   action sheet collapsed and expanded.
 - Both pristine ISO hashes re-checked after the work (US and PAL).
+
+## Addendum (v1.27.0): the Passives merge
+
+The Passives view no longer exists. Its five rune always-on toggles moved
+into the Code patches registry (group "Rune perks: always on"), so the
+editor has 19 ISO views and Combat holds seven of them. A stale runealways
+key in an old journal is unattributed on purpose: it surfaces as the dirty
+dot on Changes, never as a count, while edits made from Code patches count
+to Code patches under their toggle keys.
